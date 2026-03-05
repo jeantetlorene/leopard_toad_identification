@@ -1,0 +1,11 @@
+.venv
+.env
+.DS_Store
+.vscode
+dataset/detect_2/*
+dataset/detect_1/*
+dataset/inaturalist images/*
+dataset/dataset_reid_crops/*
+dataset/reid/images/*
+dataset/reid/labels/*
+.gradio
