@@ -1,0 +1,2 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras - AI Data/6Z/6z-102 (557).JPG,6z-102 (557).JPG,6Z,2,Western_Leopard_Toad,0.2946,0.0,2150.7,205.4,2451.1

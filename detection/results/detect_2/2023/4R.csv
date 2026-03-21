@@ -1,0 +1,19 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (549).JPG,4r-103 (549).JPG,4R,0,Other_Amphibian,0.9334,2651.5,1246.3,3018.4,1598.9
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (545).JPG,4r-103 (545).JPG,4R,0,Other_Amphibian,0.8933,2394.1,1512.2,2732.8,1830.9
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (538).JPG,4r-103 (538).JPG,4R,0,Other_Amphibian,0.8840,2075.0,2029.3,2324.8,2427.5
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (541).JPG,4r-103 (541).JPG,4R,0,Other_Amphibian,0.8794,2181.7,1779.7,2452.1,2113.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (547).JPG,4r-103 (547).JPG,4R,0,Other_Amphibian,0.9299,2540.4,1365.3,2886.5,1714.7
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-101 (241).JPG,4r-101 (241).JPG,4R,0,Other_Amphibian,0.6890,1075.9,1120.4,1365.6,1460.2
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (543).JPG,4r-103 (543).JPG,4R,0,Other_Amphibian,0.8525,2316.5,1603.8,2606.8,1933.7
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (537).JPG,4r-103 (537).JPG,4R,0,Other_Amphibian,0.8741,2016.8,2132.2,2287.5,2446.6
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (546).JPG,4r-103 (546).JPG,4R,0,Other_Amphibian,0.8696,2468.8,1437.5,2802.9,1764.9
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (536).JPG,4r-103 (536).JPG,4R,0,Other_Amphibian,0.3929,1999.5,2235.5,2280.0,2448.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (540).JPG,4r-103 (540).JPG,4R,0,Other_Amphibian,0.8873,2193.0,1802.3,2458.7,2179.9
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (550).JPG,4r-103 (550).JPG,4R,0,Other_Amphibian,0.8463,2707.1,1178.8,3096.9,1552.6
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-102 (898).JPG,4r-102 (898).JPG,4R,0,Other_Amphibian,0.3972,2406.4,1589.3,2585.1,1738.4
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (454).JPG,4r-103 (454).JPG,4R,0,Other_Amphibian,0.8939,1995.7,1474.2,2279.4,1791.6
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (674).JPG,4r-103 (674).JPG,4R,0,Other_Amphibian,0.4136,3282.5,2133.5,3455.6,2346.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (544).JPG,4r-103 (544).JPG,4R,0,Other_Amphibian,0.8727,2367.8,1544.4,2699.2,1880.3
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (542).JPG,4r-103 (542).JPG,4R,0,Other_Amphibian,0.8768,2258.8,1666.1,2538.8,2049.4
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (539).JPG,4r-103 (539).JPG,4R,0,Other_Amphibian,0.9115,2126.8,1933.3,2412.0,2329.1

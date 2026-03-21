@@ -1,0 +1,15 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-105 (591).JPG,5z-105 (591).JPG,5Z,0,Other_Amphibian,0.2636,1275.3,1874.8,1579.9,2226.4
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-101 (539).JPG,5z-101 (539).JPG,5Z,0,Other_Amphibian,0.5345,3927.0,2373.8,4167.1,2540.2
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-100 (117).JPG,5z-100 (117).JPG,5Z,2,Western_Leopard_Toad,0.9264,2390.2,2009.4,3075.2,2825.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-100 (770).JPG,5z-100 (770).JPG,5Z,2,Western_Leopard_Toad,0.9232,3307.1,2074.1,4034.6,2604.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-100 (76).JPG,5z-100 (76).JPG,5Z,2,Western_Leopard_Toad,0.8434,4312.7,956.4,4919.6,1684.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-100 (118).JPG,5z-100 (118).JPG,5Z,2,Western_Leopard_Toad,0.9258,2387.1,2009.6,3073.4,2823.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-102 (925).JPG,5z-102 (925).JPG,5Z,2,Western_Leopard_Toad,0.6499,3217.8,630.0,3949.1,1229.6
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/DSCF0894.JPG,DSCF0894.JPG,5Z,2,Western_Leopard_Toad,0.9232,3307.1,2074.1,4034.6,2604.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-104 (992).JPG,5z-104 (992).JPG,5Z,2,Western_Leopard_Toad,0.2738,1.1,2684.1,145.7,2861.5
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-104 (256).JPG,5z-104 (256).JPG,5Z,2,Western_Leopard_Toad,0.9082,2245.6,2456.3,2791.6,2855.7
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/DSCF0242.JPG,DSCF0242.JPG,5Z,2,Western_Leopard_Toad,0.9258,2387.1,2009.6,3073.4,2823.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/DSCF0241.JPG,DSCF0241.JPG,5Z,2,Western_Leopard_Toad,0.9264,2390.2,2009.4,3075.2,2825.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/5z-100 (389).JPG,5z-100 (389).JPG,5Z,2,Western_Leopard_Toad,0.8670,3671.4,2081.4,4255.6,2653.2
+/srv/shared_leopard_toad/2023/Cameras - AI Data/5Z/DSCF0513.JPG,DSCF0513.JPG,5Z,2,Western_Leopard_Toad,0.8670,3671.4,2081.4,4255.6,2653.2

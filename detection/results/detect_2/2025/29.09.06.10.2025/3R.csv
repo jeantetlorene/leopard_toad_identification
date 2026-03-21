@@ -1,0 +1,3 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2025/Documents/29.09.06.10.2025/3R/104MEDIA/DSCF0112.JPG,DSCF0112.JPG,3R/104MEDIA,2,Western_Leopard_Toad,0.3001,0.7,2069.0,485.6,2877.9
+/srv/shared_leopard_toad/2025/Documents/29.09.06.10.2025/3R/100MEDIA/DSCF0278.JPG,DSCF0278.JPG,3R/100MEDIA,0,Other_Amphibian,0.5800,2492.1,2647.5,2636.7,2846.7

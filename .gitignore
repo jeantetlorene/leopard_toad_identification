@@ -10,3 +10,8 @@ dataset/reid/images/*
 dataset/reid/labels/*
 .gradio
 __pycache__
+identification/weights/resnet50_backbone_final.pth
+identification/weights/best_simclr.pth
+detection/weights/best_retinanet.pth
+detection/weights/best_faster_rcnn1.pth
+detection/weights/best_faster_rcnn.pth

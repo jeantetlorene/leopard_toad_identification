@@ -33,9 +33,18 @@ def apply_clahe_preprocessing(image_rgb):
     
     return final_img
 
-def predict_toad(image, conf_threshold):
-    if image is None:
-        return None, {"message": "No image uploaded."}
+def predict_toad(image, image_path, conf_threshold):
+    if image is None and not image_path:
+        return None, {"message": "No image uploaded or path provided."}
+        
+    if image is None and image_path:
+        try:
+            image_bgr = cv2.imread(image_path.strip())
+            if image_bgr is None:
+                return None, {"message": f"Could not read image from {image_path}"}
+            image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            return None, {"message": f"Error loading image: {str(e)}"}
 
     # 1. Preprocess
     processed_image = apply_clahe_preprocessing(image)
@@ -74,6 +83,7 @@ with gr.Blocks(title="Western Leopard Toad Detector") as demo:
     with gr.Row():
         with gr.Column():
             input_img = gr.Image(label="Upload Image", type="numpy")
+            input_path = gr.Textbox(label="Or Provide Image Path", placeholder="/absolute/path/to/image.jpg")
             conf_slider = gr.Slider(minimum=0.0, maximum=1.0, value=0.25, label="Confidence Threshold")
             run_btn = gr.Button("Analyze Image", variant="primary")
         
@@ -83,7 +93,7 @@ with gr.Blocks(title="Western Leopard Toad Detector") as demo:
 
     run_btn.click(
         fn=predict_toad, 
-        inputs=[input_img, conf_slider], 
+        inputs=[input_img, input_path, conf_slider], 
         outputs=[output_img, output_text]
     )
 
