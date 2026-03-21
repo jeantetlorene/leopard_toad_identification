@@ -9,3 +9,4 @@ dataset/dataset_reid_crops/*
 dataset/reid/images/*
 dataset/reid/labels/*
 .gradio
+__pycache__

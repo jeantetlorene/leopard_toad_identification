@@ -4,7 +4,7 @@ import csv
 from pathlib import Path
 from ultralytics import YOLO
 from tqdm import tqdm
-
+import concurrent.futures
 def apply_clahe_preprocessing(image_rgb):
     """
     Applies CLAHE preprocessing.
@@ -19,15 +19,25 @@ def apply_clahe_preprocessing(image_rgb):
     final_img = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
     return final_img
 
+def _process_image(img_path):
+    """Reads an image, converts to RGB, and applies CLAHE."""
+    img_bgr = cv2.imread(str(img_path))
+    if img_bgr is None:
+        return None, img_path
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    input_img = apply_clahe_preprocessing(img_rgb)
+    return input_img, img_path
+
 def main():
     # --- CONFIGURATION VARIABLES ---
     MODEL_PATH = "/home/Joshua/Downloads/leopard_toad_identification/detection/runs/detect/Western_Leopard_Toad_Project/yolov8n_clahe_run2/weights/best.pt"
-    INPUT_FOLDER = "/srv/shared_leopard_toad/2023/Cameras - AI Data"
-    OUTPUT_FOLDER = "/home/Joshua/Downloads/leopard_toad_identification/detection/results/detect_2/2023"
+    INPUT_FOLDER = "/srv/shared_leopard_toad/2025/Documents/22.09-29.09.2025"
+    OUTPUT_FOLDER = "/home/Joshua/Downloads/leopard_toad_identification/detection/results/detect_2/2025/22.09-29.09.2025"
     CONF_THRESHOLD = 0.25
     IMG_SIZE = 1280
-    BATCH_SIZE = 16  # Adjust based on available RAM/VRAM
-    DEVICE = 0       # Use 0 for GPU, or 'cpu' for CPU
+    BATCH_SIZE = 16
+    DEVICE = 0
+
     # -------------------------------
 
     # Load model
@@ -73,19 +83,16 @@ def main():
                     batch_input_imgs = []
                     valid_img_paths = []
                     
-                    for img_path in batch_img_paths:
-                        # Read image
-                        img_bgr = cv2.imread(str(img_path))
-                        if img_bgr is None:
-                            print(f"Warning: Could not read image {img_path}. Skipping.")
-                            continue
-                            
-                        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                    # Process images in parallel to speed up CPU-bound CLAHE and I/O
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        results = list(executor.map(_process_image, batch_img_paths))
                         
-                        # Apply CLAHE preprocessing
-                        input_img = apply_clahe_preprocessing(img_rgb)
-                        batch_input_imgs.append(input_img)
-                        valid_img_paths.append(img_path)
+                    for input_img, img_path in results:
+                        if input_img is None:
+                            print(f"Warning: Could not read image {img_path}. Skipping.")
+                        else:
+                            batch_input_imgs.append(input_img)
+                            valid_img_paths.append(img_path)
                         
                     if not batch_input_imgs:
                         pbar.update(len(batch_img_paths))
