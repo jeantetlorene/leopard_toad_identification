@@ -1,0 +1,37 @@
+Year,Class,Model,Threshold_at_95%_Recall,Recall,Precision,FP/1000,Images_Flagged
+All Years,Western_Leopard_Toad,Faster RCNN,0.05,1.000,0.480,515.7,946
+All Years,Western_Leopard_Toad,RT-DETR,0.04,0.960,0.667,228.5,654
+All Years,Western_Leopard_Toad,YOLO26,0.01,0.916,0.766,133.1,543
+All Years,Other_Amphibian,Faster RCNN,0.01,0.873,0.307,554.5,763
+All Years,Other_Amphibian,RT-DETR,0.01,0.981,0.320,586.0,822
+All Years,Other_Amphibian,YOLO26,0.01,0.769,0.567,164.6,363
+All Years,Small_Mammal,Faster RCNN,0.05,1.000,0.013,649.9,628
+All Years,Small_Mammal,RT-DETR,0.43,1.000,0.800,2.1,10
+All Years,Small_Mammal,YOLO26,0.84,1.000,1.000,0.0,8
+2025,Western_Leopard_Toad,Faster RCNN,0.06,1.000,0.248,745.3,479
+2025,Western_Leopard_Toad,RT-DETR,0.01,0.975,0.264,670.8,440
+2025,Western_Leopard_Toad,YOLO26,0.01,0.866,0.557,169.8,185
+2025,Other_Amphibian,Faster RCNN,0.01,0.851,0.400,530.0,427
+2025,Other_Amphibian,RT-DETR,0.03,0.965,0.520,370.6,373
+2025,Other_Amphibian,YOLO26,0.01,0.771,0.692,142.9,224
+2025,Small_Mammal,Faster RCNN,0.05,1.000,0.023,623.2,308
+2025,Small_Mammal,RT-DETR,0.74,1.000,1.000,0.0,7
+2025,Small_Mammal,YOLO26,0.84,1.000,1.000,0.0,7
+2024,Western_Leopard_Toad,Faster RCNN,0.06,1.000,0.704,283.9,297
+2024,Western_Leopard_Toad,RT-DETR,0.11,0.952,0.780,180.6,255
+2024,Western_Leopard_Toad,YOLO26,0.01,0.895,0.813,138.7,230
+2024,Other_Amphibian,Faster RCNN,0.01,0.882,0.119,716.1,252
+2024,Other_Amphibian,RT-DETR,0.01,0.853,0.109,764.5,266
+2024,Other_Amphibian,YOLO26,0.01,0.618,0.210,254.8,100
+2024,Small_Mammal,Faster RCNN,0.06,1.000,0.013,245.2,77
+2024,Small_Mammal,RT-DETR,0.43,1.000,0.333,6.5,3
+2024,Small_Mammal,YOLO26,0.86,1.000,1.000,0.0,1
+2023,Western_Leopard_Toad,Faster RCNN,0.05,1.000,0.787,211.2,160
+2023,Western_Leopard_Toad,RT-DETR,0.91,0.984,1.000,0.0,124
+2023,Western_Leopard_Toad,YOLO26,0.92,0.960,1.000,0.0,121
+2023,Other_Amphibian,Faster RCNN,0.05,1.000,0.393,316.8,84
+2023,Other_Amphibian,RT-DETR,0.01,1.000,0.327,422.4,101
+2023,Other_Amphibian,YOLO26,0.01,0.909,0.769,55.9,39
+2023,Small_Mammal,Faster RCNN,0.01,0.000,0.000,521.7,84
+2023,Small_Mammal,RT-DETR,0.01,0.000,0.000,770.2,124
+2023,Small_Mammal,YOLO26,0.01,0.000,1.000,0.0,0

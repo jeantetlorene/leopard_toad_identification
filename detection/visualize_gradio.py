@@ -59,7 +59,7 @@ def draw_boxes(image_path, df):
 
 def update_ui(unique_images, df, index, evaluations):
     if not unique_images or index >= len(unique_images) or index < 0:
-        return None, "No image to display"
+        return None, "No image to display", 1
         
     img_path = unique_images[index]
     
@@ -72,7 +72,7 @@ def update_ui(unique_images, df, index, evaluations):
     status = evaluations.get(img_path, "Not evaluated yet")
     progress_text = f"**Image {index + 1} of {len(unique_images)}**\n\n**Path:** `{img_path}`\n\n**Current Status:** {status}"
     
-    return img, progress_text
+    return img, progress_text, index + 1
 
 def next_image(index, unique_images):
     if unique_images and index < len(unique_images) - 1:
@@ -83,6 +83,16 @@ def prev_image(index):
     if index > 0:
         return index - 1
     return index
+
+def jump_to_image(jump_num, unique_images):
+    if not unique_images or jump_num is None:
+        return 0
+    try:
+        idx = int(jump_num) - 1
+        idx = max(0, min(idx, len(unique_images) - 1))
+        return idx
+    except (ValueError, TypeError):
+        return 0
 
 def save_evaluations(csv_path, evaluations):
     if not csv_path:
@@ -124,6 +134,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     
     with gr.Row():
         prev_btn = gr.Button("⬅️ Previous")
+        jump_num = gr.Number(label="Jump to Image #", precision=0, minimum=1, show_label=True, step=1, value=1)
+        jump_btn = gr.Button("Jump")
         next_btn = gr.Button("Next ➡️")
         
     with gr.Row():
@@ -144,7 +156,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     ).then(
         update_ui,
         inputs=[images_state, df_state, index_state, evals_state],
-        outputs=[image_output, progress_label]
+        outputs=[image_output, progress_label, jump_num]
     )
     
     next_btn.click(
@@ -154,7 +166,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     ).then(
         update_ui,
         inputs=[images_state, df_state, index_state, evals_state],
-        outputs=[image_output, progress_label]
+        outputs=[image_output, progress_label, jump_num]
     )
     
     prev_btn.click(
@@ -164,7 +176,27 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     ).then(
         update_ui,
         inputs=[images_state, df_state, index_state, evals_state],
-        outputs=[image_output, progress_label]
+        outputs=[image_output, progress_label, jump_num]
+    )
+    
+    jump_btn.click(
+        jump_to_image,
+        inputs=[jump_num, images_state],
+        outputs=[index_state]
+    ).then(
+        update_ui,
+        inputs=[images_state, df_state, index_state, evals_state],
+        outputs=[image_output, progress_label, jump_num]
+    )
+
+    jump_num.submit(
+        jump_to_image,
+        inputs=[jump_num, images_state],
+        outputs=[index_state]
+    ).then(
+        update_ui,
+        inputs=[images_state, df_state, index_state, evals_state],
+        outputs=[image_output, progress_label, jump_num]
     )
     
     correct_btn.click(
@@ -174,7 +206,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     ).then(
         update_ui,
         inputs=[images_state, df_state, index_state, evals_state],
-        outputs=[image_output, progress_label]
+        outputs=[image_output, progress_label, jump_num]
     )
     
     incorrect_btn.click(
@@ -184,7 +216,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     ).then(
         update_ui,
         inputs=[images_state, df_state, index_state, evals_state],
-        outputs=[image_output, progress_label]
+        outputs=[image_output, progress_label, jump_num]
     )
 
 if __name__ == "__main__":

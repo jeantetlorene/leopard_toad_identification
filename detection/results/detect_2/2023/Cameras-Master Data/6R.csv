@@ -1,0 +1,3 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6R/103MEDIA/DSCF0326.JPG,DSCF0326.JPG,6R/103MEDIA,2,Western_Leopard_Toad,0.4666,1746.2,1413.3,2034.3,1750.4
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6R/101MEDIA/DSCF0701.JPG,DSCF0701.JPG,6R/101MEDIA,2,Western_Leopard_Toad,0.2568,4405.5,774.2,4608.0,1415.0

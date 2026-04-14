@@ -1,0 +1,6 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/5Z/100MEDIA/DSCF0001.JPG,DSCF0001.JPG,5Z/100MEDIA,1,Small_Mammal,0.8635,2931.5,0.0,5376.0,2915.1
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/5Z/100MEDIA/DSCF0003.JPG,DSCF0003.JPG,5Z/100MEDIA,0,Other_Amphibian,0.0288,3345.2,1914.1,3516.9,2078.3
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/5Z/100MEDIA/DSCF0005.JPG,DSCF0005.JPG,5Z/100MEDIA,0,Other_Amphibian,0.0128,2310.1,270.6,2508.2,534.6
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/5Z/100MEDIA/DSCF0004.JPG,DSCF0004.JPG,5Z/100MEDIA,0,Other_Amphibian,0.0406,2295.0,260.0,2508.6,548.1
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/5Z/100MEDIA/DSCF0002.JPG,DSCF0002.JPG,5Z/100MEDIA,0,Other_Amphibian,0.0365,2300.5,262.1,2507.1,540.8

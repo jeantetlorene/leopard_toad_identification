@@ -1,0 +1,9 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-100 (690).JPG,3z-100 (690).JPG,3Z,2,Western_Leopard_Toad,0.7847,586.5,2238.8,990.6,2446.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-100 (964).JPG,3z-100 (964).JPG,3Z,0,Other_Amphibian,0.2741,3063.8,1368.9,3290.3,1683.5
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-102 (10).JPG,3z-102 (10).JPG,3Z,2,Western_Leopard_Toad,0.7388,2307.1,2186.9,3028.4,2455.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-100 (760).JPG,3z-100 (760).JPG,3Z,0,Other_Amphibian,0.5253,2811.7,1447.0,2951.2,1616.4
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-102 (106).JPG,3z-102 (106).JPG,3Z,2,Western_Leopard_Toad,0.2428,4006.7,2297.8,4166.1,2455.7
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-100 (840).JPG,3z-100 (840).JPG,3Z,0,Other_Amphibian,0.2946,2774.1,1678.9,3049.6,1981.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-100 (764).JPG,3z-100 (764).JPG,3Z,0,Other_Amphibian,0.4274,2608.0,1789.8,2745.6,1970.5
+/srv/shared_leopard_toad/2023/Cameras - AI Data/3Z/3z-100 (594).JPG,3z-100 (594).JPG,3Z,2,Western_Leopard_Toad,0.3204,4250.0,1973.9,4608.0,2460.8

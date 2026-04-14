@@ -1,0 +1,3 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2024/18.11.2024/6Z/104MEDIA/DSCF0155.JPG,DSCF0155.JPG,6Z/104MEDIA,0,Other_Amphibian,0.2625,2621.7,0.0,2829.3,173.0
+/srv/shared_leopard_toad/2024/18.11.2024/6Z/104MEDIA/DSCF0145.JPG,DSCF0145.JPG,6Z/104MEDIA,0,Other_Amphibian,0.3339,2620.8,0.0,2826.7,180.3

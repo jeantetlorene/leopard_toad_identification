@@ -1,0 +1,2 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2024/16.09.2024/4Z/100MEDIA/DSCF0001.JPG,DSCF0001.JPG,4Z/100MEDIA,2,Western_Leopard_Toad,0.2917,4171.1,2105.0,4597.5,2454.1

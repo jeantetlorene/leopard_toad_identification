@@ -1,0 +1,4 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2024/28.08.2024/6Z/104MEDIA/DSCF0207.JPG,DSCF0207.JPG,6Z/104MEDIA,2,Western_Leopard_Toad,0.4253,3704.8,2242.7,4030.5,2450.7
+/srv/shared_leopard_toad/2024/28.08.2024/6Z/101MEDIA/DSCF0404.JPG,DSCF0404.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.4259,3026.4,779.1,3260.1,1044.9
+/srv/shared_leopard_toad/2024/28.08.2024/6Z/101MEDIA/DSCF0400.JPG,DSCF0400.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.5614,3028.4,765.0,3272.8,1039.9

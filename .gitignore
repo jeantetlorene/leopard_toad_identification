@@ -15,3 +15,8 @@ identification/weights/best_simclr.pth
 detection/weights/best_retinanet.pth
 detection/weights/best_faster_rcnn1.pth
 detection/weights/best_faster_rcnn.pth
+detection/results/detect_faster_rcnn/*
+detection/results/detect_rtdetr/*
+
+*.pt
+*.pth
