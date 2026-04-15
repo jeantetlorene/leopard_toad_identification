@@ -31,9 +31,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 import requests
 
 
-DEFAULT_METADATA_URL = (
-    "https://storage.googleapis.com/public-datasets-lila/osu-small-animals/osu-small-animals.json.zip"
-)
+DEFAULT_METADATA_URL = "https://storage.googleapis.com/public-datasets-lila/osu-small-animals/osu-small-animals.json.zip"
 DEFAULT_IMAGE_BASE_URL = (
     "https://storage.googleapis.com/public-datasets-lila/osu-small-animals"
 )
@@ -138,7 +136,9 @@ def read_json_from_file(path: Path) -> dict:
         return json.load(f)
 
 
-def load_metadata(metadata_file: Optional[str], metadata_url: str, timeout: int) -> dict:
+def load_metadata(
+    metadata_file: Optional[str], metadata_url: str, timeout: int
+) -> dict:
     if metadata_file:
         return read_json_from_file(Path(metadata_file))
     blob = load_bytes_from_url(metadata_url, timeout=timeout)
@@ -171,7 +171,9 @@ def build_category_maps(data: dict) -> Tuple[Dict[int, str], Dict[str, int]]:
     return id_to_name, name_to_id
 
 
-def matching_category_ids(id_to_name: Dict[int, str], keywords: Sequence[str]) -> Set[int]:
+def matching_category_ids(
+    id_to_name: Dict[int, str], keywords: Sequence[str]
+) -> Set[int]:
     out: Set[int] = set()
     for cid, name in id_to_name.items():
         name_l = name.lower()
@@ -180,7 +182,9 @@ def matching_category_ids(id_to_name: Dict[int, str], keywords: Sequence[str]) -
     return out
 
 
-def filter_dataset(data: dict, keywords: Sequence[str]) -> Tuple[List[dict], List[dict], Set[int]]:
+def filter_dataset(
+    data: dict, keywords: Sequence[str]
+) -> Tuple[List[dict], List[dict], Set[int]]:
     """
     Works for either:
     - image-level records with species encoded in file_name/id
@@ -329,7 +333,9 @@ def main() -> int:
         matched_images, matched_annotations, matched_category_ids = filter_dataset(
             data, args.keywords
         )
-        filtered = make_filtered_output(data, matched_images, matched_annotations, matched_category_ids)
+        filtered = make_filtered_output(
+            data, matched_images, matched_annotations, matched_category_ids
+        )
     else:
         raise ValueError("Unsupported metadata format. Expected a dict or list.")
 
@@ -340,7 +346,9 @@ def main() -> int:
             filtered["images"] = matched_images
             if "annotations" in filtered:
                 filtered["annotations"] = [
-                    ann for ann in filtered["annotations"] if ann.get("image_id") in matched_ids
+                    ann
+                    for ann in filtered["annotations"]
+                    if ann.get("image_id") in matched_ids
                 ]
         elif isinstance(filtered, list):
             filtered = matched_images

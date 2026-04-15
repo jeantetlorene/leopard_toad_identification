@@ -35,8 +35,7 @@ DEFAULT_METADATA_URL = (
 )
 
 DEFAULT_IMAGE_BASE_URL = (
-    "https://storage.googleapis.com/public-datasets-lila/"
-    "california-small-animals"
+    "https://storage.googleapis.com/public-datasets-lila/california-small-animals"
 )
 DEFAULT_KEYWORDS = ["toad", "rat", "frog"]
 
@@ -139,7 +138,9 @@ def read_json_from_file(path: Path) -> dict:
         return json.load(f)
 
 
-def load_metadata(metadata_file: Optional[str], metadata_url: str, timeout: int) -> dict:
+def load_metadata(
+    metadata_file: Optional[str], metadata_url: str, timeout: int
+) -> dict:
     if metadata_file:
         return read_json_from_file(Path(metadata_file))
     blob = load_bytes_from_url(metadata_url, timeout=timeout)
@@ -172,7 +173,9 @@ def build_category_maps(data: dict) -> Tuple[Dict[int, str], Dict[str, int]]:
     return id_to_name, name_to_id
 
 
-def matching_category_ids(id_to_name: Dict[int, str], keywords: Sequence[str]) -> Set[int]:
+def matching_category_ids(
+    id_to_name: Dict[int, str], keywords: Sequence[str]
+) -> Set[int]:
     out: Set[int] = set()
     for cid, name in id_to_name.items():
         name_l = name.lower()
@@ -181,7 +184,9 @@ def matching_category_ids(id_to_name: Dict[int, str], keywords: Sequence[str]) -
     return out
 
 
-def filter_dataset(data: dict, keywords: Sequence[str]) -> Tuple[List[dict], List[dict], Set[int]]:
+def filter_dataset(
+    data: dict, keywords: Sequence[str]
+) -> Tuple[List[dict], List[dict], Set[int]]:
     keywords = normalize_keywords(keywords)
 
     images: List[dict] = data.get("images", [])
@@ -329,7 +334,9 @@ def main() -> int:
             filtered["images"] = matched_images
             if "annotations" in filtered:
                 filtered["annotations"] = [
-                    ann for ann in filtered["annotations"] if ann.get("image_id") in matched_ids
+                    ann
+                    for ann in filtered["annotations"]
+                    if ann.get("image_id") in matched_ids
                 ]
         elif isinstance(filtered, list):
             filtered = matched_images

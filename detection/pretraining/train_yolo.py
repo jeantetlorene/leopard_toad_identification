@@ -19,7 +19,7 @@ yaml_content = {
     "val": "images/val",
     "test": "images/test",
     "nc": len(classes),
-    "names": {i: name for i, name in enumerate(classes)}
+    "names": {i: name for i, name in enumerate(classes)},
 }
 
 with open(data_yaml_path, "w") as f:
@@ -29,6 +29,7 @@ print(f"Successfully generated {data_yaml_path}")
 
 # 3. Initialize the YOLO model
 model = YOLO("yolo26m.pt")
+
 
 # 4. Train the model
 def main():
@@ -41,9 +42,10 @@ def main():
         device="0",
         project="/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/train",
         name="yolo_model",
-        exist_ok=True
+        exist_ok=True,
     )
     print("Training complete!")
+
 
 if __name__ == "__main__":
     main()
