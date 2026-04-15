@@ -91,7 +91,7 @@ def main():
     )
     
     # Check if a custom ViT best weight exists from previous runs and load it
-    best_weights = "/home/Joshua/Downloads/OIDv4_ToolKit/runs/vit_model/weights/best.bin"
+    best_weights = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/vit_model/weights/best.bin"
     if os.path.exists(best_weights):
         print(f"Loading custom specific ViT weights from {best_weights}...")
         model.load_state_dict(torch.load(best_weights, map_location="cpu"))

@@ -4,6 +4,11 @@
 .vscode
 dataset/detect_2/*
 dataset/detect_1/*
+dataset/dataset/*
+dataset/dataset1/*
+dataset/dataset2/*
+dataset/ohio_small_animals_subset/*
+dataset/california_small_animals_subset/*
 dataset/inaturalist images/*
 dataset/dataset_reid_crops/*
 dataset/reid/images/*

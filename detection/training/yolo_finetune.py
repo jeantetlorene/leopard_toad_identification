@@ -21,7 +21,7 @@ if not os.path.exists(data_yaml_path):
     print(f"Successfully generated {data_yaml_path}")
 
 # Load the best YOLO model from previous run
-model_path = "/home/Joshua/Downloads/OIDv4_ToolKit/runs/detect/yolo_model/weights/best.pt"
+model_path = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/detect/yolo_model/weights/best.pt"
 print(f"Loading YOLO model from {model_path}...")
 model = YOLO(model_path)
 

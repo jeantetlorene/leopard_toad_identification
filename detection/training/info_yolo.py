@@ -1,7 +1,7 @@
 # %%
 from ultralytics import YOLO
 
-model = YOLO("/home/Joshua/Downloads/OIDv4_ToolKit/runs/detect/yolo_model/weights/best.pt")
+model = YOLO("/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/detect/yolo_model/weights/best.pt")
 
 # Prints the detailed layers table
 model.info(detailed=True)

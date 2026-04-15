@@ -21,7 +21,7 @@ if not os.path.exists(data_yaml_path):
     print(f"Successfully generated {data_yaml_path}")
 
 # Load the best RT-DETR model from previous run
-model_path = "/home/Joshua/Downloads/OIDv4_ToolKit/runs/detect/rtdetr_finetuning/weights/best.pt"
+model_path = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/detect/rtdetr_finetuning/weights/best.pt"
 print(f"Loading RT-DETR model from {model_path}...")
 model = RTDETR(model_path)
 

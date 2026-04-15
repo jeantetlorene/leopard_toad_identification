@@ -224,7 +224,7 @@ def main():
     print("Initializing Faster R-CNN model...")
     model = fasterrcnn_resnet50_fpn(weights=None, num_classes=num_classes)
     
-    best_weights = "/home/Joshua/Downloads/OIDv4_ToolKit/runs/faster_rcnn/train_resnet50/weights/best.pt"
+    best_weights = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn/train_resnet50/weights/best.pt"
     if os.path.exists(best_weights):
         print(f"Loading best weights from {best_weights}...")
         state_dict = torch.load(best_weights, map_location="cpu")

@@ -1,6 +1,6 @@
 task: detect
 mode: train
-model: /home/Joshua/Downloads/OIDv4_ToolKit/runs/detect/yolo_model/weights/best.pt
+model: /home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/detect/yolo_model/weights/best.pt
 data: /home/Joshua/Downloads/leopard_toad_identification/dataset/detect_2/dataset_clahe/dataset_clahe.yaml
 epochs: 50
 time: null
