@@ -42,14 +42,15 @@ def train_phase_2(model_weights, run_name, epochs=30):
     return os.path.join(YOLO_DIR, "runs", f"{run_name}_phase2", "weights", "best.pt")
 
 
-def train_scratch(model_weights, run_name, epochs=60):
+def train_scratch(model_weights, run_name, epochs=300, patience=50):
     """
-    Standard training for the from-scratch model.
+    Standard training for the from-scratch model until convergence.
     """
     model = YOLO(model_weights)  # Create from scratch
     results = model.train(
         data=DATASET_YAML,
         epochs=epochs,
+        patience=patience,
         imgsz=IMG_SIZE,
         batch=TRAIN_BATCH_SIZE,
         project=os.path.join(YOLO_DIR, "runs"),
