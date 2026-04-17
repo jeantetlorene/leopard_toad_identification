@@ -1,0 +1,112 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax,evaluation
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/105MEDIA/DSCF0179.JPG,DSCF0179.JPG,4R/105MEDIA,2,Western_Leopard_Toad,0.7378,2352.8,233.6,2711.1,665.8,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/104MEDIA/DSCF0903.JPG,DSCF0903.JPG,4R/104MEDIA,2,Western_Leopard_Toad,0.8532,1349.8,804.8,2305.9,1629.8,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/104MEDIA/DSCF0897.JPG,DSCF0897.JPG,4R/104MEDIA,2,Western_Leopard_Toad,0.3684,3954.1,2447.8,4695.0,2860.6,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/108MEDIA/DSCF0718.JPG,DSCF0718.JPG,4R/108MEDIA,2,Western_Leopard_Toad,0.7724,2010.3,919.5,2934.8,2093.0,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/109MEDIA/DSCF0547.JPG,DSCF0547.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.8565,2740.3,13.5,3460.0,856.0,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/100MEDIA/DSCF0885.JPG,DSCF0885.JPG,4R/100MEDIA,0,Other_Amphibian,0.8161,1975.7,1600.3,2222.0,1883.0,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/100MEDIA/DSCF0883.JPG,DSCF0883.JPG,4R/100MEDIA,0,Other_Amphibian,0.4449,1864.8,1834.3,2078.2,2066.4,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/100MEDIA/DSCF0886.JPG,DSCF0886.JPG,4R/100MEDIA,0,Other_Amphibian,0.4998,2016.1,1462.4,2299.0,1786.4,Correct
+/srv/shared_leopard_toad/2025/Documents/12.19.08.2025/4R/100MEDIA/DSCF0882.JPG,DSCF0882.JPG,4R/100MEDIA,0,Other_Amphibian,0.3324,1763.7,1948.8,1973.2,2199.9,Correct
+/srv/shared_leopard_toad/2025/Documents/22.09-29.09.2025/4R/102MEDIA/DSCF0415.JPG,DSCF0415.JPG,4R/102MEDIA,0,Other_Amphibian,0.2818,1277.3,1739.1,1494.7,2108.5,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/105MEDIA/DSCF0215.JPG,DSCF0215.JPG,4R/105MEDIA,0,Other_Amphibian,0.3868,2767.2,1651.4,2979.0,1890.4,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/105MEDIA/DSCF0214.JPG,DSCF0214.JPG,4R/105MEDIA,0,Other_Amphibian,0.6304,2780.9,1683.4,3008.3,1913.6,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/105MEDIA/DSCF0953.JPG,DSCF0953.JPG,4R/105MEDIA,0,Other_Amphibian,0.6083,1262.3,1500.3,1609.1,1909.3,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/101MEDIA/DSCF0226.JPG,DSCF0226.JPG,4R/101MEDIA,2,Western_Leopard_Toad,0.6871,1289.4,2009.9,1566.0,2375.9,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/100MEDIA/DSCF0659.JPG,DSCF0659.JPG,4R/100MEDIA,0,Other_Amphibian,0.5652,3038.6,2432.5,3284.9,2685.7,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/100MEDIA/DSCF0686.JPG,DSCF0686.JPG,4R/100MEDIA,0,Other_Amphibian,0.6306,1839.7,2148.2,2102.6,2525.3,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/100MEDIA/DSCF0685.JPG,DSCF0685.JPG,4R/100MEDIA,0,Other_Amphibian,0.7543,1919.6,2321.2,2214.0,2721.4,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/100MEDIA/DSCF0687.JPG,DSCF0687.JPG,4R/100MEDIA,0,Other_Amphibian,0.626,1654.5,1946.1,1969.5,2311.8,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/100MEDIA/DSCF0684.JPG,DSCF0684.JPG,4R/100MEDIA,0,Other_Amphibian,0.6406,2032.3,2498.2,2241.1,2851.5,Correct
+/srv/shared_leopard_toad/2025/Documents/09.09.15.09.2025/4R/100MEDIA/DSCF0688.JPG,DSCF0688.JPG,4R/100MEDIA,0,Other_Amphibian,0.6652,1579.1,1721.5,1837.1,2115.7,Correct
+/srv/shared_leopard_toad/2025/Documents/06.10-13.10.2025/4R/105MEDIA/DSCF0938.JPG,DSCF0938.JPG,4R/105MEDIA,2,Western_Leopard_Toad,0.376,847.2,1125.5,1299.5,1587.4,Correct
+/srv/shared_leopard_toad/2025/Documents/06.10-13.10.2025/4R/106MEDIA/DSCF0044.JPG,DSCF0044.JPG,4R/106MEDIA,2,Western_Leopard_Toad,0.2849,4709.0,1715.9,5184.1,2251.1,Correct
+/srv/shared_leopard_toad/2025/Documents/06.10-13.10.2025/4R/106MEDIA/DSCF0008.JPG,DSCF0008.JPG,4R/106MEDIA,2,Western_Leopard_Toad,0.2672,1563.7,1610.8,2139.5,2378.0,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/104MEDIA/DSCF0451.JPG,DSCF0451.JPG,4R/104MEDIA,0,Other_Amphibian,0.5409,4404.8,2104.6,4720.6,2491.1,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0067.JPG,DSCF0067.JPG,4R/101MEDIA,0,Other_Amphibian,0.8116,3008.4,1622.6,3194.3,1845.2,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0063.JPG,DSCF0063.JPG,4R/101MEDIA,0,Other_Amphibian,0.8437,3005.3,1633.7,3189.7,1846.3,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0065.JPG,DSCF0065.JPG,4R/101MEDIA,0,Other_Amphibian,0.8441,3005.4,1630.7,3191.4,1845.2,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0706.JPG,DSCF0706.JPG,4R/101MEDIA,0,Other_Amphibian,0.6546,1145.3,1942.7,1353.9,2368.6,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0068.JPG,DSCF0068.JPG,4R/101MEDIA,0,Other_Amphibian,0.8157,3008.7,1623.1,3193.7,1845.5,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0066.JPG,DSCF0066.JPG,4R/101MEDIA,0,Other_Amphibian,0.8039,3007.7,1622.2,3196.6,1844.8,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0062.JPG,DSCF0062.JPG,4R/101MEDIA,0,Other_Amphibian,0.8304,3005.9,1633.1,3191.2,1848.4,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0935.JPG,DSCF0935.JPG,4R/101MEDIA,0,Other_Amphibian,0.3673,3134.9,1515.8,3535.1,1959.1,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/101MEDIA/DSCF0064.JPG,DSCF0064.JPG,4R/101MEDIA,0,Other_Amphibian,0.8763,3004.8,1630.5,3192.5,1844.4,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/106MEDIA/DSCF0543.JPG,DSCF0543.JPG,4R/106MEDIA,0,Other_Amphibian,0.4818,3306.2,1588.0,3731.4,1939.4,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/106MEDIA/DSCF0864.JPG,DSCF0864.JPG,4R/106MEDIA,0,Other_Amphibian,0.5495,885.2,1906.0,1252.5,2192.1,Correct
+/srv/shared_leopard_toad/2025/Documents/15.09-22.09.2025/4R/100MEDIA/DSCF0422.JPG,DSCF0422.JPG,4R/100MEDIA,2,Western_Leopard_Toad,0.5073,1585.8,1825.9,1941.2,2096.5,Correct
+/srv/shared_leopard_toad/2025/Documents/01.09.09.09.2025/4R/102MEDIA/DSCF0544.JPG,DSCF0544.JPG,4R/102MEDIA,0,Other_Amphibian,0.4939,2392.3,1083.5,2808.0,1519.0,Correct
+/srv/shared_leopard_toad/2025/Documents/01.09.09.09.2025/4R/102MEDIA/DSCF0546.JPG,DSCF0546.JPG,4R/102MEDIA,0,Other_Amphibian,0.5995,2186.1,863.3,2598.1,1297.6,Correct
+/srv/shared_leopard_toad/2025/Documents/01.09.09.09.2025/4R/102MEDIA/DSCF0547.JPG,DSCF0547.JPG,4R/102MEDIA,0,Other_Amphibian,0.3735,2141.7,703.9,2530.6,1137.0,Correct
+/srv/shared_leopard_toad/2025/Documents/01.09.09.09.2025/4R/101MEDIA/DSCF0430.JPG,DSCF0430.JPG,4R/101MEDIA,0,Other_Amphibian,0.6888,3052.2,2291.6,3397.6,2681.9,Correct
+/srv/shared_leopard_toad/2025/Documents/01.09.09.09.2025/4R/101MEDIA/DSCF0425.JPG,DSCF0425.JPG,4R/101MEDIA,0,Other_Amphibian,0.4119,2057.7,2578.0,2363.4,2856.7,Correct
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/4R/103MEDIA/DSCF0536.JPG,DSCF0536.JPG,4R/103MEDIA,2,Western_Leopard_Toad,0.3801,2996.4,1962.0,3368.6,2236.6,Correct
+/srv/shared_leopard_toad/2025/Documents/21-28.08.2025/4R/102MEDIA/DSCF0905.JPG,DSCF0905.JPG,4R/102MEDIA,0,Other_Amphibian,0.6947,3029.9,1050.3,3362.2,1367.5,Correct
+/srv/shared_leopard_toad/2024/23.08.2024/4R/100MEDIA/DSCF0041.JPG,DSCF0041.JPG,4R/100MEDIA,0,Other_Amphibian,0.4933,2087.3,491.0,2297.4,727.1,Correct
+/srv/shared_leopard_toad/2024/18.11.2024/4R/103MEDIA/DSCF0806.JPG,DSCF0806.JPG,4R/103MEDIA,0,Other_Amphibian,0.3717,1617.7,2333.4,1795.6,2449.3,Correct
+/srv/shared_leopard_toad/2024/18.11.2024/4R/114MEDIA/DSCF0416.JPG,DSCF0416.JPG,4R/114MEDIA,2,Western_Leopard_Toad,0.7647,2781.2,271.0,3333.9,972.2,Correct
+/srv/shared_leopard_toad/2024/18.11.2024/4R/114MEDIA/DSCF0417.JPG,DSCF0417.JPG,4R/114MEDIA,2,Western_Leopard_Toad,0.7825,2775.6,270.9,3334.3,966.5,Correct
+/srv/shared_leopard_toad/2024/18.11.2024/4R/114MEDIA/DSCF0414.JPG,DSCF0414.JPG,4R/114MEDIA,2,Western_Leopard_Toad,0.7997,2724.6,286.1,3317.0,952.0,Correct
+/srv/shared_leopard_toad/2024/18.11.2024/4R/114MEDIA/DSCF0418.JPG,DSCF0418.JPG,4R/114MEDIA,2,Western_Leopard_Toad,0.8059,2779.7,269.9,3339.3,979.3,Correct
+/srv/shared_leopard_toad/2024/18.11.2024/4R/114MEDIA/DSCF0415.JPG,DSCF0415.JPG,4R/114MEDIA,2,Western_Leopard_Toad,0.7949,2773.9,263.7,3335.4,960.4,Correct
+/srv/shared_leopard_toad/2024/26.09.2024/4R/106MEDIA/DSCF0139.JPG,DSCF0139.JPG,4R/106MEDIA,2,Western_Leopard_Toad,0.6661,2756.2,963.1,3047.5,1260.7,Correct
+/srv/shared_leopard_toad/2024/26.09.2024/4R/106MEDIA/DSCF0815.JPG,DSCF0815.JPG,4R/106MEDIA,2,Western_Leopard_Toad,0.2667,3178.4,1488.1,3409.9,1829.0,Correct
+/srv/shared_leopard_toad/2024/26.09.2024/4R/106MEDIA/DSCF0140.JPG,DSCF0140.JPG,4R/106MEDIA,2,Western_Leopard_Toad,0.6059,2583.3,933.1,2838.5,1275.0,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/104MEDIA/DSCF0694.JPG,DSCF0694.JPG,4R/104MEDIA,0,Other_Amphibian,0.3141,2015.3,748.9,2249.2,1003.9,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0012.JPG,DSCF0012.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.3151,2313.8,1847.0,2611.3,2099.5,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0015.JPG,DSCF0015.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.7081,2341.7,1831.7,2596.0,2077.0,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0013.JPG,DSCF0013.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.4175,2266.1,1781.2,2523.1,2041.0,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0011.JPG,DSCF0011.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.6486,2389.4,1836.4,2649.2,2096.4,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0017.JPG,DSCF0017.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.5866,2161.0,1670.8,2436.7,1934.7,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0010.JPG,DSCF0010.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.6958,2386.7,1867.8,2646.2,2121.1,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0016.JPG,DSCF0016.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.56,2343.3,1833.0,2596.4,2078.2,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0014.JPG,DSCF0014.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.6846,2342.5,1829.5,2597.6,2078.7,Correct
+/srv/shared_leopard_toad/2024/16.09.2024/4R/109MEDIA/DSCF0009.JPG,DSCF0009.JPG,4R/109MEDIA,2,Western_Leopard_Toad,0.7664,2424.2,1891.8,2705.1,2144.6,Correct
+/srv/shared_leopard_toad/2024/11.10.2024/4R/103MEDIA/DSCF0605.JPG,DSCF0605.JPG,4R/103MEDIA,2,Western_Leopard_Toad,0.5128,907.9,0.0,1719.1,462.1,Correct
+/srv/shared_leopard_toad/2024/11.10.2024/4R/104MEDIA/DSCF0708.JPG,DSCF0708.JPG,4R/104MEDIA,2,Western_Leopard_Toad,0.8399,2659.3,422.9,3359.1,1266.5,Correct
+/srv/shared_leopard_toad/2024/11.10.2024/4R/110MEDIA/DSCF0128.JPG,DSCF0128.JPG,4R/110MEDIA,2,Western_Leopard_Toad,0.7411,3619.2,693.0,4193.6,1334.2,Correct
+/srv/shared_leopard_toad/2024/11.10.2024/4R/109MEDIA/DSCF0513.JPG,DSCF0513.JPG,4R/109MEDIA,0,Other_Amphibian,0.4089,2342.6,1122.9,2564.9,1375.5,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/104MEDIA/DSCF0621.JPG,DSCF0621.JPG,4R/104MEDIA,2,Western_Leopard_Toad,0.7908,954.9,1664.5,1348.1,2216.6,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/102MEDIA/DSCF0902.JPG,DSCF0902.JPG,4R/102MEDIA,0,Other_Amphibian,0.6457,1528.8,2070.2,1805.3,2388.8,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/102MEDIA/DSCF0902.JPG,DSCF0902.JPG,4R/102MEDIA,0,Other_Amphibian,0.5493,1528.0,2072.4,1725.1,2394.7,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/102MEDIA/DSCF0903.JPG,DSCF0903.JPG,4R/102MEDIA,0,Other_Amphibian,0.6162,1437.0,1943.5,1863.4,2419.6,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/100MEDIA/DSCF0341.JPG,DSCF0341.JPG,4R/100MEDIA,0,Other_Amphibian,0.6481,2073.4,1407.5,2293.4,1647.2,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/100MEDIA/DSCF0342.JPG,DSCF0342.JPG,4R/100MEDIA,0,Other_Amphibian,0.5607,2073.6,1407.3,2287.8,1647.6,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/100MEDIA/DSCF0346.JPG,DSCF0346.JPG,4R/100MEDIA,0,Other_Amphibian,0.4456,2116.6,1721.8,2317.6,1940.1,Correct
+/srv/shared_leopard_toad/2024/28.08.2024/4R/100MEDIA/DSCF0351.JPG,DSCF0351.JPG,4R/100MEDIA,0,Other_Amphibian,0.4549,1688.6,1840.0,1904.4,2052.4,Correct
+/srv/shared_leopard_toad/2024/09.02.2024/4R/102MEDIA/DSCF0898.JPG,DSCF0898.JPG,4R/102MEDIA,2,Western_Leopard_Toad,0.7572,1250.7,1641.4,1675.5,2159.7,Correct
+/srv/shared_leopard_toad/2024/09.02.2024/4R/101MEDIA/DSCF0730.JPG,DSCF0730.JPG,4R/101MEDIA,2,Western_Leopard_Toad,0.8695,618.8,109.1,1160.9,760.9,Correct
+/srv/shared_leopard_toad/2024/09.02.2024/4R/101MEDIA/DSCF0729.JPG,DSCF0729.JPG,4R/101MEDIA,2,Western_Leopard_Toad,0.8297,608.9,103.6,1161.3,758.8,Correct
+/srv/shared_leopard_toad/2024/09.02.2024/4R/101MEDIA/DSCF0600.JPG,DSCF0600.JPG,4R/101MEDIA,2,Western_Leopard_Toad,0.3613,2207.0,0.0,2463.8,203.4,Correct
+/srv/shared_leopard_toad/2024/09.02.2024/4R/100MEDIA/DSCF0198.JPG,DSCF0198.JPG,4R/100MEDIA,2,Western_Leopard_Toad,0.2602,2625.0,335.5,2878.9,550.4,Correct
+/srv/shared_leopard_toad/2024/09.02.2024/4R/100MEDIA/DSCF0638.JPG,DSCF0638.JPG,4R/100MEDIA,2,Western_Leopard_Toad,0.331,2082.8,753.9,2345.4,985.0,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (549).JPG,4r-103 (549).JPG,4R,0,Other_Amphibian,0.9334,2651.5,1246.3,3018.4,1598.9,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (545).JPG,4r-103 (545).JPG,4R,0,Other_Amphibian,0.8933,2394.1,1512.2,2732.8,1830.9,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (538).JPG,4r-103 (538).JPG,4R,0,Other_Amphibian,0.884,2075.0,2029.3,2324.8,2427.5,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (541).JPG,4r-103 (541).JPG,4R,0,Other_Amphibian,0.8794,2181.7,1779.7,2452.1,2113.0,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (547).JPG,4r-103 (547).JPG,4R,0,Other_Amphibian,0.9299,2540.4,1365.3,2886.5,1714.7,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-101 (241).JPG,4r-101 (241).JPG,4R,0,Other_Amphibian,0.689,1075.9,1120.4,1365.6,1460.2,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (543).JPG,4r-103 (543).JPG,4R,0,Other_Amphibian,0.8525,2316.5,1603.8,2606.8,1933.7,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (537).JPG,4r-103 (537).JPG,4R,0,Other_Amphibian,0.8741,2016.8,2132.2,2287.5,2446.6,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (546).JPG,4r-103 (546).JPG,4R,0,Other_Amphibian,0.8696,2468.8,1437.5,2802.9,1764.9,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (536).JPG,4r-103 (536).JPG,4R,0,Other_Amphibian,0.3929,1999.5,2235.5,2280.0,2448.8,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (540).JPG,4r-103 (540).JPG,4R,0,Other_Amphibian,0.8873,2193.0,1802.3,2458.7,2179.9,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (550).JPG,4r-103 (550).JPG,4R,0,Other_Amphibian,0.8463,2707.1,1178.8,3096.9,1552.6,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (454).JPG,4r-103 (454).JPG,4R,0,Other_Amphibian,0.8939,1995.7,1474.2,2279.4,1791.6,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (544).JPG,4r-103 (544).JPG,4R,0,Other_Amphibian,0.8727,2367.8,1544.4,2699.2,1880.3,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (542).JPG,4r-103 (542).JPG,4R,0,Other_Amphibian,0.8768,2258.8,1666.1,2538.8,2049.4,Correct
+/srv/shared_leopard_toad/2023/Cameras - AI Data/4R/4r-103 (539).JPG,4r-103 (539).JPG,4R,0,Other_Amphibian,0.9115,2126.8,1933.3,2412.0,2329.1,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0537.JPG,DSCF0537.JPG,4R/103MEDIA,0,Other_Amphibian,0.8741,2016.8,2132.2,2287.5,2446.6,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0541.JPG,DSCF0541.JPG,4R/103MEDIA,0,Other_Amphibian,0.8794,2181.7,1779.7,2452.1,2113.0,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0543.JPG,DSCF0543.JPG,4R/103MEDIA,0,Other_Amphibian,0.8525,2316.5,1603.8,2606.8,1933.7,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0539.JPG,DSCF0539.JPG,4R/103MEDIA,0,Other_Amphibian,0.9115,2126.8,1933.3,2412.0,2329.1,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0549.JPG,DSCF0549.JPG,4R/103MEDIA,0,Other_Amphibian,0.9334,2651.5,1246.3,3018.4,1598.9,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0544.JPG,DSCF0544.JPG,4R/103MEDIA,0,Other_Amphibian,0.8727,2367.8,1544.4,2699.2,1880.3,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0536.JPG,DSCF0536.JPG,4R/103MEDIA,0,Other_Amphibian,0.3929,1999.5,2235.5,2280.0,2448.8,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0538.JPG,DSCF0538.JPG,4R/103MEDIA,0,Other_Amphibian,0.884,2075.0,2029.3,2324.8,2427.5,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0550.JPG,DSCF0550.JPG,4R/103MEDIA,0,Other_Amphibian,0.8463,2707.1,1178.8,3096.9,1552.6,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0545.JPG,DSCF0545.JPG,4R/103MEDIA,0,Other_Amphibian,0.8933,2394.1,1512.2,2732.8,1830.9,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0542.JPG,DSCF0542.JPG,4R/103MEDIA,0,Other_Amphibian,0.8768,2258.8,1666.1,2538.8,2049.4,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0540.JPG,DSCF0540.JPG,4R/103MEDIA,0,Other_Amphibian,0.8873,2193.0,1802.3,2458.7,2179.9,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0546.JPG,DSCF0546.JPG,4R/103MEDIA,0,Other_Amphibian,0.8696,2468.8,1437.5,2802.9,1764.9,Correct
+/srv/shared_leopard_toad/2023/Cameras-Master Data/4R/103MEDIA/DSCF0547.JPG,DSCF0547.JPG,4R/103MEDIA,0,Other_Amphibian,0.9299,2540.4,1365.3,2886.5,1714.7,Correct

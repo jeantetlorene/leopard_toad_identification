@@ -335,7 +335,7 @@ def main():
 
     # YOLO style run directory organization
     project_dir = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn"
-    run_name = "train_resnet50"
+    run_name = "train_resnet50_1"
     run_dir = os.path.join(project_dir, run_name)
     weights_dir = os.path.join(run_dir, "weights")
     results_dir = os.path.join(run_dir, "results")

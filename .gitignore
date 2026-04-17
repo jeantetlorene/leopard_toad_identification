@@ -25,3 +25,5 @@ detection/results/detect_rtdetr/*
 
 *.pt
 *.pth
+
+detection/active learning/data/detect_1/*
