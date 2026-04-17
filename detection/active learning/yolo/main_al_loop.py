@@ -14,7 +14,7 @@ from config import (
     BUDGET_PER_CYCLE,
     CANDIDATE_OUTPUT_CSV,
     AL_STATE_JSON,
-    BATCH_SIZE,
+    INFER_BATCH_SIZE,
 )
 from trainer import train_phase_1, train_phase_2, train_scratch
 from inference import get_unlabeled_pool, extract_features_and_boxes_batch
@@ -93,9 +93,7 @@ def main():
         return
 
     # To honor performance and the entire pool, we process in chunks
-    print(
-        "\n>> Starting Inference & Feature Extraction (This will take considerable time on 1.4TB)"
-    )
+    print("\n>> Starting Inference & Feature Extraction")
     active_model = YOLO(pretrained_model)
     dcus = DCUS()
 
@@ -104,8 +102,8 @@ def main():
     embeddings_list = []
 
     # Process in batches
-    for i in tqdm(range(0, len(pool), BATCH_SIZE), desc="Inferring Pool"):
-        chunk = pool[i : i + BATCH_SIZE]
+    for i in tqdm(range(0, len(pool), INFER_BATCH_SIZE), desc="Inferring Pool"):
+        chunk = pool[i : i + INFER_BATCH_SIZE]
         batch_paths, batch_boxes, batch_features = extract_features_and_boxes_batch(
             active_model, chunk
         )

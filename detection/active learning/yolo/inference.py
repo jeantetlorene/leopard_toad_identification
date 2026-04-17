@@ -1,11 +1,32 @@
 import os
 from pathlib import Path
-from config import YEARS, FOLDERS, EXCLUDED_CAMERAS, CONF_THRESHOLD, IMG_SIZE, DEVICE
+from config import (
+    YEARS,
+    FOLDERS,
+    EXCLUDED_CAMERAS,
+    CONF_THRESHOLD,
+    IMG_SIZE,
+    DEVICE,
+    TRAIN_IMAGES_DIR,
+)
 
 
 def get_unlabeled_pool():
     image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
     pool = []
+
+    # Step 1: Securely identify all images that have already been annotated (seed set + previous loops)
+    train_dir = TRAIN_IMAGES_DIR
+    annotated_basenames = set()
+    if os.path.exists(train_dir):
+        for f in os.listdir(train_dir):
+            if f.endswith(tuple(image_extensions)):
+                # The train generator saves images as: f"{camera}_{year}_{original_basename}"
+                parts = f.split("_", 2)
+                if len(parts) == 3:
+                    annotated_basenames.add(parts[2])
+                else:
+                    annotated_basenames.add(f)
 
     for year, base_input_dir in YEARS.items():
         for folder in FOLDERS:
@@ -15,8 +36,11 @@ def get_unlabeled_pool():
 
             for img_path in in_dir.rglob("*"):
                 if img_path.is_file() and img_path.suffix.lower() in image_extensions:
+                    # Skip excluded Static Eval cameras
                     if not any(f"/{cam}/" in str(img_path) for cam in EXCLUDED_CAMERAS):
-                        pool.append(str(img_path))
+                        # Skip anything that already exists in the training set
+                        if img_path.name not in annotated_basenames:
+                            pool.append(str(img_path))
     return pool
 
 
@@ -36,6 +60,7 @@ def extract_features_and_boxes_batch(model, chunk_paths):
             conf=CONF_THRESHOLD,
             imgsz=IMG_SIZE,
             device=DEVICE,
+            half=True,  # FP16 precision drastically speeds up inference on A6000
         )
 
         for k, result in enumerate(results):
