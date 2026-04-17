@@ -1,0 +1,114 @@
+import os
+import torch
+import cv2
+import numpy as np
+import concurrent.futures
+from pathlib import Path
+from config import (
+    YEARS,
+    FOLDERS,
+    EXCLUDED_CAMERAS,
+    CONF_THRESHOLD,
+    IMG_SIZE,
+    DEVICE,
+    TRAIN_IMAGES_DIR,
+)
+
+
+def get_unlabeled_pool():
+    image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+    pool = []
+
+    train_dir = TRAIN_IMAGES_DIR
+    annotated_basenames = set()
+    if os.path.exists(train_dir):
+        for f in os.listdir(train_dir):
+            if f.endswith(tuple(image_extensions)):
+                parts = f.split("_", 2)
+                if len(parts) == 3:
+                    annotated_basenames.add(parts[2])
+                else:
+                    annotated_basenames.add(f)
+
+    for year, base_input_dir in YEARS.items():
+        for folder in FOLDERS:
+            in_dir = Path(base_input_dir) / folder
+            if not in_dir.exists():
+                continue
+
+            for img_path in in_dir.rglob("*"):
+                if img_path.is_file() and img_path.suffix.lower() in image_extensions:
+                    if not any(f"/{cam}/" in str(img_path) for cam in EXCLUDED_CAMERAS):
+                        if img_path.name not in annotated_basenames:
+                            pool.append(str(img_path))
+    return pool
+
+
+def _parallel_read_and_tensor(path):
+    try:
+        img_bgr = cv2.imread(path)
+        if img_bgr is None:
+            return None
+        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        img_resized = cv2.resize(
+            img_rgb, (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_LINEAR
+        )
+        img_norm = img_resized.astype(np.float32) / 255.0
+        img_tensor = torch.from_numpy(img_norm).permute(2, 0, 1)  # C, H, W
+        return img_tensor
+    except Exception:
+        return None
+
+
+def extract_features_and_boxes_batch(model, chunk_paths):
+    chunk_boxes = []
+    chunk_features = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
+        loaded_tensors = list(executor.map(_parallel_read_and_tensor, chunk_paths))
+
+    valid_paths = []
+    valid_tensors = []
+    for path, t in zip(chunk_paths, loaded_tensors):
+        if t is not None:
+            valid_paths.append(path)
+            valid_tensors.append(t)
+
+    if not valid_tensors:
+        return [], [], []
+
+    try:
+        # Pytorch Faster R-CNN requires list of tensors
+        inputs = [t.to(DEVICE) for t in valid_tensors]
+
+        with torch.no_grad():
+            outputs = model(inputs)
+
+        for k, out in enumerate(outputs):
+            path = valid_paths[k]
+            boxes = []
+
+            pred_boxes = out["boxes"].cpu().numpy()
+            pred_scores = out["scores"].cpu().numpy()
+            pred_labels = out["labels"].cpu().numpy()
+
+            # Filter by conf
+            for i in range(len(pred_scores)):
+                if pred_scores[i] >= CONF_THRESHOLD:
+                    # native torch Faster r-cnn labels are 1-indexed. Yolo is 0.
+                    boxes.append(
+                        {"cls": int(pred_labels[i]) - 1, "conf": float(pred_scores[i])}
+                    )
+
+            semantic_features = []
+            for b in boxes[:3]:
+                semantic_features.extend([b["cls"], b["conf"]])
+            semantic_features += [0.0] * (6 - len(semantic_features))
+
+            chunk_boxes.append(boxes)
+            chunk_features.append(semantic_features)
+
+        return valid_paths, chunk_boxes, chunk_features
+    except Exception as e:
+        print(f"Failed to infer batch: {e}")
+        return [], [], []
