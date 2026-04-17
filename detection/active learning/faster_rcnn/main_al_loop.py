@@ -3,7 +3,19 @@ import csv
 import os
 import torch
 import numpy as np
+import argparse
 from tqdm import tqdm
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--mode",
+    choices=["pretrained", "scratch"],
+    required=True,
+    help="Run AL loop using either pretrained base or purely from scratch.",
+)
+args = parser.parse_args()
+
+os.environ["AL_MODE"] = args.mode
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -52,31 +64,34 @@ def main():
     state = load_state()
     cycle = state["cycle"]
 
-    print(f"\n{'=' * 50}\nStarting Active Learning Cycle {cycle}\n{'=' * 50}")
+    print(
+        f"\n{'=' * 50}\nStarting Active Learning Cycle {cycle} [{args.mode.upper()}]\n{'=' * 50}"
+    )
 
     pretrained_model = state["model_paths"].get("pretrained", PRETRAINED_WEIGHTS)
     scratch_model = state["model_paths"].get("scratch", SCRATCH_WEIGHTS)
 
     if cycle == 0:
         print(">> Cycle 0: Initial Training on Seed Dataset.")
-        print("\n--- Scenario 1: Pretrained Model (Phased Unfreezing) ---")
-        p1 = train_phase_1(
-            pretrained_model,
-            f"cycle_{cycle}_pretrained",
-            freeze=True,
-            epochs=100,
-            patience=15,
-        )
-        p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", epochs=15)
-        pretrained_model = p2
+        if args.mode == "pretrained":
+            print("\n--- Pretrained Model (Phased Unfreezing) ---")
+            p1 = train_phase_1(
+                pretrained_model,
+                f"cycle_{cycle}_pretrained",
+                freeze=True,
+                epochs=100,
+                patience=15,
+            )
+            p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", epochs=15)
+            pretrained_model = p2
+            state["model_paths"]["pretrained"] = pretrained_model
+        else:
+            print("\n--- From-Scratch Model ---")
+            scratch_model = train_scratch(
+                scratch_model, f"cycle_{cycle}_scratch", epochs=60
+            )
+            state["model_paths"]["scratch"] = scratch_model
 
-        print("\n--- Scenario 2: From-Scratch Model ---")
-        scratch_model = train_scratch(
-            scratch_model, f"cycle_{cycle}_scratch", epochs=60
-        )
-
-        state["model_paths"]["pretrained"] = pretrained_model
-        state["model_paths"]["scratch"] = scratch_model
         state["cycle"] += 1
         save_state(state)
         print(">> Initial Models Trained. Advancing to Cycle 1 for pool inference.")
@@ -94,10 +109,21 @@ def main():
 
     print("\n>> Starting Inference & Feature Extraction")
 
-    # Initialize PyTorch Faster R-CNN natively
     active_model = get_model(num_classes=3, freeze_backbone=False)
-    if os.path.exists(pretrained_model):
-        active_model.load_state_dict(torch.load(pretrained_model))
+
+    if args.mode == "pretrained":
+        if os.path.exists(pretrained_model):
+            active_model.load_state_dict(torch.load(pretrained_model))
+        else:
+            print(f"Error: {pretrained_model} not found.")
+            return
+    else:
+        if os.path.exists(scratch_model):
+            active_model.load_state_dict(torch.load(scratch_model))
+        else:
+            print(f"Error: {scratch_model} not found.")
+            return
+
     active_model.to(DEVICE)
     active_model.eval()
 

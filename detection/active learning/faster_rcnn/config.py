@@ -1,6 +1,8 @@
 import os
 import sys
 
+MODE = os.environ.get("AL_MODE", "pretrained")
+
 # Data Paths
 BASE_DIR = "/home/Joshua/Downloads/leopard_toad_identification/detection"
 PRETRAINING_DIR = os.path.join(BASE_DIR, "pretraining")
@@ -8,10 +10,8 @@ PRETRAINING_DIR = os.path.join(BASE_DIR, "pretraining")
 # Import native dataset logic to perfectly replicate the fine-tuner
 sys.path.append(PRETRAINING_DIR)
 FASTER_RCNN_DIR = os.path.join(BASE_DIR, "active learning", "faster_rcnn")
-DATASET_DIR = os.path.join(BASE_DIR, "active learning", "data", "detect_1")
-TRAIN_IMAGES_DIR = os.path.join(
-    BASE_DIR, "active learning", "data", "detect_1", "train", "images"
-)
+DATASET_DIR = os.path.join(BASE_DIR, "active learning", "data", f"detect_{MODE}")
+TRAIN_IMAGES_DIR = os.path.join(DATASET_DIR, "train", "images")
 PRETRAINED_WEIGHTS = os.path.join(
     BASE_DIR,
     "pretraining",
@@ -66,5 +66,5 @@ FOLDERS = [
 ]
 
 # AL specific paths
-CANDIDATE_OUTPUT_CSV = os.path.join(FASTER_RCNN_DIR, "al_query_candidates.csv")
-AL_STATE_JSON = os.path.join(FASTER_RCNN_DIR, "al_state.json")
+CANDIDATE_OUTPUT_CSV = os.path.join(FASTER_RCNN_DIR, f"al_query_candidates_{MODE}.csv")
+AL_STATE_JSON = os.path.join(FASTER_RCNN_DIR, f"al_state_{MODE}.json")

@@ -27,3 +27,6 @@ detection/results/detect_rtdetr/*
 *.pth
 
 detection/active learning/data/detect_1/*
+detection/active learning/data/detect_pretrained/*
+detection/active learning/data/detect_scratch/*
+

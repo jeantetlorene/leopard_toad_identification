@@ -2,8 +2,20 @@ import json
 import csv
 import os
 import numpy as np
+import argparse
 from tqdm import tqdm
 from ultralytics import RTDETR
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--mode",
+    choices=["pretrained", "scratch"],
+    required=True,
+    help="Run AL loop using either pretrained base or purely from scratch.",
+)
+args = parser.parse_args()
+
+os.environ["AL_MODE"] = args.mode
 
 # Enforce working directory to be this folder so RTDETR strictly downloads weights and creates any cache/runs here
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -51,32 +63,34 @@ def main():
     state = load_state()
     cycle = state["cycle"]
 
-    print(f"\n{'=' * 50}\nStarting Active Learning Cycle {cycle}\n{'=' * 50}")
+    print(
+        f"\n{'=' * 50}\nStarting Active Learning Cycle {cycle} [{args.mode.upper()}]\n{'=' * 50}"
+    )
 
     pretrained_model = state["model_paths"].get("pretrained", PRETRAINED_WEIGHTS)
     scratch_model = state["model_paths"].get("scratch", SCRATCH_WEIGHTS)
 
     if cycle == 0:
         print(">> Cycle 0: Initial Training on Seed Dataset.")
-        print("\n--- Scenario 1: Pretrained Model (Phased Unfreezing) ---")
-        p1 = train_phase_1(
-            pretrained_model,
-            f"cycle_{cycle}_pretrained",
-            freeze=15,
-            epochs=100,
-            patience=15,
-        )
-        # Few more epochs for Phase 2 unfrozen
-        p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", epochs=15)
-        pretrained_model = p2
+        if args.mode == "pretrained":
+            print("\n--- Pretrained Model (Phased Unfreezing) ---")
+            p1 = train_phase_1(
+                pretrained_model,
+                f"cycle_{cycle}_pretrained",
+                freeze=15,
+                epochs=100,
+                patience=15,
+            )
+            p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", epochs=30)
+            pretrained_model = p2
+            state["model_paths"]["pretrained"] = pretrained_model
+        else:
+            print("\n--- From-Scratch Model ---")
+            scratch_model = train_scratch(
+                scratch_model, f"cycle_{cycle}_scratch", epochs=60
+            )
+            state["model_paths"]["scratch"] = scratch_model
 
-        print("\n--- Scenario 2: From-Scratch Model ---")
-        scratch_model = train_scratch(
-            scratch_model, f"cycle_{cycle}_scratch", epochs=60
-        )
-
-        state["model_paths"]["pretrained"] = pretrained_model
-        state["model_paths"]["scratch"] = scratch_model
         state["cycle"] += 1
         save_state(state)
         print(">> Initial Models Trained. Advancing to Cycle 1 for pool inference.")
@@ -92,16 +106,24 @@ def main():
         print("No unlabeled images found. Exiting.")
         return
 
-    # To honor performance and the entire pool, we process in chunks
     print("\n>> Starting Inference & Feature Extraction")
-    active_model = RTDETR(pretrained_model)
+    if args.mode == "pretrained":
+        if not os.path.exists(pretrained_model):
+            print(f"Error: {pretrained_model} not found.")
+            return
+        active_model = RTDETR(pretrained_model)
+    else:
+        if not os.path.exists(scratch_model):
+            print(f"Error: {scratch_model} not found.")
+            return
+        active_model = RTDETR(scratch_model)
+
     dcus = DCUS()
 
     valid_paths = []
     image_uncertainties = []
     embeddings_list = []
 
-    # Process in batches
     for i in tqdm(range(0, len(pool), INFER_BATCH_SIZE), desc="Inferring Pool"):
         chunk = pool[i : i + INFER_BATCH_SIZE]
         batch_paths, batch_boxes, batch_features = extract_features_and_boxes_batch(
@@ -112,17 +134,14 @@ def main():
             boxes = batch_boxes[k]
             u_img = dcus.image_uncertainty(boxes)
 
-            # Store data
             valid_paths.append(batch_paths[k])
             image_uncertainties.append(u_img)
             embeddings_list.append(batch_features[k])
 
     print("\n>> Applying Stage 3: Difficulty Calibrated Uncertainty Sampling (DCUS)..")
     image_uncertainties = np.array(image_uncertainties)
-    # Sort descending by uncertainty
     sorted_indices = np.argsort(image_uncertainties)[::-1]
 
-    # Take the top N most uncertain candidates as our candidate pool
     candidate_pool_size = min(2000, len(valid_paths))
     candidate_indices = sorted_indices[:candidate_pool_size]
     print(f"Filtered mass pool down to Top {candidate_pool_size} candidate images.")

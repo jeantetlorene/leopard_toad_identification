@@ -1,11 +1,13 @@
 import os
 
+MODE = os.environ.get("AL_MODE", "pretrained")
+
 # Data Paths
 BASE_DIR = "/home/Joshua/Downloads/leopard_toad_identification/detection"
 YOLO_DIR = os.path.join(BASE_DIR, "active learning", "yolo")
 DATASET_YAML = os.path.join(YOLO_DIR, "dataset.yaml")
 TRAIN_IMAGES_DIR = os.path.join(
-    BASE_DIR, "active learning", "data", "detect_1", "train", "images"
+    BASE_DIR, "active learning", "data", f"detect_{MODE}", "train", "images"
 )
 PRETRAINED_WEIGHTS = os.path.join(
     BASE_DIR, "pretraining", "runs", "detect", "yolo_model", "weights", "best.pt"
@@ -16,8 +18,8 @@ SCRATCH_WEIGHTS = os.path.join(YOLO_DIR, "yolo26m.pt")
 BUDGET_PER_CYCLE = 100
 CONF_THRESHOLD = 0.05  # Lower threshold for uncertainty
 IMG_SIZE = 640
-TRAIN_BATCH_SIZE = 32  # Keep conservative for training backpropagation memory
-INFER_BATCH_SIZE = 512  # Maximize huge 48GB VRAM for forward pass only
+TRAIN_BATCH_SIZE = 32
+INFER_BATCH_SIZE = 512
 DEVICE = "0"  # GPU device
 
 EXCLUDED_CAMERAS = ["4R", "5Z"]
@@ -55,5 +57,5 @@ FOLDERS = [
 ]
 
 # AL specific paths
-CANDIDATE_OUTPUT_CSV = os.path.join(YOLO_DIR, "al_query_candidates.csv")
-AL_STATE_JSON = os.path.join(YOLO_DIR, "al_state.json")
+CANDIDATE_OUTPUT_CSV = os.path.join(YOLO_DIR, f"al_query_candidates_{MODE}.csv")
+AL_STATE_JSON = os.path.join(YOLO_DIR, f"al_state_{MODE}.json")
