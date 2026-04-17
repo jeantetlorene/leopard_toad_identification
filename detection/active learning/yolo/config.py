@@ -10,10 +10,10 @@ PRETRAINED_WEIGHTS = os.path.join(
 SCRATCH_WEIGHTS = os.path.join(YOLO_DIR, "yolo26m.pt")
 
 # AL Configuration
-BUDGET_PER_CYCLE = 100  # Very limited dataset, annotate 50 at a time
+BUDGET_PER_CYCLE = 100
 CONF_THRESHOLD = 0.05  # Lower threshold for uncertainty
 IMG_SIZE = 640
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 DEVICE = "0"  # GPU device
 
 EXCLUDED_CAMERAS = ["4R", "5Z"]

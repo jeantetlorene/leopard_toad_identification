@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from config import YEARS, FOLDERS, EXCLUDED_CAMERAS, CONF_THRESHOLD
+from config import YEARS, FOLDERS, EXCLUDED_CAMERAS, CONF_THRESHOLD, IMG_SIZE, DEVICE
 
 
 def get_unlabeled_pool():
@@ -30,7 +30,13 @@ def extract_features_and_boxes_batch(model, chunk_paths):
     chunk_features = []
 
     try:
-        results = model(chunk_paths, verbose=False, conf=CONF_THRESHOLD)
+        results = model(
+            chunk_paths,
+            verbose=False,
+            conf=CONF_THRESHOLD,
+            imgsz=IMG_SIZE,
+            device=DEVICE,
+        )
 
         for k, result in enumerate(results):
             path = chunk_paths[k]

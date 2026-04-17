@@ -1,6 +1,6 @@
 import os
 from ultralytics import YOLO
-from config import DATASET_YAML, YOLO_DIR
+from config import DATASET_YAML, YOLO_DIR, BATCH_SIZE, IMG_SIZE, DEVICE
 
 
 def train_phase_1(model_weights, run_name, freeze=15, epochs=100, patience=15):
@@ -12,12 +12,12 @@ def train_phase_1(model_weights, run_name, freeze=15, epochs=100, patience=15):
         data=DATASET_YAML,
         epochs=epochs,
         patience=patience,  # Stop when metrics converge
-        imgsz=640,
-        batch=16,
+        imgsz=IMG_SIZE,
+        batch=BATCH_SIZE,
         project=os.path.join(YOLO_DIR, "runs"),
         name=f"{run_name}_phase1",
         freeze=freeze,
-        device="0",
+        device=DEVICE,
         verbose=False,
     )
     return os.path.join(YOLO_DIR, "runs", f"{run_name}_phase1", "weights", "best.pt")
@@ -31,12 +31,12 @@ def train_phase_2(model_weights, run_name, epochs=30):
     results = model.train(
         data=DATASET_YAML,
         epochs=epochs,
-        imgsz=640,
-        batch=16,
+        imgsz=IMG_SIZE,
+        batch=BATCH_SIZE,
         project=os.path.join(YOLO_DIR, "runs"),
         name=f"{run_name}_phase2",
         freeze=0,
-        device="0",
+        device=DEVICE,
         verbose=False,
     )
     return os.path.join(YOLO_DIR, "runs", f"{run_name}_phase2", "weights", "best.pt")
@@ -50,11 +50,11 @@ def train_scratch(model_weights, run_name, epochs=60):
     results = model.train(
         data=DATASET_YAML,
         epochs=epochs,
-        imgsz=640,
-        batch=16,
+        imgsz=IMG_SIZE,
+        batch=BATCH_SIZE,
         project=os.path.join(YOLO_DIR, "runs"),
         name=f"{run_name}_scratch",
-        device="0",
+        device=DEVICE,
         verbose=False,
     )
     return os.path.join(YOLO_DIR, "runs", f"{run_name}_scratch", "weights", "best.pt")
