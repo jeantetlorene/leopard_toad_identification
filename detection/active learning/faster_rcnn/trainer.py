@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import pandas as pd
 from torch.utils.data import DataLoader
 from torchvision.models.detection import (
     fasterrcnn_resnet50_fpn_v2,
@@ -41,8 +42,11 @@ def _train_routine(model, run_name, epochs=100, patience=15):
     )
     val_loader = DataLoader(
         YoloToFasterRCNNDataset(
-            DATASET_DIR, "train", img_size=IMG_SIZE
-        ),  # Evaluate on train briefly since validation split isn't heavily modified by AL explicitly
+            DATASET_DIR,
+            "val",
+            img_size=IMG_SIZE,
+            augment=False,  # Use the true val set!
+        ),
         batch_size=TRAIN_BATCH_SIZE,
         shuffle=False,
         collate_fn=collate_fn,
@@ -54,9 +58,19 @@ def _train_routine(model, run_name, epochs=100, patience=15):
     early_stopping = EarlyStopping(patience=patience)
     best_loss = float("inf")
 
+    history = []
+
+    print(f"Starting Training: {run_name} for {epochs} epochs")
     for epoch in range(epochs):
         model.train()
         train_loss = 0
+        train_comps = {
+            "loss_classifier": 0,
+            "loss_box_reg": 0,
+            "loss_objectness": 0,
+            "loss_rpn_box_reg": 0,
+        }
+
         for images, targets in train_loader:
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -67,23 +81,56 @@ def _train_routine(model, run_name, epochs=100, patience=15):
             losses.backward()
             optimizer.step()
             train_loss += losses.item()
+            for k in train_comps.keys():
+                if k in loss_dict:
+                    train_comps[k] += loss_dict[k].item()
 
         # Simplified Val
         with torch.no_grad():
             val_loss = 0
+            val_comps = {
+                "loss_classifier": 0,
+                "loss_box_reg": 0,
+                "loss_objectness": 0,
+                "loss_rpn_box_reg": 0,
+            }
             for images, targets in val_loader:
                 images = [img.to(device) for img in images]
                 targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
                 loss_dict = model(images, targets)
                 val_loss += sum(loss for loss in loss_dict.values()).item()
+                for k in val_comps.keys():
+                    if k in loss_dict:
+                        val_comps[k] += loss_dict[k].item()
 
+        avg_train = train_loss / max(1, len(train_loader))
         avg_val = val_loss / max(1, len(val_loader))
+
+        print(
+            f"Epoch {epoch + 1}/{epochs}: Train Loss: {avg_train:.4f}, Val Loss: {avg_val:.4f}"
+        )
+
+        history.append(
+            {
+                "epoch": epoch + 1,
+                "train_loss": avg_train,
+                "val_loss": avg_val,
+                "train_classifier_loss": train_comps["loss_classifier"]
+                / max(1, len(train_loader)),
+                "val_classifier_loss": val_comps["loss_classifier"]
+                / max(1, len(val_loader)),
+            }
+        )
+
+        pd.DataFrame(history).to_csv(os.path.join(run_dir, "results.csv"), index=False)
+
         if avg_val < best_loss:
             best_loss = avg_val
             torch.save(model.state_dict(), os.path.join(weights_dir, "best.pt"))
 
         early_stopping(avg_val)
         if early_stopping.early_stop:
+            print(f"Early stopping triggered at epoch {epoch + 1}")
             break
 
     best_path = os.path.join(weights_dir, "best.pt")

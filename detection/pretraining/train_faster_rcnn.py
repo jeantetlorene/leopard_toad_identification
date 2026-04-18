@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from PIL import Image
+from PIL import Image, ImageFile
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from torch.utils.data import Dataset, DataLoader
 from torchvision.models.detection import (
     fasterrcnn_resnet50_fpn_v2,
@@ -26,12 +28,24 @@ class YoloToFasterRCNNDataset(Dataset):
         self.split = split
         self.img_size = img_size
         self.augment = augment
-        self.img_dir = os.path.join(dataset_dir, "images", split)
-        self.lbl_dir = os.path.join(dataset_dir, "labels", split)
+        # Flexible directory structure support: check for split/images (custom) vs images/split (YOLO default)
+        custom_img_dir = os.path.join(dataset_dir, split, "images")
+        custom_lbl_dir = os.path.join(dataset_dir, split, "labels")
+        yolo_img_dir = os.path.join(dataset_dir, "images", split)
+        yolo_lbl_dir = os.path.join(dataset_dir, "labels", split)
+
+        if os.path.exists(custom_img_dir):
+            self.img_dir = custom_img_dir
+            self.lbl_dir = custom_lbl_dir
+        else:
+            self.img_dir = yolo_img_dir
+            self.lbl_dir = yolo_lbl_dir
 
         self.img_files = sorted(glob.glob(os.path.join(self.img_dir, "*.*")))
         self.img_files = [
-            f for f in self.img_files if f.lower().endswith((".png", ".jpg", ".jpeg"))
+            f
+            for f in self.img_files
+            if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"))
         ]
 
     def __len__(self):
@@ -39,7 +53,12 @@ class YoloToFasterRCNNDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.img_files[idx]
-        img = Image.open(img_path).convert("RGB")
+        try:
+            img = Image.open(img_path).convert("RGB")
+        except Exception as e:
+            print(f"Warning: Skipping corrupted image {img_path}: {e}")
+            # Fallback to a blank image if corrupted
+            img = Image.new("RGB", (self.img_size, self.img_size), (0, 0, 0))
 
         base_name = os.path.splitext(os.path.basename(img_path))[0]
         lbl_path = os.path.join(self.lbl_dir, base_name + ".txt")
@@ -59,20 +78,29 @@ class YoloToFasterRCNNDataset(Dataset):
                         ymin = (yc - h / 2) * self.img_size
                         xmax = (xc + w / 2) * self.img_size
                         ymax = (yc + h / 2) * self.img_size
-                        boxes.append([xmin, ymin, xmax, ymax])
-                        labels.append(cls_id + 1)
+
+                        # Clip boxes to safely stay within image bounds
+                        xmin = max(0.0, xmin)
+                        ymin = max(0.0, ymin)
+                        xmax = min(float(self.img_size), xmax)
+                        ymax = min(float(self.img_size), ymax)
+
+                        if xmax > xmin and ymax > ymin:
+                            boxes.append([xmin, ymin, xmax, ymax])
+                            labels.append(cls_id + 1)
 
         if self.augment:
             # Random Horizontal Flip
             if np.random.random() > 0.5:
                 img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                new_boxes = []
-                for b in boxes:
-                    # x_new = width - x_old
-                    new_boxes.append(
-                        [self.img_size - b[2], b[1], self.img_size - b[0], b[3]]
-                    )
-                boxes = new_boxes
+                if len(boxes) > 0:
+                    new_boxes = []
+                    for b in boxes:
+                        # x_new = width - x_old
+                        new_boxes.append(
+                            [self.img_size - b[2], b[1], self.img_size - b[0], b[3]]
+                        )
+                    boxes = new_boxes
 
             import PIL.ImageEnhance as ImageEnhance
 
