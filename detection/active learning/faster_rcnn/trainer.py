@@ -157,7 +157,7 @@ def train_phase_2(model_weights, run_name, epochs=30):
     return _train_routine(model, f"{run_name}_phase2", epochs, 15)
 
 
-def train_scratch(model_weights, run_name, epochs=300, patience=50):
+def train_scratch(model_weights, run_name, epochs=100, patience=15):
     """Train completely from scratch until convergence"""
     model = get_model(num_classes=3, freeze_backbone=False)
     # ignore string weights since it's from scratch
