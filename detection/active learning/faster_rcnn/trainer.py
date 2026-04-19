@@ -55,6 +55,9 @@ def _train_routine(model, run_name, epochs=100, patience=15):
     optimizer = torch.optim.Adam(
         [p for p in model.parameters() if p.requires_grad], lr=0.0001
     )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=0.5, patience=5, min_lr=1e-6
+    )
     early_stopping = EarlyStopping(patience=patience)
     best_loss = float("inf")
 
@@ -106,8 +109,9 @@ def _train_routine(model, run_name, epochs=100, patience=15):
         avg_train = train_loss / max(1, len(train_loader))
         avg_val = val_loss / max(1, len(val_loader))
 
+        current_lr = optimizer.param_groups[0]['lr']
         print(
-            f"Epoch {epoch + 1}/{epochs}: Train Loss: {avg_train:.4f}, Val Loss: {avg_val:.4f}"
+            f"Epoch {epoch + 1}/{epochs}: Train Loss: {avg_train:.4f}, Val Loss: {avg_val:.4f}, LR: {current_lr:.6f}"
         )
 
         history.append(
@@ -119,6 +123,7 @@ def _train_routine(model, run_name, epochs=100, patience=15):
                 / max(1, len(train_loader)),
                 "val_classifier_loss": val_comps["loss_classifier"]
                 / max(1, len(val_loader)),
+                "learning_rate": current_lr,
             }
         )
 
@@ -128,6 +133,7 @@ def _train_routine(model, run_name, epochs=100, patience=15):
             best_loss = avg_val
             torch.save(model.state_dict(), os.path.join(weights_dir, "best.pt"))
 
+        scheduler.step(avg_val)
         early_stopping(avg_val)
         if early_stopping.early_stop:
             print(f"Early stopping triggered at epoch {epoch + 1}")
@@ -157,7 +163,7 @@ def train_phase_2(model_weights, run_name, epochs=30):
     return _train_routine(model, f"{run_name}_phase2", epochs, 15)
 
 
-def train_scratch(model_weights, run_name, epochs=100, patience=15):
+def train_scratch(model_weights, run_name, epochs=100, patience=20):
     """Train completely from scratch until convergence"""
     model = get_model(num_classes=3, freeze_backbone=False)
     # ignore string weights since it's from scratch
