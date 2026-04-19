@@ -28,7 +28,7 @@ BUDGET_PER_CYCLE = 100
 CONF_THRESHOLD = 0.05  # Lower threshold for uncertainty
 IMG_SIZE = 640
 TRAIN_BATCH_SIZE = 32  # Keep conservative for training backpropagation memory
-INFER_BATCH_SIZE = 512  # Maximize huge 48GB VRAM for forward pass only
+INFER_BATCH_SIZE = 128  # Maximize huge 48GB VRAM for forward pass only
 DEVICE = "cuda:0"  # GPU device
 
 EXCLUDED_CAMERAS = ["4R", "5Z"]

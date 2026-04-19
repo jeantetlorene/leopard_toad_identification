@@ -108,7 +108,12 @@ def extract_features_and_boxes_batch(model, chunk_paths):
             chunk_boxes.append(boxes)
             chunk_features.append(semantic_features)
 
+        del inputs
+        del outputs
+        torch.cuda.empty_cache()
+
         return valid_paths, chunk_boxes, chunk_features
     except Exception as e:
         print(f"Failed to infer batch: {e}")
+        torch.cuda.empty_cache()
         return [], [], []
