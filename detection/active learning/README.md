@@ -6,9 +6,9 @@ This folder contains a multi-architecture active learning (AL) suite designed to
 - `/yolo`: YOLO specific scripts and configuration.
 - `/rtdetr`: RT-DETR specific scripts and configuration.
 - `/faster_rcnn`: PyTorch-native Faster R-CNN scripts.
-- `/data`: Contains separate dataset folders:
-  - `detect_pretrained/`: Dataset used for the Pretrained model loop.
-  - `detect_scratch/`: Dataset used for the From-Scratch model loop.
+- `/data`: Contains separate, cycle-specific dataset folders for dynamic data logging:
+  - `detect_pretrained_cycle_{X}/`: Dataset used for the Pretrained model loop at Cycle X.
+  - `detect_scratch_cycle_{X}/`: Dataset used for the From-Scratch model loop at Cycle X.
 
 ## How to Run
 Every pipeline requires a `--mode` argument to determine whether it uses the pretrained or from-scratch state.
@@ -36,7 +36,7 @@ python3 main_al_loop.py --mode scratch
 
 ## State Management
 - **States:** The script tracks progress via `al_state_pretrained.json` and `al_state_scratch.json` within each model folder.
-- **Candidates:** Query results are exported to `al_query_candidates_pretrained.csv` and `al_query_candidates_scratch.csv`.
+- **Candidates:** Query results are exported with cycle-tracking appended to the filename to avoid overwrites (e.g., `al_query_candidates_pretrained_cycle_{X}.csv` and `al_query_candidates_scratch_cycle_{X}.csv`).
 
 ## Performance Optimizations
 - **Threadpool Loading:** Uses 64 CPU workers for fast image I/O from network/disk storage.
@@ -47,4 +47,4 @@ python3 main_al_loop.py --mode scratch
 If you wish to re-run from Cycle 0:
 1. Delete the `al_state_*.json` files in the model folder.
 2. (Optional) Clear the `runs/` folder to save disk space.
-3. Ensure the respective `detect_*` folder in `/data` contains only the initial seed dataset.
+3. Ensure the respective `detect_*_cycle_0` folder in `/data` contains only the initial seed dataset.

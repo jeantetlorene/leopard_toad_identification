@@ -13,22 +13,32 @@ from config import (
 )
 
 
-def get_unlabeled_pool():
+def get_unlabeled_pool(mode, current_cycle):
+    from config import BASE_DIR
+
     image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
     pool = []
 
     # Step 1: Securely identify all images that have already been annotated (seed set + previous loops)
-    train_dir = TRAIN_IMAGES_DIR
     annotated_basenames = set()
-    if os.path.exists(train_dir):
-        for f in os.listdir(train_dir):
-            if f.endswith(tuple(image_extensions)):
-                # The train generator saves images as: f"{camera}_{year}_{original_basename}"
-                parts = f.split("_", 2)
-                if len(parts) == 3:
-                    annotated_basenames.add(parts[2])
-                else:
-                    annotated_basenames.add(f)
+    for c in range(current_cycle + 1):
+        train_dir = os.path.join(
+            BASE_DIR,
+            "active learning",
+            "data",
+            f"detect_{mode}_cycle_{c}",
+            "train",
+            "images",
+        )
+        if os.path.exists(train_dir):
+            for f in os.listdir(train_dir):
+                if f.endswith(tuple(image_extensions)):
+                    # The train generator saves images as: f"{camera}_{year}_{original_basename}"
+                    parts = f.split("_", 2)
+                    if len(parts) == 3:
+                        annotated_basenames.add(parts[2])
+                    else:
+                        annotated_basenames.add(f)
 
     for year, base_input_dir in YEARS.items():
         for folder in FOLDERS:

@@ -5,10 +5,7 @@ MODE = os.environ.get("AL_MODE", "pretrained")
 # Data Paths
 BASE_DIR = "/home/Joshua/Downloads/leopard_toad_identification/detection"
 RTDETR_DIR = os.path.join(BASE_DIR, "active learning", "rtdetr")
-DATASET_YAML = os.path.join(RTDETR_DIR, "dataset.yaml")
-TRAIN_IMAGES_DIR = os.path.join(
-    BASE_DIR, "active learning", "data", f"detect_{MODE}", "train", "images"
-)
+
 PRETRAINED_WEIGHTS = os.path.join(
     BASE_DIR, "pretraining", "runs", "detect", "rtdetr_finetuning", "weights", "best.pt"
 )
@@ -57,5 +54,5 @@ FOLDERS = [
 ]
 
 # AL specific paths
-CANDIDATE_OUTPUT_CSV = os.path.join(RTDETR_DIR, f"al_query_candidates_{MODE}.csv")
+
 AL_STATE_JSON = os.path.join(RTDETR_DIR, f"al_state_{MODE}.json")

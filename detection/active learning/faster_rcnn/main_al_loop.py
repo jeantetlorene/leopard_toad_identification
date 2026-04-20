@@ -23,7 +23,6 @@ from config import (
     PRETRAINED_WEIGHTS,
     SCRATCH_WEIGHTS,
     BUDGET_PER_CYCLE,
-    CANDIDATE_OUTPUT_CSV,
     AL_STATE_JSON,
     INFER_BATCH_SIZE,
     DEVICE,
@@ -46,17 +45,15 @@ def load_state():
     return {"cycle": 0, "model_paths": {}}
 
 
-def write_candidates_csv(selected_paths):
-    with open(CANDIDATE_OUTPUT_CSV, "w", newline="") as f:
+def write_candidates_csv(selected_paths, csv_path):
+    with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["image_path", "status"])
         for path in selected_paths:
             writer.writerow([path, "To annotate"])
+    print(f"\n[ORACLE PAUSE] Exported {len(selected_paths)} queries to {csv_path}")
     print(
-        f"\n[ORACLE PAUSE] Exported {len(selected_paths)} queries to {CANDIDATE_OUTPUT_CSV}"
-    )
-    print(
-        "Please annotate these images in Label Studio, move the YOLO-formatted labels back to your 'train' folder, and run this script again."
+        "Please annotate these images in Label Studio, move the YOLO-formatted labels back to your cycle-specific 'train' folder, and run this script again."
     )
 
 
@@ -71,6 +68,12 @@ def main():
     pretrained_model = state["model_paths"].get("pretrained", PRETRAINED_WEIGHTS)
     scratch_model = state["model_paths"].get("scratch", SCRATCH_WEIGHTS)
 
+    from config import BASE_DIR, FASTER_RCNN_DIR
+
+    dataset_dir = os.path.join(
+        BASE_DIR, "active learning", "data", f"detect_{args.mode}_cycle_{cycle}"
+    )
+
     if cycle == 0:
         print(">> Cycle 0: Initial Training on Seed Dataset.")
         if args.mode == "pretrained":
@@ -78,17 +81,18 @@ def main():
             p1 = train_phase_1(
                 pretrained_model,
                 f"cycle_{cycle}_pretrained",
+                dataset_dir,
                 freeze=True,
                 epochs=100,
                 patience=15,
             )
-            p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", epochs=15)
+            p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", dataset_dir, epochs=15)
             pretrained_model = p2
             state["model_paths"]["pretrained"] = pretrained_model
         else:
             print("\n--- From-Scratch Model ---")
             scratch_model = train_scratch(
-                scratch_model, f"cycle_{cycle}_scratch", epochs=60
+                scratch_model, f"cycle_{cycle}_scratch", dataset_dir, epochs=60
             )
             state["model_paths"]["scratch"] = scratch_model
 
@@ -100,7 +104,7 @@ def main():
     print(
         "\n>> Scanning for unlabelled images from /srv ... (Excluding 4R, 5Z val/test cameras)"
     )
-    pool = get_unlabeled_pool()
+    pool = get_unlabeled_pool(args.mode, cycle)
     print(f"Found {len(pool)} unlabelled images in the massive pool.")
 
     if len(pool) == 0:
@@ -164,7 +168,10 @@ def main():
     )
     selected_paths = [valid_paths[i] for i in selected_subset]
 
-    write_candidates_csv(selected_paths)
+    candidate_csv_path = os.path.join(
+        FASTER_RCNN_DIR, f"al_query_candidates_{args.mode}_cycle_{cycle}.csv"
+    )
+    write_candidates_csv(selected_paths, candidate_csv_path)
 
     state["cycle"] += 1
     save_state(state)

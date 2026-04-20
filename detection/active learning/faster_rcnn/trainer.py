@@ -10,7 +10,7 @@ from torchvision.models.detection import (
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm import tqdm
 
-from config import DATASET_DIR, FASTER_RCNN_DIR, TRAIN_BATCH_SIZE, IMG_SIZE, DEVICE
+from config import FASTER_RCNN_DIR, TRAIN_BATCH_SIZE, IMG_SIZE, DEVICE
 from train_faster_rcnn import YoloToFasterRCNNDataset, collate_fn, EarlyStopping
 
 
@@ -25,7 +25,7 @@ def get_model(num_classes=3, freeze_backbone=False):
     return model
 
 
-def _train_routine(model, run_name, epochs=100, patience=15):
+def _train_routine(model, run_name, dataset_dir, epochs=100, patience=15):
     device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
@@ -35,14 +35,14 @@ def _train_routine(model, run_name, epochs=100, patience=15):
 
     # We define validation dynamically as detect_1 val, since AL is dynamically gathering
     train_loader = DataLoader(
-        YoloToFasterRCNNDataset(DATASET_DIR, "train", img_size=IMG_SIZE, augment=True),
+        YoloToFasterRCNNDataset(dataset_dir, "train", img_size=IMG_SIZE, augment=True),
         batch_size=TRAIN_BATCH_SIZE,
         shuffle=True,
         collate_fn=collate_fn,
     )
     val_loader = DataLoader(
         YoloToFasterRCNNDataset(
-            DATASET_DIR,
+            dataset_dir,
             "val",
             img_size=IMG_SIZE,
             augment=False,  # Use the true val set!
@@ -56,7 +56,7 @@ def _train_routine(model, run_name, epochs=100, patience=15):
         [p for p in model.parameters() if p.requires_grad], lr=0.0001
     )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5, min_lr=1e-6
+        optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-6
     )
     early_stopping = EarlyStopping(patience=patience)
     best_loss = float("inf")
@@ -109,7 +109,7 @@ def _train_routine(model, run_name, epochs=100, patience=15):
         avg_train = train_loss / max(1, len(train_loader))
         avg_val = val_loss / max(1, len(val_loader))
 
-        current_lr = optimizer.param_groups[0]['lr']
+        current_lr = optimizer.param_groups[0]["lr"]
         print(
             f"Epoch {epoch + 1}/{epochs}: Train Loss: {avg_train:.4f}, Val Loss: {avg_val:.4f}, LR: {current_lr:.6f}"
         )
@@ -145,26 +145,28 @@ def _train_routine(model, run_name, epochs=100, patience=15):
     return best_path
 
 
-def train_phase_1(model_weights, run_name, freeze=True, epochs=100, patience=15):
+def train_phase_1(
+    model_weights, run_name, dataset_dir, freeze=True, epochs=100, patience=15
+):
     """Phase 1: Freeze backbone"""
     model = get_model(num_classes=3, freeze_backbone=freeze)
     if model_weights and model_weights != "scratch" and os.path.exists(model_weights):
         model.load_state_dict(torch.load(model_weights))
 
-    return _train_routine(model, f"{run_name}_phase1", epochs, patience)
+    return _train_routine(model, f"{run_name}_phase1", dataset_dir, epochs, patience)
 
 
-def train_phase_2(model_weights, run_name, epochs=30):
+def train_phase_2(model_weights, run_name, dataset_dir, epochs=30):
     """Phase 2: Unfreeze Backbone"""
     model = get_model(num_classes=3, freeze_backbone=False)
     if model_weights and os.path.exists(model_weights):
         model.load_state_dict(torch.load(model_weights))
 
-    return _train_routine(model, f"{run_name}_phase2", epochs, 15)
+    return _train_routine(model, f"{run_name}_phase2", dataset_dir, epochs, 15)
 
 
-def train_scratch(model_weights, run_name, epochs=100, patience=20):
+def train_scratch(model_weights, run_name, dataset_dir, epochs=100, patience=20):
     """Train completely from scratch until convergence"""
     model = get_model(num_classes=3, freeze_backbone=False)
     # ignore string weights since it's from scratch
-    return _train_routine(model, f"{run_name}_scratch", epochs, patience)
+    return _train_routine(model, f"{run_name}_scratch", dataset_dir, epochs, patience)
