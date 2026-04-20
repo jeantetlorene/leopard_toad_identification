@@ -64,8 +64,9 @@ def main():
         f"\n{'=' * 50}\nStarting Active Learning Cycle {cycle} [{args.mode.upper()}]\n{'=' * 50}"
     )
 
-    pretrained_model = state["model_paths"].get("pretrained", PRETRAINED_WEIGHTS)
-    scratch_model = state["model_paths"].get("scratch", SCRATCH_WEIGHTS)
+    # Always start from baseline weights to prevent catastrophic forgetting
+    pretrained_base = PRETRAINED_WEIGHTS
+    scratch_base = SCRATCH_WEIGHTS
 
     from config import BASE_DIR, YOLO_DIR
 
@@ -91,12 +92,16 @@ names:
     with open(dataset_yaml, "w") as f:
         f.write(yaml_content)
 
-    if cycle == 0:
-        print(">> Cycle 0: Initial Training on Seed Dataset.")
-        if args.mode == "pretrained":
+    print(f">> Cycle {cycle}: Training Model.")
+    if args.mode == "pretrained":
+        expected_p2_model = os.path.join(YOLO_DIR, "runs", f"cycle_{cycle}_pretrained_phase2", "weights", "best.pt")
+        if os.path.exists(expected_p2_model):
+            print(f"  Found existing trained model for Cycle {cycle}. Skipping training.")
+            pretrained_model = expected_p2_model
+        else:
             print("\n--- Pretrained Model (Phased Unfreezing) ---")
             p1 = train_phase_1(
-                pretrained_model,
+                pretrained_base,
                 f"cycle_{cycle}_pretrained",
                 dataset_yaml,
                 freeze=15,
@@ -105,18 +110,18 @@ names:
             )
             p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", dataset_yaml, epochs=30)
             pretrained_model = p2
-            state["model_paths"]["pretrained"] = pretrained_model
+        state["model_paths"]["pretrained"] = pretrained_model
+    else:
+        expected_scratch_model = os.path.join(YOLO_DIR, "runs", f"cycle_{cycle}_scratch_scratch", "weights", "best.pt")
+        if os.path.exists(expected_scratch_model):
+            print(f"  Found existing trained model for Cycle {cycle}. Skipping training.")
+            scratch_model = expected_scratch_model
         else:
             print("\n--- From-Scratch Model ---")
             scratch_model = train_scratch(
-                scratch_model, f"cycle_{cycle}_scratch", dataset_yaml, epochs=60
+                scratch_base, f"cycle_{cycle}_scratch", dataset_yaml, epochs=60
             )
-            state["model_paths"]["scratch"] = scratch_model
-
-        state["cycle"] += 1
-        save_state(state)
-        print(">> Initial Models Trained. Advancing to Cycle 1 for pool inference.")
-        cycle = 1
+        state["model_paths"]["scratch"] = scratch_model
 
     print(
         "\n>> Scanning for unlabelled images from /srv ... (Excluding 4R, 5Z val/test cameras)"
