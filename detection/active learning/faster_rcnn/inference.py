@@ -11,7 +11,6 @@ from config import (
     CONF_THRESHOLD,
     IMG_SIZE,
     DEVICE,
-    TRAIN_IMAGES_DIR,
 )
 
 
