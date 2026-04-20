@@ -19,28 +19,40 @@ def get_unlabeled_pool(mode, current_cycle):
     image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
     pool = []
 
-    # Step 1: Securely identify all images that have already been annotated (seed set + previous loops)
+    import csv
+
+    # Step 1: Securely identify all images that have already been annotated
     annotated_basenames = set()
-    for c in range(current_cycle + 1):
-        train_dir = os.path.join(
+
+    # 1a. Exclude ALL images that are statically assigned natively
+    for csv_file in ["train.csv", "val.csv", "test.csv"]:
+        csv_path = os.path.join(BASE_DIR, "active learning", "data", csv_file)
+        if os.path.exists(csv_path):
+            with open(csv_path, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if "image_name" in row:
+                        annotated_basenames.add(row["image_name"])
+                    elif "image_path" in row:
+                        annotated_basenames.add(os.path.basename(row["image_path"]))
+
+    # 1b. Exclude all images that have been suggested in previous cycles for this exact model & mode
+    for c in range(current_cycle):
+        candidate_csv_path = os.path.join(
             BASE_DIR,
             "active learning",
-            "data",
             "rtdetr",
+            "cycles",
             mode,
             f"cycle_{c}",
-            "train",
-            "images",
+            f"al_query_candidates_{mode}_cycle_{c}.csv",
         )
-        if os.path.exists(train_dir):
-            for f in os.listdir(train_dir):
-                if f.endswith(tuple(image_extensions)):
-                    # The train generator saves images as: f"{camera}_{year}_{original_basename}"
-                    parts = f.split("_", 2)
-                    if len(parts) == 3:
-                        annotated_basenames.add(parts[2])
-                    else:
-                        annotated_basenames.add(f)
+        if os.path.exists(candidate_csv_path):
+            with open(candidate_csv_path, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if "image_path" in row:
+                        annotated_basenames.add(os.path.basename(row["image_path"]))
 
     for year, base_input_dir in YEARS.items():
         for folder in FOLDERS:
