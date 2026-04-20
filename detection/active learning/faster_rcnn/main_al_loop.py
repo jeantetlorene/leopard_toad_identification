@@ -81,9 +81,17 @@ def main():
 
     print(f">> Cycle {cycle}: Training Model.")
     if args.mode == "pretrained":
-        expected_p2_model = os.path.join(FASTER_RCNN_DIR, "runs", f"cycle_{cycle}_pretrained_phase2", "weights", "best.pt")
+        expected_p2_model = os.path.join(
+            FASTER_RCNN_DIR,
+            "runs",
+            f"cycle_{cycle}_pretrained_phase2",
+            "weights",
+            "best.pt",
+        )
         if os.path.exists(expected_p2_model):
-            print(f"  Found existing trained model for Cycle {cycle}. Skipping training.")
+            print(
+                f"  Found existing trained model for Cycle {cycle}. Skipping training."
+            )
             pretrained_model = expected_p2_model
         else:
             print("\n--- Pretrained Model (Phased Unfreezing) ---")
@@ -99,9 +107,17 @@ def main():
             pretrained_model = p2
         state["model_paths"]["pretrained"] = pretrained_model
     else:
-        expected_scratch_model = os.path.join(FASTER_RCNN_DIR, "runs", f"cycle_{cycle}_scratch_scratch", "weights", "best.pt")
+        expected_scratch_model = os.path.join(
+            FASTER_RCNN_DIR,
+            "runs",
+            f"cycle_{cycle}_scratch_scratch",
+            "weights",
+            "best.pt",
+        )
         if os.path.exists(expected_scratch_model):
-            print(f"  Found existing trained model for Cycle {cycle}. Skipping training.")
+            print(
+                f"  Found existing trained model for Cycle {cycle}. Skipping training."
+            )
             scratch_model = expected_scratch_model
         else:
             print("\n--- From-Scratch Model ---")

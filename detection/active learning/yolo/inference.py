@@ -1,5 +1,8 @@
 import os
 import cv2
+import torch
+import numpy as np
+import csv
 import concurrent.futures
 from pathlib import Path
 from config import (
@@ -17,8 +20,6 @@ def get_unlabeled_pool(mode, current_cycle):
 
     image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
     pool = []
-
-    import csv
 
     # Step 1: Securely identify all images that have already been annotated
     annotated_basenames = set()
@@ -102,6 +103,15 @@ def extract_features_and_boxes_batch(model, chunk_paths):
         return [], [], []
 
     try:
+        features_list = []
+
+        def hook(module, inputs, outputs):
+            # YOLOv8 target layer outputs [N, C, H, W]
+            pooled = torch.nn.functional.adaptive_avg_pool2d(outputs, (1, 1)).flatten(1)
+            features_list.append(pooled.cpu().numpy())
+
+        handle = model.model.model[-2].register_forward_hook(hook)
+
         # [OPTIMIZATION] Set batch=len(valid_imgs) to ensure YOLO pushes massive tensors together!
         results = model(
             valid_imgs,
@@ -113,6 +123,13 @@ def extract_features_and_boxes_batch(model, chunk_paths):
             batch=len(valid_imgs),
         )
 
+        handle.remove()
+        batch_features = (
+            np.concatenate(features_list, axis=0)
+            if features_list
+            else np.zeros((len(valid_imgs), 256))
+        )
+
         for k, result in enumerate(results):
             path = valid_paths[k]
             boxes = []
@@ -120,16 +137,8 @@ def extract_features_and_boxes_batch(model, chunk_paths):
             for box in result.boxes:
                 boxes.append({"cls": int(box.cls[0]), "conf": float(box.conf[0])})
 
-            # If standard embedding is heavy, we represent the 'semantic layout'
-            # of the image purely via extreme dimensionality reduction: the
-            # confidences and classes of the top 3 objects.
-            semantic_features = []
-            for b in boxes[:3]:
-                semantic_features.extend([b["cls"], b["conf"]])
-            semantic_features += [0.0] * (6 - len(semantic_features))  # Pad to 6
-
             chunk_boxes.append(boxes)
-            chunk_features.append(semantic_features)
+            chunk_features.append(batch_features[k].tolist())
 
         return valid_paths, chunk_boxes, chunk_features
     except Exception as e:

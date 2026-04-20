@@ -1,6 +1,7 @@
 import os
 import torch
 import cv2
+import csv
 import numpy as np
 import concurrent.futures
 from pathlib import Path
@@ -19,8 +20,6 @@ def get_unlabeled_pool(mode, current_cycle):
 
     image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
     pool = []
-
-    import csv
 
     # Step 1: Securely identify all images that have already been annotated
     annotated_basenames = set()
@@ -106,8 +105,25 @@ def extract_features_and_boxes_batch(model, chunk_paths):
         # Pytorch Faster R-CNN requires list of tensors
         inputs = [t.to(DEVICE) for t in valid_tensors]
 
+        # Pytorch hook for deep features
+        features_list = []
+
+        def hook(module, inputs, outputs):
+            # outputs is [N, 256, 4, 4]. GAP it down to [N, 256]
+            pooled = torch.nn.functional.adaptive_avg_pool2d(outputs, (1, 1)).flatten(1)
+            features_list.append(pooled.cpu().numpy())
+
+        handle = model.backbone.pool.register_forward_hook(hook)
+
         with torch.no_grad():
             outputs = model(inputs)
+
+        handle.remove()
+        batch_features = (
+            np.concatenate(features_list, axis=0)
+            if features_list
+            else np.zeros((len(inputs), 256))
+        )
 
         for k, out in enumerate(outputs):
             path = valid_paths[k]
@@ -125,13 +141,8 @@ def extract_features_and_boxes_batch(model, chunk_paths):
                         {"cls": int(pred_labels[i]) - 1, "conf": float(pred_scores[i])}
                     )
 
-            semantic_features = []
-            for b in boxes[:3]:
-                semantic_features.extend([b["cls"], b["conf"]])
-            semantic_features += [0.0] * (6 - len(semantic_features))
-
             chunk_boxes.append(boxes)
-            chunk_features.append(semantic_features)
+            chunk_features.append(batch_features[k].tolist())
 
         del inputs
         del outputs
