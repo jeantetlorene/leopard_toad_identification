@@ -7,8 +7,7 @@ This folder contains a multi-architecture active learning (AL) suite designed to
 - `/rtdetr`: RT-DETR specific scripts and configuration.
 - `/faster_rcnn`: PyTorch-native Faster R-CNN scripts.
 - `/data`: Contains separate, cycle-specific dataset folders for dynamic data logging:
-  - `detect_pretrained_cycle_{X}/`: Dataset used for the Pretrained model loop at Cycle X.
-  - `detect_scratch_cycle_{X}/`: Dataset used for the From-Scratch model loop at Cycle X.
+  - `<model>/<mode>/cycle_{X}/`: Dataset and annotated images specific to each model's cycle state.
 
 ## How to Run
 Every pipeline requires a `--mode` argument to determine whether it uses the pretrained or from-scratch state.
@@ -47,4 +46,4 @@ python3 main_al_loop.py --mode scratch
 If you wish to re-run from Cycle 0:
 1. Delete the `al_state_*.json` files in the model folder.
 2. (Optional) Clear the `runs/` folder to save disk space.
-3. Ensure the respective `detect_*_cycle_0` folder in `/data` contains only the initial seed dataset.
+3. Ensure the respective `<model>/<mode>/cycle_0` folder in `/data` contains only the initial seed dataset.

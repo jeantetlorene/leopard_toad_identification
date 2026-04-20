@@ -69,10 +69,14 @@ def main():
 
     from config import BASE_DIR, YOLO_DIR
 
+    model_name = "yolo"
+    cycle_dir = os.path.join(YOLO_DIR, "cycles", args.mode, f"cycle_{cycle}")
+    os.makedirs(cycle_dir, exist_ok=True)
+
     dataset_dir = os.path.join(
-        BASE_DIR, "active learning", "data", f"detect_{args.mode}_cycle_{cycle}"
+        BASE_DIR, "active learning", "data", model_name, args.mode, f"cycle_{cycle}"
     )
-    dataset_yaml = os.path.join(YOLO_DIR, f"dataset_{args.mode}_cycle_{cycle}.yaml")
+    dataset_yaml = os.path.join(cycle_dir, f"dataset_{args.mode}_cycle_{cycle}.yaml")
 
     yaml_content = f"""path: {dataset_dir}
 train: train/images
@@ -175,7 +179,7 @@ names:
     selected_paths = [valid_paths[i] for i in selected_subset]
 
     candidate_csv_path = os.path.join(
-        YOLO_DIR, f"al_query_candidates_{args.mode}_cycle_{cycle}.csv"
+        cycle_dir, f"al_query_candidates_{args.mode}_cycle_{cycle}.csv"
     )
     write_candidates_csv(selected_paths, candidate_csv_path)
 

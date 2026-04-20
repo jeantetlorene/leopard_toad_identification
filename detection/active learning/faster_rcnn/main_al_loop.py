@@ -70,8 +70,12 @@ def main():
 
     from config import BASE_DIR, FASTER_RCNN_DIR
 
+    model_name = "faster_rcnn"
+    cycle_dir = os.path.join(FASTER_RCNN_DIR, "cycles", args.mode, f"cycle_{cycle}")
+    os.makedirs(cycle_dir, exist_ok=True)
+
     dataset_dir = os.path.join(
-        BASE_DIR, "active learning", "data", f"detect_{args.mode}_cycle_{cycle}"
+        BASE_DIR, "active learning", "data", model_name, args.mode, f"cycle_{cycle}"
     )
 
     if cycle == 0:
@@ -169,7 +173,7 @@ def main():
     selected_paths = [valid_paths[i] for i in selected_subset]
 
     candidate_csv_path = os.path.join(
-        FASTER_RCNN_DIR, f"al_query_candidates_{args.mode}_cycle_{cycle}.csv"
+        cycle_dir, f"al_query_candidates_{args.mode}_cycle_{cycle}.csv"
     )
     write_candidates_csv(selected_paths, candidate_csv_path)
 

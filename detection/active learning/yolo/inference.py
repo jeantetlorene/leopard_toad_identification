@@ -26,7 +26,9 @@ def get_unlabeled_pool(mode, current_cycle):
             BASE_DIR,
             "active learning",
             "data",
-            f"detect_{mode}_cycle_{c}",
+            "yolo",
+            mode,
+            f"cycle_{c}",
             "train",
             "images",
         )
