@@ -13,7 +13,7 @@ SCRATCH_WEIGHTS = os.path.join(RTDETR_DIR, "rtdetr-l.pt")
 
 # AL Configuration
 BUDGET_PER_CYCLE = 100
-CONF_THRESHOLD = 0.05  # Lower threshold for uncertainty
+CONF_THRESHOLD = 0.01  # Lower threshold for uncertainty
 IMG_SIZE = 640
 TRAIN_BATCH_SIZE = 32  # Keep conservative for training backpropagation memory
 INFER_BATCH_SIZE = 512  # Maximize huge 48GB VRAM for forward pass only
