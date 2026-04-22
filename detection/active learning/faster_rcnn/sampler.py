@@ -32,15 +32,20 @@ class DCUS:
         boxes: list of dicts with 'conf' and 'cls'.
         """
         w = self.compute_difficulty_coefficient()
-        u_img = 0
+        if not boxes:
+            return 0.0
+            
+        max_u = 0.0
         for box in boxes:
             c = int(box["cls"])
             if c < self.num_classes:
                 p = box["conf"]
                 # Binary cross-entropy estimation of prediction uncertainty
                 entropy = -p * math.log(p + 1e-9) - (1 - p) * math.log((1 - p) + 1e-9)
-                u_img += w[c] * entropy
-        return u_img
+                u = w[c] * entropy
+                if u > max_u:
+                    max_u = u
+        return max_u
 
 
 def diversity_sampling(embeddings, candidate_indices, n_samples):
