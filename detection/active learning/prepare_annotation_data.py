@@ -53,8 +53,13 @@ def main():
 
     csv_path = Path(args.csv_path)
     if not csv_path.exists():
-        print(f"Error: CSV file not found at {csv_path}")
-        return
+        stripped_path = Path(str(csv_path).lstrip("/"))
+        if stripped_path.exists():
+            csv_path = stripped_path
+            
+        else:
+            print(f"Error: CSV file not found at {args.csv_path}")
+            return
 
     model_type, mode, cycle = extract_metadata(csv_path)
     folder_name = f"{model_type}_{mode}_{cycle}"
