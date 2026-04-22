@@ -109,11 +109,11 @@ def extract_features_and_boxes_batch(model, chunk_paths):
         features_list = []
 
         def hook(module, inputs, outputs):
-            # outputs is [N, 256, 4, 4]. GAP it down to [N, 256]
-            pooled = torch.nn.functional.adaptive_avg_pool2d(outputs, (1, 1)).flatten(1)
+            # outputs is an OrderedDict from FPN. 'pool' gives [N, 256, 4, 4]. GAP it down to [N, 256]
+            pooled = torch.nn.functional.adaptive_avg_pool2d(outputs['pool'], (1, 1)).flatten(1)
             features_list.append(pooled.cpu().numpy())
 
-        handle = model.backbone.pool.register_forward_hook(hook)
+        handle = model.backbone.register_forward_hook(hook)
 
         with torch.no_grad():
             outputs = model(inputs)
