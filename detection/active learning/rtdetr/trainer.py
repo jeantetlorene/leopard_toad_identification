@@ -4,7 +4,7 @@ from config import RTDETR_DIR, TRAIN_BATCH_SIZE, IMG_SIZE, DEVICE
 
 
 def train_phase_1(
-    model_weights, run_name, dataset_yaml, freeze=15, epochs=100, patience=15
+    model_weights, run_name, dataset_yaml, freeze=15, epochs=100, patience=25
 ):
     """
     Phase 1: Freeze the backbone and train the detection head until convergence.

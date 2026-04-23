@@ -101,7 +101,7 @@ def main():
                 dataset_dir,
                 freeze=True,
                 epochs=100,
-                patience=15,
+                patience=25,
             )
             p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", dataset_dir, epochs=15)
             pretrained_model = p2

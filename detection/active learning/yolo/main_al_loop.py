@@ -110,7 +110,7 @@ names:
                 dataset_yaml,
                 freeze=15,
                 epochs=100,
-                patience=15,
+                patience=25,
             )
             p2 = train_phase_2(p1, f"cycle_{cycle}_pretrained", dataset_yaml, epochs=30)
             pretrained_model = p2

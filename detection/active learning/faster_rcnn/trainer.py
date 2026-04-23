@@ -25,7 +25,7 @@ def get_model(num_classes=3, freeze_backbone=False):
     return model
 
 
-def _train_routine(model, run_name, dataset_dir, epochs=100, patience=15):
+def _train_routine(model, run_name, dataset_dir, epochs=100, patience=25):
     device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
@@ -146,7 +146,7 @@ def _train_routine(model, run_name, dataset_dir, epochs=100, patience=15):
 
 
 def train_phase_1(
-    model_weights, run_name, dataset_dir, freeze=True, epochs=100, patience=15
+    model_weights, run_name, dataset_dir, freeze=True, epochs=100, patience=25
 ):
     """Phase 1: Freeze backbone"""
     model = get_model(num_classes=3, freeze_backbone=freeze)
