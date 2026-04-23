@@ -56,7 +56,7 @@ def main():
         stripped_path = Path(str(csv_path).lstrip("/"))
         if stripped_path.exists():
             csv_path = stripped_path
-            
+
         else:
             print(f"Error: CSV file not found at {args.csv_path}")
             return

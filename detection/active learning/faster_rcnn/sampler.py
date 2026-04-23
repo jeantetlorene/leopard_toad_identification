@@ -34,7 +34,7 @@ class DCUS:
         w = self.compute_difficulty_coefficient()
         if not boxes:
             return 0.0
-            
+
         max_u = 0.0
         for box in boxes:
             c = int(box["cls"])

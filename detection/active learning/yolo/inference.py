@@ -38,7 +38,8 @@ def get_unlabeled_pool(mode, current_cycle):
 
     # 1b. Exclude all images that have been suggested in previous cycles for this exact model & mode
     for c in range(current_cycle):
-        candidate_csv_path = os.path.join(
+        # 1. Check the new structure for candidate CSVs
+        candidate_csv_path_new = os.path.join(
             BASE_DIR,
             "active learning",
             "yolo",
@@ -47,12 +48,37 @@ def get_unlabeled_pool(mode, current_cycle):
             f"cycle_{c}",
             f"al_query_candidates_{mode}_cycle_{c}.csv",
         )
-        if os.path.exists(candidate_csv_path):
-            with open(candidate_csv_path, mode="r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if "image_path" in row:
-                        annotated_basenames.add(os.path.basename(row["image_path"]))
+        # 2. Check the old/legacy structure for candidate CSVs (e.g., cycle 0 was created here)
+        candidate_csv_path_old = os.path.join(
+            BASE_DIR,
+            "active learning",
+            "yolo",
+            f"al_query_candidates_{mode}_cycle_{c}.csv",
+        )
+
+        for candidate_csv_path in [candidate_csv_path_new, candidate_csv_path_old]:
+            if os.path.exists(candidate_csv_path):
+                with open(candidate_csv_path, mode="r", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if "image_path" in row:
+                            annotated_basenames.add(os.path.basename(row["image_path"]))
+
+        # 3. As an ultimate fallback, exclude any images physically present in the training directories of previous cycles
+        train_img_dir = os.path.join(
+            BASE_DIR,
+            "active learning",
+            "data",
+            "yolo",
+            mode,
+            f"cycle_{c}",
+            "train",
+            "images",
+        )
+        if os.path.exists(train_img_dir):
+            for img_name in os.listdir(train_img_dir):
+                if img_name.lower().endswith(tuple(image_extensions)):
+                    annotated_basenames.add(img_name)
 
     for year, base_input_dir in YEARS.items():
         for folder in FOLDERS:
