@@ -100,7 +100,17 @@ def main():
                 continue
 
             # Use original filename and copy
+            # Resolve naming conflicts
             dest_path = dest_dir / src_path.name
+            if dest_path.exists():
+                stem = src_path.stem
+                suffix = src_path.suffix
+                counter = 1
+                while dest_path.exists():
+                    dest_path = dest_dir / f"{stem}_{counter}{suffix}"
+                    counter += 1
+                print(f"   [CONFLICT] Renamed {src_path.name} -> {dest_path.name}")
+
             try:
                 shutil.copy2(src_path, dest_path)
                 success_count += 1
