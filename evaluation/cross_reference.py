@@ -7,6 +7,7 @@ import torchvision
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
+import math
 
 
 def cluster_boxes(df_group, iou_threshold=0.5):
@@ -47,6 +48,18 @@ def cluster_boxes(df_group, iou_threshold=0.5):
 
         if len(unique_models) >= 3:
             # Valid cluster found
+            mean_conf = float(cluster_df["confidence"].mean())
+            # Binary entropy estimation
+            entropy = -mean_conf * math.log(mean_conf + 1e-9) - (
+                1 - mean_conf
+            ) * math.log((1 - mean_conf) + 1e-9)
+
+            # Calculate bounding box area variance
+            areas = (cluster_df["xmax"] - cluster_df["xmin"]) * (
+                cluster_df["ymax"] - cluster_df["ymin"]
+            )
+            bbox_var = float(areas.var(ddof=0)) if len(cluster_df) > 1 else 0.0
+
             clusters.append(
                 {
                     "image_path": seed_row["image_path"],
@@ -56,6 +69,9 @@ def cluster_boxes(df_group, iou_threshold=0.5):
                     "class_name": seed_row["class_name"],
                     "confidence": float(cluster_df["confidence"].max()),
                     "min_confidence": float(cluster_df["confidence"].min()),
+                    "mean_confidence": mean_conf,
+                    "entropy": entropy,
+                    "bbox_variance": bbox_var,
                     "xmin": round(float(cluster_df["xmin"].mean()), 1),
                     "ymin": round(float(cluster_df["ymin"].mean()), 1),
                     "xmax": round(float(cluster_df["xmax"].mean()), 1),

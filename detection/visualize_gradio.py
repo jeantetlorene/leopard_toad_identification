@@ -4,7 +4,7 @@ import cv2
 import os
 
 
-def load_csv(csv_path):
+def load_csv(csv_path, show_reps_only=False):
     if not os.path.exists(csv_path):
         return None, 0, f"Error: File {csv_path} not found.", {}, []
 
@@ -16,9 +16,15 @@ def load_csv(csv_path):
     if "image_path" not in df.columns:
         return None, 0, "Error: CSV must contain 'image_path' column", {}, []
 
-    unique_images = df["image_path"].unique().tolist()
+    # Filter for representatives if requested
+    if show_reps_only and "is_representative" in df.columns:
+        df_filtered = df[df["is_representative"] == True]
+    else:
+        df_filtered = df
+
+    unique_images = df_filtered["image_path"].unique().tolist()
     if not unique_images:
-        return None, 0, "No images found in CSV.", {}, []
+        return df, 0, "No matching images found in CSV.", {}, []
 
     # Attempt to load existing evaluations if they exist
     eval_path = csv_path.replace(".csv", "_evaluations.csv")
@@ -68,18 +74,25 @@ def draw_boxes(image_path, df):
                 int(row["xmax"]),
                 int(row["ymax"]),
             )
-            label = f"{row['class_name']} ({row.get('confidence', 0):.2f})"
+            
+            is_rep = row.get("is_representative", False)
+            if is_rep:
+                color = (255, 0, 0)  # Red for representative boundary case
+                label = f"REP: {row['class_name']} ({row.get('confidence', 0):.2f})"
+                thickness = max(3, int(max(image.shape[0], image.shape[1]) / 400))
+            else:
+                color = (0, 255, 0)  # Green for regular predictions
+                label = f"{row['class_name']} ({row.get('confidence', 0):.2f})"
+                thickness = max(2, int(max(image.shape[0], image.shape[1]) / 500))
 
-            thickness = max(2, int(max(image.shape[0], image.shape[1]) / 500))
-
-            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), thickness)
+            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, thickness)
             cv2.putText(
                 image,
                 label,
                 (xmin, ymin - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 max(0.5, thickness / 3),
-                (0, 255, 0),
+                color,
                 thickness,
             )
         except Exception as e:
@@ -157,6 +170,9 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             label="CSV File Path",
             placeholder="Enter full path to .csv file (e.g. /home/.../results/detect_2/.../3Z.csv)",
         )
+        reps_checkbox = gr.Checkbox(
+            label="Show Representative Boundary Cases Only", value=False
+        )
         load_btn = gr.Button("Load CSV", variant="primary", scale=0)
 
     status_msg = gr.Markdown("Please load a CSV file to start.")
@@ -189,8 +205,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         correct_btn = gr.Button("✅ Flag as Correct", variant="primary")
         incorrect_btn = gr.Button("❌ Flag as Incorrect", variant="stop")
 
-    def handle_load(csv_path):
-        df, idx, msg, evals, imgs = load_csv(csv_path)
+    def handle_load(csv_path, show_reps):
+        df, idx, msg, evals, imgs = load_csv(csv_path, show_reps)
         if df is None:
             return pd.DataFrame(), idx, msg, evals, imgs
         return df, idx, msg, evals, imgs
@@ -198,7 +214,17 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     # Handlers
     load_btn.click(
         handle_load,
-        inputs=[csv_input],
+        inputs=[csv_input, reps_checkbox],
+        outputs=[df_state, index_state, status_msg, evals_state, images_state],
+    ).then(
+        update_ui,
+        inputs=[images_state, df_state, index_state, evals_state],
+        outputs=[image_output, progress_label, jump_num],
+    )
+
+    reps_checkbox.change(
+        handle_load,
+        inputs=[csv_input, reps_checkbox],
         outputs=[df_state, index_state, status_msg, evals_state, images_state],
     ).then(
         update_ui,
