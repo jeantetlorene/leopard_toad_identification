@@ -103,7 +103,7 @@ def run_all(
 
                         # Save results
                         with open(raw_file, "w") as f:
-                            json.dump(raw_results, f)
+                            json.dump(raw_results, f, indent=4)
                         pd.DataFrame(metrics).to_csv(metrics_file, index=False)
 
                         # Summary entry (at 0.1 threshold)
