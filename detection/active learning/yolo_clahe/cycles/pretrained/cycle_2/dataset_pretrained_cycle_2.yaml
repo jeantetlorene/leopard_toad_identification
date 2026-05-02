@@ -1,0 +1,9 @@
+path: /home/Joshua/Downloads/leopard_toad_identification/detection/active learning/data/yolo/pretrained/cycle_2
+train: train/images
+val: val/images
+test: test/images
+
+names:
+  0: Other_Amphibian
+  1: Small_Mammal
+  2: Western_Leopard_Toad
