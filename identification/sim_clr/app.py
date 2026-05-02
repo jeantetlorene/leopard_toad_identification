@@ -31,7 +31,7 @@ def load_model():
     if os.path.exists(weights_path):
         print(f"Loading weights from {weights_path}")
         state_dict = torch.load(weights_path, map_location=Config.DEVICE)
-        model.load_state_dict(state_dict)
+        model.backbone.load_state_dict(state_dict)
     else:
         print("Warning: Trained weights not found. Using untrained backbone.")
 
