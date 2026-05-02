@@ -67,7 +67,9 @@ names:
                     "best.pt",
                 )
                 if os.path.exists(expected_p1_model):
-                    print(f"  Found existing Phase 1 trained model for Cycle {cycle_num}. Skipping Phase 1.")
+                    print(
+                        f"  Found existing Phase 1 trained model for Cycle {cycle_num}. Skipping Phase 1."
+                    )
                     p1 = expected_p1_model
                 else:
                     p1 = train_phase_1(
