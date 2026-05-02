@@ -15,7 +15,9 @@ class FasterRCNNWrapper(BaseModel):
         self.device = device
         # Replicate model creation logic from trainer.py
         weights = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
-        self.model = fasterrcnn_resnet50_fpn_v2(weights=weights)
+        self.model = fasterrcnn_resnet50_fpn_v2(
+            weights=weights, box_score_thresh=0.001, min_size=640, max_size=640
+        )
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = FastRCNNPredictor(
             in_features, num_classes + 1
@@ -29,7 +31,8 @@ class FasterRCNNWrapper(BaseModel):
         self.model.to(device)
         self.model.eval()
 
-    def predict_batch(self, images):
+    def predict_batch(self, images, **kwargs):
+        sub_batch_size = kwargs.get("sub_batch_size", 8)
         # Convert BGR images to RGB tensors
         inputs = []
         for img in images:
@@ -38,35 +41,47 @@ class FasterRCNNWrapper(BaseModel):
             img_tensor = torch.from_numpy(img_norm).permute(2, 0, 1)  # C, H, W
             inputs.append(img_tensor.to(self.device))
 
-        with torch.no_grad():
-            outputs = self.model(inputs)
-
         batch_preds = []
-        for out in outputs:
-            preds = []
-            boxes = out["boxes"].cpu().numpy()
-            scores = out["scores"].cpu().numpy()
-            labels = out["labels"].cpu().numpy()
 
-            # Faster R-CNN outputs [x1, y1, x2, y2] in pixels
-            # We need to normalize them to [x_center, y_center, w, h] for consistency
-            img_h, img_w = images[0].shape[:2]
+        # Split into sub-batches to avoid OOM
+        for i in range(0, len(inputs), sub_batch_size):
+            sub_inputs = inputs[i : i + sub_batch_size]
+            with torch.no_grad():
+                outputs = self.model(sub_inputs)
 
-            for i in range(len(scores)):
-                x1, y1, x2, y2 = boxes[i]
-                w = (x2 - x1) / img_w
-                h = (y2 - y1) / img_h
-                x_center = (x1 + x2) / (2 * img_w)
-                y_center = (y1 + y2) / (2 * img_h)
+            for out in outputs:
+                preds = []
+                boxes = out["boxes"].cpu().numpy()
+                scores = out["scores"].cpu().numpy()
+                labels = out["labels"].cpu().numpy()
 
-                preds.append(
-                    {
-                        "cls": int(labels[i]) - 1,  # 1-indexed to 0-indexed
-                        "conf": float(scores[i]),
-                        "bbox": [float(x_center), float(y_center), float(w), float(h)],
-                    }
-                )
-            batch_preds.append(preds)
+                img_h, img_w = images[0].shape[:2]
+
+                for j in range(len(scores)):
+                    x1, y1, x2, y2 = boxes[j]
+                    w = (x2 - x1) / img_w
+                    h = (y2 - y1) / img_h
+                    x_center = (x1 + x2) / (2 * img_w)
+                    y_center = (y1 + y2) / (2 * img_h)
+
+                    preds.append(
+                        {
+                            "cls": int(labels[j]) - 1,
+                            "conf": float(scores[j]),
+                            "bbox": [
+                                float(x_center),
+                                float(y_center),
+                                float(w),
+                                float(h),
+                            ],
+                        }
+                    )
+                batch_preds.append(preds)
+
+            # Free memory
+            del sub_inputs
+            torch.cuda.empty_cache()
+
         return batch_preds
 
 

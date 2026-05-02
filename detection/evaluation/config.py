@@ -21,7 +21,8 @@ MODEL_ROOTS = {
 # Inference Settings
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 IMG_SIZE = 640
-DEFAULT_BATCH_SIZE = 32
+DEFAULT_BATCH_SIZE = 256
+FASTER_RCNN_SUB_BATCH_SIZE = 64
 CONF_THRESHOLDS = [round(x, 2) for x in torch.linspace(0.01, 0.95, 20).tolist()]
 
 # Dataset Mappings

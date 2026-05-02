@@ -14,7 +14,7 @@ class UltralyticsWrapper(BaseModel):
         self.imgsz = imgsz
         self.device = device
 
-    def predict_batch(self, images):
+    def predict_batch(self, images, **kwargs):
         results = self.model(
             images, imgsz=self.imgsz, conf=0.001, device=self.device, verbose=False
         )

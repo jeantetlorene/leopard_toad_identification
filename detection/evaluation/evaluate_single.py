@@ -4,7 +4,13 @@ import pandas as pd
 from tqdm import tqdm
 import json
 import concurrent.futures
-from config import DATASETS, DEVICE, CONF_THRESHOLDS, DEFAULT_BATCH_SIZE
+from config import (
+    DATASETS,
+    DEVICE,
+    CONF_THRESHOLDS,
+    DEFAULT_BATCH_SIZE,
+    FASTER_RCNN_SUB_BATCH_SIZE,
+)
 from data_utils import (
     apply_clahe,
     load_labels,
@@ -12,7 +18,7 @@ from data_utils import (
     get_camera_images,
     get_ground_truth_positives,
 )
-from metrics import calculate_image_level_metrics
+from metrics import calculate_image_level_metrics, calculate_detection_metrics
 
 
 def evaluate_single_model(
@@ -63,8 +69,9 @@ def evaluate_single_model(
         if not imgs:
             continue
 
-        # Inference
-        batch_preds = model_wrapper.predict_batch(imgs)
+        batch_preds = model_wrapper.predict_batch(
+            imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
+        )
 
         for path, preds in zip(valid_paths, batch_preds):
             is_positive = path in positives
@@ -79,5 +86,11 @@ def evaluate_single_model(
                 }
             )
 
-    metrics = calculate_image_level_metrics(results, CONF_THRESHOLDS)
-    return results, metrics
+    image_metrics = calculate_image_level_metrics(results, CONF_THRESHOLDS)
+    mAP = calculate_detection_metrics(results)
+
+    # Add mAP to all threshold entries for logging convenience
+    for m in image_metrics:
+        m["mAP"] = mAP
+
+    return results, image_metrics
