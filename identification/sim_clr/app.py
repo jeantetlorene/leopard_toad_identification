@@ -12,16 +12,7 @@ from sklearn.neighbors import NearestNeighbors
 # Import local modules
 from config import Config
 from augmentations import ResizeAndPad
-
-
-class SimCLRBackbone(nn.Module):
-    def __init__(self, base_model=models.resnet50):
-        super(SimCLRBackbone, self).__init__()
-        self.backbone = base_model(weights=None)
-        self.backbone.fc = nn.Identity()
-
-    def forward(self, x):
-        return self.backbone(x)
+from model import SimCLRBackbone
 
 
 def load_model():
