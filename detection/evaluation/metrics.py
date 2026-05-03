@@ -57,7 +57,7 @@ def box_iou(box1, box2):
 
 
 def calculate_detection_metrics(results, iou_threshold=0.5):
-    """Calculate mAP@0.5 across the dataset."""
+    """Calculate AP per class and mAP@0.5 across the dataset."""
     # Group results by class
     all_preds = []
     all_gts = []
@@ -83,7 +83,7 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
             )
 
     classes = np.unique([g["cls"] for g in all_gts])
-    aps = []
+    class_aps = {}
 
     for c in classes:
         cls_preds = [p for p in all_preds if p["cls"] == c]
@@ -115,14 +115,18 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
             else:
                 fp[i] = 1
 
-        # Reset matched for next eval (if any) - not strictly needed here as we filter cls_gts
+        # Reset matched
         for g in cls_gts:
             g["matched"] = False
 
         tp_cum = np.cumsum(tp)
         fp_cum = np.cumsum(fp)
-        recall = tp_cum / n_gt
-        precision = tp_cum / (tp_cum + fp_cum)
+        recall = tp_cum / n_gt if n_gt > 0 else np.zeros_like(tp_cum)
+        precision = (
+            tp_cum / (tp_cum + fp_cum)
+            if (tp_cum + fp_cum).any()
+            else np.zeros_like(tp_cum)
+        )
 
         # VOC all-points interpolation
         mrec = np.concatenate(([0.0], recall, [1.0]))
@@ -131,6 +135,7 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
             mpre[j - 1] = np.maximum(mpre[j - 1], mpre[j])
         idx = np.where(mrec[1:] != mrec[:-1])[0]
         ap = np.sum((mrec[idx + 1] - mrec[idx]) * mpre[idx + 1])
-        aps.append(ap)
+        class_aps[int(c)] = ap
 
-    return np.mean(aps) if aps else 0.0
+    mAP = np.mean(list(class_aps.values())) if class_aps else 0.0
+    return {"mAP": mAP, "class_aps": class_aps}
