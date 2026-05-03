@@ -56,6 +56,7 @@ def calculate_per_class_image_metrics(results, thresholds):
 
 def analyze_all_results():
     all_summary_rows = []
+    full_sweep_rows = []
     
     folders = sorted([f for f in os.listdir(RESULTS_DIR) if os.path.isdir(os.path.join(RESULTS_DIR, f))])
     for model_folder in folders:
@@ -87,6 +88,25 @@ def analyze_all_results():
                 ap = class_aps.get(cls_id, 0.0)
                 metrics_sweep = image_class_metrics[cls_id]
                 
+                # Record all thresholds in full_sweep_rows
+                for m in metrics_sweep:
+                    full_sweep_rows.append({
+                        "model": model_type,
+                        "processing": processing,
+                        "cycle": cycle,
+                        "variant": variant,
+                        "dataset": dataset,
+                        "class_id": cls_id,
+                        "class_name": cls_name,
+                        "threshold": m["threshold"],
+                        "recall": m["recall"],
+                        "specificity": m["specificity"],
+                        "tp": m["tp"],
+                        "fp": m["fp"],
+                        "tn": m["tn"],
+                        "fn": m["fn"]
+                    })
+                
                 idx_01 = np.argmin([abs(m["threshold"] - 0.1) for m in metrics_sweep])
                 m01 = metrics_sweep[idx_01]
                 
@@ -117,10 +137,17 @@ def analyze_all_results():
                 })
 
     if all_summary_rows:
+        # Save Summary
         summary_df = pd.DataFrame(all_summary_rows)
         csv_path = os.path.join(RESULTS_DIR, "per_class_models_summary.csv")
         summary_df.to_csv(csv_path, index=False)
-        print(f"\nFull per-class summary saved to {csv_path}")
+        print(f"\nSummary saved to {csv_path}")
+        
+        # Save Full Sweep
+        sweep_df = pd.DataFrame(full_sweep_rows)
+        sweep_path = os.path.join(RESULTS_DIR, "per_class_threshold_sweep.csv")
+        sweep_df.to_csv(sweep_path, index=False)
+        print(f"Full sweep data saved to {sweep_path}")
         
         # Display highlights for Toad class (2)
         print("\n--- Toad Performance Highlights (Cycle 4, Test Set) ---")
