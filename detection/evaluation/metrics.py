@@ -21,6 +21,12 @@ def calculate_image_level_metrics(results, thresholds):
 
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0
         specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        f1 = (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall) > 0
+            else 0
+        )
         metrics.append(
             {
                 "threshold": thresh,
@@ -30,6 +36,8 @@ def calculate_image_level_metrics(results, thresholds):
                 "fn": fn,
                 "recall": recall,
                 "specificity": specificity,
+                "precision": precision,
+                "f1_score": f1,
             }
         )
     return metrics
