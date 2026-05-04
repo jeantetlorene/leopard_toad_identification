@@ -9,22 +9,25 @@ from PIL import Image
 import gradio as gr
 from sklearn.neighbors import NearestNeighbors
 
-# Import local modules
+import argparse
 from config import Config
 from augmentations import ResizeAndPad
 from model import SimCLRBackbone
 
 
-def load_model():
+def load_model(weights_path=None):
     model = SimCLRBackbone()
-    weights_path = os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth")
+    if weights_path is None:
+        weights_path = os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth")
 
     if os.path.exists(weights_path):
         print(f"Loading weights from {weights_path}")
         state_dict = torch.load(weights_path, map_location=Config.DEVICE)
         model.backbone.load_state_dict(state_dict)
     else:
-        print("Warning: Trained weights not found. Using untrained backbone.")
+        print(
+            f"Warning: Weights not found at {weights_path}. Using untrained backbone."
+        )
 
     model.to(Config.DEVICE)
     model.eval()
@@ -49,15 +52,18 @@ db_image_paths = None
 db_toad_ids = None
 
 
-def index_database():
+def index_database(data_dir=None):
     global db_embeddings, db_image_paths, db_toad_ids
-    print("Indexing database...")
+    if data_dir is None:
+        data_dir = Config.DATA_DIR
+
+    print(f"Indexing database from {data_dir}...")
 
     image_paths = []
     toad_ids = []
 
     # Walk through the data directory
-    for root, dirs, files in os.walk(Config.DATA_DIR):
+    for root, dirs, files in os.walk(data_dir):
         for file in files:
             if file.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
                 full_path = os.path.join(root, file)
@@ -126,11 +132,6 @@ def identify_toad(input_img, top_k=5):
     return results
 
 
-# Initialize app
-model = load_model()
-transform = get_transform()
-index_database()
-
 # Create Gradio interface
 with gr.Blocks(title="Leopard Toad Identification") as demo:
     gr.Markdown("# 🐸 Leopard Toad Identification (SimCLR)")
@@ -149,4 +150,24 @@ with gr.Blocks(title="Leopard Toad Identification") as demo:
     identify_btn.click(fn=identify_toad, inputs=input_image, outputs=output_gallery)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Launch Toad Identification App.")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=Config.DATA_DIR,
+        help="Path to the directory containing indexed toad chips.",
+    )
+    parser.add_argument(
+        "--weights_path",
+        type=str,
+        default=os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth"),
+        help="Path to model weights file.",
+    )
+    args = parser.parse_args()
+
+    # Initialize app with arguments
+    model = load_model(args.weights_path)
+    transform = get_transform()
+    index_database(args.data_dir)
+
     demo.launch(share=True)

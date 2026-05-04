@@ -8,6 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+import argparse
 from config import Config
 from augmentations import SimCLRTransform
 from dataset import ToadDataset, get_data_splits
@@ -39,15 +40,45 @@ def plot_history(history, save_path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Train SimCLR model on toad chips.")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=Config.DATA_DIR,
+        help="Path to the directory containing sorted toad chips.",
+    )
+    parser.add_argument(
+        "--weights_dir",
+        type=str,
+        default=Config.WEIGHTS_DIR,
+        help="Directory to save model weights.",
+    )
+    parser.add_argument(
+        "--logs_dir",
+        type=str,
+        default=Config.LOGS_DIR,
+        help="Directory to save training logs and plots.",
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=Config.EPOCHS, help="Number of training epochs."
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=Config.BATCH_SIZE,
+        help="Batch size for training.",
+    )
+    args = parser.parse_args()
+
     set_seed(Config.SEED)
 
     # Create directories
-    os.makedirs(Config.WEIGHTS_DIR, exist_ok=True)
-    os.makedirs(Config.LOGS_DIR, exist_ok=True)
+    os.makedirs(args.weights_dir, exist_ok=True)
+    os.makedirs(args.logs_dir, exist_ok=True)
 
     # Get data splits (Split by Toad ID)
     train_files, val_files = get_data_splits(
-        Config.DATA_DIR, val_split=Config.VAL_SPLIT, seed=Config.SEED
+        args.data_dir, val_split=Config.VAL_SPLIT, seed=Config.SEED
     )
 
     train_transform = SimCLRTransform(Config.IMG_SIZE)
@@ -55,14 +86,14 @@ def main():
 
     train_loader = DataLoader(
         ToadDataset(train_files, transform=train_transform),
-        batch_size=Config.BATCH_SIZE,
+        batch_size=args.batch_size,
         shuffle=True,
         drop_last=True,
         num_workers=Config.NUM_WORKERS,
     )
     val_loader = DataLoader(
         ToadDataset(val_files, transform=val_transform),
-        batch_size=Config.BATCH_SIZE,
+        batch_size=args.batch_size,
         shuffle=False,
         drop_last=True,
         num_workers=Config.NUM_WORKERS,
@@ -80,22 +111,22 @@ def main():
             + np.cos(
                 np.pi
                 * (epoch - Config.WARMUP_EPOCHS)
-                / (Config.EPOCHS - Config.WARMUP_EPOCHS)
+                / (args.epochs - Config.WARMUP_EPOCHS)
             )
         )
 
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-    criterion = NTXentLoss(Config.BATCH_SIZE, Config.TEMPERATURE, Config.DEVICE)
+    criterion = NTXentLoss(args.batch_size, Config.TEMPERATURE, Config.DEVICE)
 
     best_val_loss = float("inf")
     patience_counter = 0
     history = {"train_loss": [], "val_loss": []}
 
     print(f"Starting Training on {Config.DEVICE}...")
-    for epoch in range(Config.EPOCHS):
+    for epoch in range(args.epochs):
         model.train()
         train_loss = 0.0
-        pbar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{Config.EPOCHS} [Train]")
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{args.epochs} [Train]")
         for x_i, x_j in pbar:
             x_i, x_j = x_i.to(Config.DEVICE), x_j.to(Config.DEVICE)
             optimizer.zero_grad()
@@ -112,7 +143,7 @@ def main():
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            vbar = tqdm(val_loader, desc=f"Epoch {epoch + 1}/{Config.EPOCHS} [Val]")
+            vbar = tqdm(val_loader, desc=f"Epoch {epoch + 1}/{args.epochs} [Val]")
             for x_i, x_j in vbar:
                 x_i, x_j = x_i.to(Config.DEVICE), x_j.to(Config.DEVICE)
                 _, z_i = model(x_i)
@@ -127,7 +158,7 @@ def main():
 
         curr_lr = optimizer.param_groups[0]["lr"]
         print(
-            f"Epoch[{epoch + 1}/{Config.EPOCHS}] LR: {curr_lr:.6f} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}"
+            f"Epoch[{epoch + 1}/{args.epochs}] LR: {curr_lr:.6f} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}"
         )
 
         scheduler.step()
@@ -140,7 +171,7 @@ def main():
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
-                os.path.join(Config.WEIGHTS_DIR, "best_simclr.pth"),
+                os.path.join(args.weights_dir, "best_simclr.pth"),
             )
             print("--> Best Model Saved")
         else:
@@ -155,14 +186,14 @@ def main():
     # Save final backbone
     torch.save(
         model.backbone.state_dict(),
-        os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth"),
+        os.path.join(args.weights_dir, "resnet50_backbone_final.pth"),
     )
 
     # Save history
-    with open(os.path.join(Config.LOGS_DIR, "training_history.json"), "w") as f:
+    with open(os.path.join(args.logs_dir, "training_history.json"), "w") as f:
         json.dump(history, f)
 
-    plot_history(history, os.path.join(Config.LOGS_DIR, "training_trajectory.png"))
+    plot_history(history, os.path.join(args.logs_dir, "training_trajectory.png"))
     print("\nTraining Complete. Backbone saved.")
 
 

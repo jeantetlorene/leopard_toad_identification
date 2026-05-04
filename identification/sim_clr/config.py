@@ -3,13 +3,13 @@ import os
 
 
 class Config:
-    DATA_DIR = "/home/Joshua/Downloads/leopard_toad_identification/identification/toads_by_id_crop"
-    WEIGHTS_DIR = "/home/Joshua/Downloads/leopard_toad_identification/identification/sim_clr/weights"
-    LOGS_DIR = (
-        "/home/Joshua/Downloads/leopard_toad_identification/identification/sim_clr/logs"
-    )
+    # Default paths
+    BASE_DATA_DIR = "/home/Joshua/Downloads/leopard_toad_identification/identification"
+    DATA_DIR = os.path.join(BASE_DATA_DIR, "toads_by_id_crop")
+    WEIGHTS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/weights")
+    LOGS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/logs")
 
-    IMG_SIZE = 224
+    IMG_SIZE = 640
     VAL_SPLIT = 0.2
     SEED = 42
 
