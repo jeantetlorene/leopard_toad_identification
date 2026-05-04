@@ -147,7 +147,7 @@ def run_evaluation_suite():
             
             # Store FPR/TPR for plotting (only for Cycle 4)
             if cycle == 4:
-                save_plot_data(model_type, processing, dataset, per_class_results)
+                save_plot_data(model_type, processing, variant, dataset, per_class_results)
 
     # Save Summaries
     pd.DataFrame(all_metrics).to_csv(os.path.join(RESULTS_DIR, "unified_model_evaluation.csv"), index=False)
@@ -163,12 +163,13 @@ def run_evaluation_suite():
 # Global storage for plot data
 plot_data = []
 
-def save_plot_data(model, processing, dataset, per_class_results):
+def save_plot_data(model, processing, variant, dataset, per_class_results):
     for cls_id, res in per_class_results.items():
         if res["fpr"] is not None:
             plot_data.append({
                 "model": model,
                 "processing": processing,
+                "variant": variant,
                 "dataset": dataset,
                 "class_id": cls_id,
                 "class_name": CLASSES[cls_id],
@@ -191,7 +192,7 @@ def generate_roc_plots():
             plt.figure(figsize=(10, 8))
             
             for _, row in subset.iterrows():
-                label = f"{row['model'].upper()} ({row['processing']}) - AUC: {row['auc']:.4f}"
+                label = f"{row['model'].upper()} {row['variant'].capitalize()} ({row['processing']}) - AUC: {row['auc']:.4f}"
                 plt.plot(row['fpr'], row['tpr'], label=label, linewidth=2)
                 
             plt.plot([0, 1], [0, 1], 'k--', alpha=0.5, label='Chance')
