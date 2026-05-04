@@ -4,18 +4,21 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 from sklearn.neighbors import NearestNeighbors
+import argparse
 import torchvision.transforms as T
 from collections import defaultdict
 
 # Import local modules
 from config import Config
 from model import SimCLRBackbone
-from augmentations import ResizeAndPad
+from augmentations import ResizeAndPad, get_inference_transform
 
 
-def load_model():
+def load_model(weights_path=None):
     model = SimCLRBackbone()
-    weights_path = os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth")
+    if weights_path is None:
+        weights_path = os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth")
+
     if not os.path.exists(weights_path):
         raise FileNotFoundError(f"Weights not found at {weights_path}")
 
@@ -27,25 +30,34 @@ def load_model():
 
 
 def get_transform():
-    return T.Compose(
-        [
-            ResizeAndPad(Config.IMG_SIZE, fill=0),
-            T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    return get_inference_transform(Config.IMG_SIZE)
 
 
 def main():
-    transform = get_transform()
-    model = load_model()
+    parser = argparse.ArgumentParser(description="Evaluate SimCLR model on re-ID.")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=Config.DATA_DIR,
+        help="Path to the directory containing sorted toad chips.",
+    )
+    parser.add_argument(
+        "--weights_path",
+        type=str,
+        default=os.path.join(Config.WEIGHTS_DIR, "resnet50_backbone_final.pth"),
+        help="Path to model weights file.",
+    )
+    args = parser.parse_args()
 
-    print("Collecting dataset metadata...")
+    transform = get_transform()
+    model = load_model(args.weights_path)
+
+    print(f"Collecting dataset metadata from {args.data_dir}...")
     image_paths = []
     toad_ids = []
     id_counts = defaultdict(int)
 
-    for root, dirs, files in os.walk(Config.DATA_DIR):
+    for root, dirs, files in os.walk(args.data_dir):
         for file in files:
             if file.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
                 full_path = os.path.join(root, file)

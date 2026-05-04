@@ -29,7 +29,8 @@ class ResizeAndPad:
             delta_h - (delta_h // 2),
         )
 
-        return T.functional.pad(image, padding, fill=self.fill)
+        # Use reflection padding to avoid artificial black borders while keeping aspect ratio
+        return T.functional.pad(image, padding, padding_mode="reflect")
 
 
 class GaussianBlur:
@@ -45,14 +46,16 @@ class SimCLRTransform:
     def __init__(self, size):
         self.transform = T.Compose(
             [
-                # 1. Fix Aspect Ratio & Pad
-                ResizeAndPad(size, fill=0),
-                # 2. Safe Geometric Augmentations
-                T.Pad(padding=int(size * 0.1)),
-                T.RandomCrop(size=size),
+                # 1. Aspect Ratio Preserving Resize with Reflection Padding
+                ResizeAndPad(size),
+                # 2. Geometric Augmentations (Preserving Full Pattern)
                 T.RandomHorizontalFlip(p=0.5),
                 T.RandomRotation(degrees=15),
-                # 3. Photometric Augmentations (IR Simulation)
+                # RandomAffine provides translation and slight scaling without aggressive cropping
+                T.RandomAffine(
+                    degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=5
+                ),
+                # 3. Photometric Augmentations
                 T.RandomApply(
                     [
                         T.ColorJitter(
@@ -62,7 +65,7 @@ class SimCLRTransform:
                     p=0.8,
                 ),
                 T.RandomGrayscale(p=0.2),
-                # 4. Blur (Simulating focus issues)
+                # 4. Blur
                 T.RandomApply([GaussianBlur([0.1, 2.0])], p=0.5),
                 # 5. Normalization
                 T.ToTensor(),
@@ -72,3 +75,19 @@ class SimCLRTransform:
 
     def __call__(self, x):
         return self.transform(x), self.transform(x)
+
+
+def get_inference_transform(size):
+    """
+    Standard inference transform:
+    1. Aspect Ratio Preserving Resize with Reflection Padding
+    2. Conversion to Tensor
+    3. Normalization (ImageNet stats)
+    """
+    return T.Compose(
+        [
+            ResizeAndPad(size),
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )

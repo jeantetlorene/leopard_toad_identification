@@ -11,7 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 
 import argparse
 from config import Config
-from augmentations import ResizeAndPad
+from augmentations import ResizeAndPad, get_inference_transform
 from model import SimCLRBackbone
 
 
@@ -35,13 +35,7 @@ def load_model(weights_path=None):
 
 
 def get_transform():
-    return T.Compose(
-        [
-            ResizeAndPad(Config.IMG_SIZE, fill=0),
-            T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    return get_inference_transform(Config.IMG_SIZE)
 
 
 # Global variables for the app

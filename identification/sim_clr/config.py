@@ -8,12 +8,13 @@ class Config:
     DATA_DIR = os.path.join(BASE_DATA_DIR, "toads_by_id_crop")
     WEIGHTS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/weights")
     LOGS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/logs")
+    PRETRAINED_BACKBONE = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn/train_resnet50/weights/best.pt"
 
     IMG_SIZE = 640
     VAL_SPLIT = 0.2
     SEED = 42
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 16
     EPOCHS = 200
     LEARNING_RATE = 3e-4
     TEMPERATURE = 0.12

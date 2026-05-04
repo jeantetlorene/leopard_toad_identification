@@ -68,6 +68,24 @@ def main():
         default=Config.BATCH_SIZE,
         help="Batch size for training.",
     )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=Config.LEARNING_RATE,
+        help="Learning rate for training.",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=Config.TEMPERATURE,
+        help="NT-Xent temperature.",
+    )
+    parser.add_argument(
+        "--pretrained_backbone",
+        type=str,
+        default=Config.PRETRAINED_BACKBONE,
+        help="Path to a pretrained backbone checkpoint (e.g. from Faster R-CNN).",
+    )
     args = parser.parse_args()
 
     set_seed(Config.SEED)
@@ -99,8 +117,10 @@ def main():
         num_workers=Config.NUM_WORKERS,
     )
 
-    model = SimCLR(out_dim=Config.EMBEDDING_DIM).to(Config.DEVICE)
-    optimizer = optim.Adam(model.parameters(), lr=Config.LEARNING_RATE)
+    model = SimCLR(
+        out_dim=Config.EMBEDDING_DIM, pretrained_path=args.pretrained_backbone
+    ).to(Config.DEVICE)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # Linear Warmup + Cosine Annealing
     def lr_lambda(epoch):
@@ -116,7 +136,7 @@ def main():
         )
 
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-    criterion = NTXentLoss(args.batch_size, Config.TEMPERATURE, Config.DEVICE)
+    criterion = NTXentLoss(args.batch_size, args.temperature, Config.DEVICE)
 
     best_val_loss = float("inf")
     patience_counter = 0
