@@ -7,6 +7,8 @@ EVAL_DIR = os.path.join(BASE_DIR, "evaluation")
 DATA_DIR = os.path.join(EVAL_DIR, "data")
 CONSENSUS_DIR = os.path.join(EVAL_DIR, "consensus_predictions")
 RESULTS_DIR = os.path.join(EVAL_DIR, "results")
+FILES_DIR = os.path.join(RESULTS_DIR, "files")
+PLOTS_DIR = os.path.join(RESULTS_DIR, "plots")
 
 # Model Roots
 MODEL_ROOTS = {

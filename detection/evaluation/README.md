@@ -28,21 +28,26 @@ The PR curves are generated using standard VOC/COCO interpolation (monotonic dec
 
 ## Unified Evaluation Pipeline
 
+The evaluation pipeline is highly optimized to **decouple heavy inference from metrics calculation**. If raw prediction JSON files (`_raw.json`) are already generated and present in the `results/` directory, the master script will automatically skip inference and only calculate/update the performance metrics. 
+
 ### Modular Components
 - **[`config.py`](config.py)**: Centralized configuration for paths, camera-to-dataset mappings, and hyperparameters.
 - **[`data_utils.py`](data_utils.py)**: Utilities for parallel image loading, on-the-fly CLAHE enhancement, and robust ground-truth label matching.
 - **[`metrics.py`](metrics.py)**: Mathematical implementation of binary image-level metrics and IoU-based detection matching.
-- **[`evaluate_single.py`](evaluate_single.py)**: Core logic for evaluating a single model variant. Supports a `--full_sequence` mode for large-scale filtering analysis.
-- **[`run_all_evaluations.py`](run_all_evaluations.py)**: Master orchestration script for bulk evaluation.
+- **[`inference.py`](inference.py)**: Core logic for loading a single model variant and generating spatial predictions. Supports a `--full_sequence` mode for large-scale filtering analysis.
+- **[`evaluation_suite.py`](evaluation_suite.py)**: Comprehensive metric calculator. Aggregates cached prediction JSONs to output threshold sweeps, ROC-AUCs, and unified comparison CSVs.
+- **[`run_all_evaluations.py`](run_all_evaluations.py)**: Master orchestration script for bulk evaluation. It manages inference caching and triggers the full evaluation suite automatically.
 
 ### Usage
 
 **1. Run Bulk Evaluation (Detection-Level & Subsets):**
+This executes evaluation on both `test` and `val` datasets for all available model iterations. Models with cached `_raw.json` files will gracefully bypass the inference phase.
 ```bash
 python3 run_all_evaluations.py --batch_size 64
 ```
 
 **2. Run Full-Sequence Evaluation (Filtering Analysis):**
+This executes predictions across the entire unbroken sequence of unlabelled images to explicitly verify binary filtering capability. 
 ```bash
 python3 run_all_evaluations.py --cycles 0 --models yolo --full_sequence --batch_size 256
 ```
@@ -57,5 +62,6 @@ python3 generate_preprocessing_report.py
 ## Directory Organization
 - `consensus_predictions/`: Ground truth mapping CSVs generated from manual audits.
 - `data/`: Manually verified YOLO-format labels for the test and val sets.
-- `results/`: Target directory for all generated evaluation metrics, raw prediction JSONs, and PR curve plots.
-- `preprocessing_results.md`: The summary report for the CLAHE impact study.
+- `results/files/`: Target directory for all generated evaluation metrics, unified sweep CSVs, and `preprocessing_results.md`.
+- `results/plots/`: Target directory for all generated ROC plots and PR curve visualizations.
+- `results/<model_type>_<processing>/`: Contains the raw prediction JSON files (`_raw.json`).

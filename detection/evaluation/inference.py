@@ -1,13 +1,10 @@
 import os
 import cv2
-import pandas as pd
-from tqdm import tqdm
-import json
 import concurrent.futures
+from tqdm import tqdm
+
 from config import (
     DATASETS,
-    DEVICE,
-    CONF_THRESHOLDS,
     DEFAULT_BATCH_SIZE,
     FASTER_RCNN_SUB_BATCH_SIZE,
 )
@@ -19,10 +16,9 @@ from data_utils import (
     get_ground_truth_positives,
     get_dataset_images,
 )
-from metrics import calculate_image_level_metrics, calculate_detection_metrics
 
 
-def evaluate_single_model(
+def generate_predictions(
     model_wrapper,
     dataset_name,
     use_clahe=False,
@@ -30,8 +26,13 @@ def evaluate_single_model(
     batch_size=DEFAULT_BATCH_SIZE,
     full_sequence=False,
 ):
+    """
+    Run inference on a dataset and return the raw prediction results.
+    Does NOT calculate evaluation metrics.
+    """
     ds_info = DATASETS[dataset_name]
     positives = get_ground_truth_positives(dataset_name)
+
     if full_sequence:
         all_images = get_camera_images(ds_info["camera"])
     else:
@@ -44,7 +45,7 @@ def evaluate_single_model(
     results = []
 
     print(
-        f"Evaluating model on {dataset_name} ({len(all_images)} images, CLAHE={use_clahe})"
+        f"Generating predictions on {dataset_name} ({len(all_images)} images, CLAHE={use_clahe})"
     )
 
     for i in tqdm(range(0, len(all_images), batch_size)):
@@ -91,11 +92,4 @@ def evaluate_single_model(
                 }
             )
 
-    image_metrics = calculate_image_level_metrics(results, CONF_THRESHOLDS)
-    mAP = calculate_detection_metrics(results)
-
-    # Add mAP to all threshold entries for logging convenience
-    for m in image_metrics:
-        m["mAP"] = mAP
-
-    return results, image_metrics
+    return results

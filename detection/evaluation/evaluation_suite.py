@@ -1,12 +1,12 @@
 import os
-import orjson
+import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import roc_curve, auc, precision_score, recall_score, f1_score
 from metrics import calculate_detection_metrics, calculate_image_level_metrics
-from config import RESULTS_DIR, CLASSES, DATASETS, CONF_THRESHOLDS
+from config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, CONF_THRESHOLDS
 
 
 def get_model_info(folder_name):
@@ -26,10 +26,65 @@ def get_eval_info(filename):
     return cycle, variant, dataset
 
 
+def save_plot_data(model, processing, variant, dataset, per_class_results, plot_data):
+    for cls_id, res in per_class_results.items():
+        if res["fpr"] is not None:
+            plot_data.append(
+                {
+                    "model": model,
+                    "processing": processing,
+                    "variant": variant,
+                    "dataset": dataset,
+                    "class_id": cls_id,
+                    "class_name": CLASSES[cls_id],
+                    "fpr": res["fpr"],
+                    "tpr": res["tpr"],
+                    "auc": res["auc"],
+                }
+            )
+
+
+def generate_roc_plots(plot_data):
+    df_plot = pd.DataFrame(plot_data)
+    if df_plot.empty:
+        return
+
+    for dataset in ["test", "val"]:
+        for cls_id, cls_name in CLASSES.items():
+            subset = df_plot[
+                (df_plot["dataset"] == dataset) & (df_plot["class_id"] == cls_id)
+            ]
+            if subset.empty:
+                continue
+
+            plt.figure(figsize=(10, 8))
+
+            for _, row in subset.iterrows():
+                label = f"{row['model'].upper()} {row['variant'].capitalize()} ({row['processing']}) - AUC: {row['auc']:.4f}"
+                plt.plot(row["fpr"], row["tpr"], label=label, linewidth=2)
+
+            plt.plot([0, 1], [0, 1], "k--", alpha=0.5, label="Chance")
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel("False Positive Rate (1 - Specificity)")
+            plt.ylabel("True Positive Rate (Recall)")
+            plt.title(f"ROC Curves - {cls_name} (Cycle 4, {dataset.capitalize()} Set)")
+            plt.legend(loc="lower right")
+            plt.grid(alpha=0.3)
+            plt.gca().set_aspect("equal")
+
+            plot_filename = f"final_roc_{cls_name.lower()}_{dataset}.png"
+            plot_path = os.path.join(PLOTS_DIR, plot_filename)
+            plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+            plt.close()
+            print(f"ROC plot saved to {plot_path}")
+
+
 def run_evaluation_suite():
     all_metrics = []
     all_per_class_sweep = []
     all_binary_sweep = []
+    plot_data = []
 
     # Get all model folders
     folders = sorted(
@@ -54,8 +109,8 @@ def run_evaluation_suite():
         for filename in tqdm(filenames, desc=f"Models in {model_folder}"):
             cycle, variant, dataset = get_eval_info(filename)
 
-            with open(os.path.join(folder_path, filename), "rb") as f:
-                results = orjson.loads(f.read())
+            with open(os.path.join(folder_path, filename), "r") as f:
+                results = json.load(f)
 
             # 1. Detection-level Metrics (mAP)
             det_metrics = calculate_detection_metrics(results)
@@ -211,83 +266,32 @@ def run_evaluation_suite():
             # Store FPR/TPR for plotting (only for Cycle 4)
             if cycle == 4:
                 save_plot_data(
-                    model_type, processing, variant, dataset, per_class_results
+                    model_type,
+                    processing,
+                    variant,
+                    dataset,
+                    per_class_results,
+                    plot_data,
                 )
 
     # Save Summaries
+    os.makedirs(FILES_DIR, exist_ok=True)
     pd.DataFrame(all_metrics).to_csv(
-        os.path.join(RESULTS_DIR, "unified_model_evaluation.csv"), index=False
+        os.path.join(FILES_DIR, "unified_model_evaluation.csv"), index=False
     )
     pd.DataFrame(all_per_class_sweep).to_csv(
-        os.path.join(RESULTS_DIR, "per_class_threshold_sweep.csv"), index=False
+        os.path.join(FILES_DIR, "per_class_threshold_sweep.csv"), index=False
     )
     pd.DataFrame(all_binary_sweep).to_csv(
-        os.path.join(RESULTS_DIR, "binary_threshold_sweep.csv"), index=False
+        os.path.join(FILES_DIR, "binary_threshold_sweep.csv"), index=False
     )
 
-    print(f"\nEvaluation files saved to {RESULTS_DIR}")
+    print(f"\nEvaluation files saved to {FILES_DIR}")
 
     # Generate Plots
     print("\n>>> Generating ROC Plots...")
-    generate_roc_plots()
-
-
-# Global storage for plot data
-plot_data = []
-
-
-def save_plot_data(model, processing, variant, dataset, per_class_results):
-    for cls_id, res in per_class_results.items():
-        if res["fpr"] is not None:
-            plot_data.append(
-                {
-                    "model": model,
-                    "processing": processing,
-                    "variant": variant,
-                    "dataset": dataset,
-                    "class_id": cls_id,
-                    "class_name": CLASSES[cls_id],
-                    "fpr": res["fpr"],
-                    "tpr": res["tpr"],
-                    "auc": res["auc"],
-                }
-            )
-
-
-def generate_roc_plots():
-    df_plot = pd.DataFrame(plot_data)
-    if df_plot.empty:
-        return
-
-    for dataset in ["test", "val"]:
-        for cls_id, cls_name in CLASSES.items():
-            subset = df_plot[
-                (df_plot["dataset"] == dataset) & (df_plot["class_id"] == cls_id)
-            ]
-            if subset.empty:
-                continue
-
-            plt.figure(figsize=(10, 8))
-
-            for _, row in subset.iterrows():
-                label = f"{row['model'].upper()} {row['variant'].capitalize()} ({row['processing']}) - AUC: {row['auc']:.4f}"
-                plt.plot(row["fpr"], row["tpr"], label=label, linewidth=2)
-
-            plt.plot([0, 1], [0, 1], "k--", alpha=0.5, label="Chance")
-            plt.xlim([0.0, 1.0])
-            plt.ylim([0.0, 1.05])
-            plt.xlabel("False Positive Rate (1 - Specificity)")
-            plt.ylabel("True Positive Rate (Recall)")
-            plt.title(f"ROC Curves - {cls_name} (Cycle 4, {dataset.capitalize()} Set)")
-            plt.legend(loc="lower right")
-            plt.grid(alpha=0.3)
-            plt.gca().set_aspect("equal")
-
-            plot_filename = f"final_roc_{cls_name.lower()}_{dataset}.png"
-            plot_path = os.path.join(RESULTS_DIR, plot_filename)
-            plt.savefig(plot_path, dpi=300, bbox_inches="tight")
-            plt.close()
-            print(f"ROC plot saved to {plot_path}")
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    generate_roc_plots(plot_data)
 
 
 if __name__ == "__main__":

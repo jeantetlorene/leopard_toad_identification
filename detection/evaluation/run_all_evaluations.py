@@ -1,11 +1,9 @@
 import os
-import pandas as pd
-import json
 import argparse
-from config import MODEL_ROOTS, RESULTS_DIR, DEVICE, DATASETS
-from models.ultralytics_wrapper import UltralyticsWrapper
-from models.faster_rcnn_wrapper import FasterRCNNWrapper
-from evaluate_single import evaluate_single_model
+import json
+from config import MODEL_ROOTS, RESULTS_DIR, DEVICE
+from inference import generate_predictions
+from evaluation_suite import run_evaluation_suite
 
 
 def run_all(
@@ -22,15 +20,13 @@ def run_all(
     processing_types = ["plain", "clahe"]
     variants = ["pretrained", "scratch"]
     cycles = range(5)
-
-    summary_rows = []
+    datasets = ["test", "val"]
 
     for m_type in model_types:
         if target_models and m_type not in target_models:
             continue
 
         for p_type in processing_types:
-            # Determine root directory based on model type and processing
             root_key = f"{m_type}_{p_type}" if p_type == "clahe" else m_type
             root_dir = MODEL_ROOTS.get(root_key)
             if not root_dir or not os.path.exists(root_dir):
@@ -49,8 +45,6 @@ def run_all(
                     if target_variants and var not in target_variants:
                         continue
 
-                    # Construct model path
-                    # Note: We prefer phase2 for pretrained
                     run_name = (
                         f"cycle_{cycle}_{var}_phase2"
                         if var == "pretrained"
@@ -59,7 +53,6 @@ def run_all(
                     model_path = os.path.join(runs_dir, run_name, "weights", "best.pt")
 
                     if not os.path.exists(model_path):
-                        # Try phase1 as fallback for pretrained if phase2 is missing
                         if var == "pretrained":
                             run_name_p1 = f"cycle_{cycle}_{var}_phase1"
                             model_path = os.path.join(
@@ -70,31 +63,53 @@ def run_all(
                         else:
                             continue
 
+                    res_dir = os.path.join(RESULTS_DIR, f"{m_type}_{p_type}")
+                    os.makedirs(res_dir, exist_ok=True)
+
+                    # Check if all datasets have cached predictions
+                    all_cached = True
+                    for ds_name in datasets:
+                        file_prefix = f"cycle_{cycle}_{var}_{ds_name}"
+                        if full_sequence:
+                            file_prefix += "_full_seq"
+                        raw_file = os.path.join(res_dir, f"{file_prefix}_raw.json")
+                        if not os.path.exists(raw_file):
+                            all_cached = False
+                            break
+
+                    if all_cached:
+                        print(
+                            f"\n>>> Skipping Inference for {m_type} | {p_type} | Cycle {cycle} | {var} (Predictions cached)"
+                        )
+                        continue
+
                     print(
-                        f"\n>>> Evaluating {m_type} | {p_type} | Cycle {cycle} | {var}"
+                        f"\n>>> Running Inference for {m_type} | {p_type} | Cycle {cycle} | {var}"
                     )
 
-                    # Load model wrapper
+                    # Lazy import to save memory/time if all are cached
                     if m_type in ["yolo", "rtdetr"]:
+                        from models.ultralytics_wrapper import UltralyticsWrapper
+
                         wrapper = UltralyticsWrapper(m_type, model_path, device=DEVICE)
                     else:
+                        from models.faster_rcnn_wrapper import FasterRCNNWrapper
+
                         wrapper = FasterRCNNWrapper(model_path, device=DEVICE)
 
-                    # Evaluate only on test set as requested
-                    for ds_name in ["test"]:
-                        res_dir = os.path.join(RESULTS_DIR, f"{m_type}_{p_type}")
-                        os.makedirs(res_dir, exist_ok=True)
-
+                    for ds_name in datasets:
                         file_prefix = f"cycle_{cycle}_{var}_{ds_name}"
+                        if full_sequence:
+                            file_prefix += "_full_seq"
                         raw_file = os.path.join(res_dir, f"{file_prefix}_raw.json")
-                        metrics_file = os.path.join(
-                            res_dir, f"{file_prefix}_metrics.csv"
-                        )
 
-                        # Use CLAHE preprocessing if it's a CLAHE model
+                        if os.path.exists(raw_file):
+                            print(f"Skipping dataset {ds_name}, predictions exist.")
+                            continue
+
                         use_clahe = p_type == "clahe"
 
-                        raw_results, metrics = evaluate_single_model(
+                        raw_results = generate_predictions(
                             wrapper,
                             ds_name,
                             use_clahe=use_clahe,
@@ -103,33 +118,13 @@ def run_all(
                             full_sequence=full_sequence,
                         )
 
-                        # Save results
                         with open(raw_file, "w") as f:
-                            json.dump(raw_results, f, indent=4)
-                        pd.DataFrame(metrics).to_csv(metrics_file, index=False)
+                            json.dump(raw_results, f, indent=2)
 
-                        # Summary entry (at 0.1 threshold)
-                        metrics_df = pd.DataFrame(metrics)
-                        idx = (metrics_df["threshold"] - 0.1).abs().idxmin()
-                        summary_rows.append(
-                            {
-                                "model": m_type,
-                                "processing": p_type,
-                                "cycle": cycle,
-                                "variant": var,
-                                "dataset": ds_name,
-                                "recall_0.1": metrics_df.loc[idx, "recall"],
-                                "specificity_0.1": metrics_df.loc[idx, "specificity"],
-                            }
-                        )
-
-    if summary_rows:
-        summary_df = pd.DataFrame(summary_rows)
-        summary_df.to_csv(
-            os.path.join(RESULTS_DIR, "all_models_summary.csv"), index=False
-        )
-        print("\nFull Evaluation Complete! Summary saved to all_models_summary.csv")
-        print(summary_df)
+    print("\n=========================================")
+    print(">>> All predictions generated. Running Evaluation Suite...")
+    print("=========================================")
+    run_evaluation_suite()
 
 
 if __name__ == "__main__":
@@ -139,7 +134,11 @@ if __name__ == "__main__":
     parser.add_argument("--models", nargs="+", default=None)
     parser.add_argument("--cycles", type=int, nargs="+", default=None)
     parser.add_argument("--variants", nargs="+", default=None)
-    parser.add_argument("--full_sequence", action="store_true")
+    parser.add_argument(
+        "--full_sequence",
+        action="store_true",
+        help="Run over the entire full camera sequence instead of just ground-truth pool.",
+    )
     args = parser.parse_args()
 
     run_all(

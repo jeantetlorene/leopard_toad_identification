@@ -3,11 +3,10 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-RESULTS_DIR = (
-    "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/results"
-)
-UNIFIED_CSV = os.path.join(RESULTS_DIR, "unified_model_evaluation.csv")
-SWEEP_CSV = os.path.join(RESULTS_DIR, "per_class_threshold_sweep.csv")
+from config import FILES_DIR, PLOTS_DIR
+
+UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
+SWEEP_CSV = os.path.join(FILES_DIR, "per_class_threshold_sweep.csv")
 
 
 def generate_report():
@@ -44,7 +43,7 @@ def generate_report():
     df_final = pd.merge(df_metrics, df_ar, on=["model", "processing", "variant"])
 
     # 4. Generate Table (Markdown)
-    report_path = os.path.join(os.path.dirname(UNIFIED_CSV), "preprocessing_results.md")
+    report_path = os.path.join(FILES_DIR, "preprocessing_results.md")
     with open(report_path, "w") as f:
         f.write("# Results: Effect of Preprocessing (Cycle 0)\n\n")
         f.write(
@@ -66,7 +65,7 @@ def generate_report():
         for arch in df_final["model"].unique():
             f.write(f"#### {arch.upper()}\n")
             f.write(
-                f"![{arch.upper()} PR Curve](results/pr_curve_{arch}_cycle0.png)\n\n"
+                f"![{arch.upper()} PR Curve](../plots/pr_curve_{arch}_cycle0.png)\n\n"
             )
 
     print(f"Report saved to: {report_path}")
@@ -156,7 +155,8 @@ def plot_pr_curves(df_sweep):
         )
 
         plt.tight_layout()
-        plot_path = os.path.join(RESULTS_DIR, f"pr_curve_{arch}_cycle0.png")
+        os.makedirs(PLOTS_DIR, exist_ok=True)
+        plot_path = os.path.join(PLOTS_DIR, f"pr_curve_{arch}_cycle0.png")
         plt.savefig(plot_path, dpi=300)
         print(f"Saved PR curve plot to: {plot_path}")
         plt.close()
