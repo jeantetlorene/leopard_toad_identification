@@ -64,16 +64,36 @@ def get_camera_images(camera_id, root_path="/srv/shared_leopard_toad"):
     all_images = []
     print(f"Crawling {root_path} for camera {camera_id} images...")
     for root, dirs, files in os.walk(root_path):
-        if os.path.basename(root) == camera_id:
+        # Normalize root to ensure consistent comparison
+        norm_root = os.path.normpath(root)
+        path_parts = norm_root.split(os.sep)
+
+        if camera_id in path_parts:
             for file in files:
                 if file.lower().endswith((".jpg", ".jpeg")):
-                    all_images.append(os.path.join(root, file))
+                    all_images.append(os.path.normpath(os.path.join(root, file)))
     return all_images
 
 
 def get_ground_truth_positives(dataset_name):
     """Get a set of paths for known positive images from the consensus CSV."""
     ds_info = DATASETS[dataset_name]
-    df = pd.read_csv(ds_info["csv"], header=None, names=["path", "label", "id"])
-    positives = set(df[df["label"].isin(["Correct", "Missed Animal"])]["path"].tolist())
+    df = pd.read_csv(ds_info["csv"], header=0)  # Use header=0 since CSV has a header
+    # Correct columns are: image_path, evaluation, row_idx
+    positives = set(
+        df[df["evaluation"].isin(["Correct", "Missed Animal"])]["image_path"]
+        .map(os.path.normpath)
+        .tolist()
+    )
     return positives
+
+
+def get_dataset_images(dataset_name):
+    """Get all image paths for a dataset from its consensus CSV."""
+    ds_info = DATASETS[dataset_name]
+    if not os.path.exists(ds_info["csv"]):
+        print(f"Warning: Consensus CSV not found at {ds_info['csv']}")
+        return []
+
+    df = pd.read_csv(ds_info["csv"], header=0)
+    return df["image_path"].map(os.path.normpath).tolist()

@@ -17,6 +17,7 @@ from data_utils import (
     get_best_label_match,
     get_camera_images,
     get_ground_truth_positives,
+    get_dataset_images,
 )
 from metrics import calculate_image_level_metrics, calculate_detection_metrics
 
@@ -27,10 +28,14 @@ def evaluate_single_model(
     use_clahe=False,
     limit=None,
     batch_size=DEFAULT_BATCH_SIZE,
+    full_sequence=False,
 ):
     ds_info = DATASETS[dataset_name]
     positives = get_ground_truth_positives(dataset_name)
-    all_images = get_camera_images(ds_info["camera"])
+    if full_sequence:
+        all_images = get_camera_images(ds_info["camera"])
+    else:
+        all_images = get_dataset_images(dataset_name)
 
     if limit:
         all_images = all_images[:limit]

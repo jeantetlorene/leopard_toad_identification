@@ -14,6 +14,7 @@ def run_all(
     target_models=None,
     target_cycles=None,
     target_variants=None,
+    full_sequence=False,
 ):
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
@@ -79,8 +80,8 @@ def run_all(
                     else:
                         wrapper = FasterRCNNWrapper(model_path, device=DEVICE)
 
-                    # Evaluate on both datasets (test and val)
-                    for ds_name in DATASETS.keys():
+                    # Evaluate only on test set as requested
+                    for ds_name in ["test"]:
                         res_dir = os.path.join(RESULTS_DIR, f"{m_type}_{p_type}")
                         os.makedirs(res_dir, exist_ok=True)
 
@@ -99,6 +100,7 @@ def run_all(
                             use_clahe=use_clahe,
                             limit=limit,
                             batch_size=batch_size,
+                            full_sequence=full_sequence,
                         )
 
                         # Save results
@@ -137,6 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("--models", nargs="+", default=None)
     parser.add_argument("--cycles", type=int, nargs="+", default=None)
     parser.add_argument("--variants", nargs="+", default=None)
+    parser.add_argument("--full_sequence", action="store_true")
     args = parser.parse_args()
 
     run_all(
@@ -145,4 +148,5 @@ if __name__ == "__main__":
         target_models=args.models,
         target_cycles=args.cycles,
         target_variants=args.variants,
+        full_sequence=args.full_sequence,
     )
