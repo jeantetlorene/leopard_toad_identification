@@ -14,12 +14,17 @@ The evaluation is designed to address the challenges of camera trap data (sparse
 
 ---
 
-## Preprocessing Analysis (Effect of CLAHE)
-
 We provide a specialized report for evaluating the impact of **Contrast Limited Adaptive Histogram Equalisation (CLAHE)** on initial model performance (Cycle 0).
 
-- **[`preprocessing_results.md`](preprocessing_results.md)**: Final report containing comparative tables and visualizations.
-- **[`generate_preprocessing_report.py`](generate_preprocessing_report.py)**: Automation script that aggregates metrics and generates "Ultralytics-style" Precision-Recall curves.
+- **`results/files/preprocessing_results.md`**: Final report containing comparative tables and visualizations.
+- **`generate_preprocessing_report.py`**: Automation script that aggregates metrics and generates PR curves.
+
+## Architecture Benchmarking (Cycle 0)
+
+We provide a report for benchmarking the fundamental baseline architectures (YOLO, RT-DETR, Faster R-CNN) at Cycle 0 before transfer learning.
+
+- **`results/files/architecture_results.md`**: Final report containing computational benchmarking (Params, GFLOPs, Inference ms) and mAP50.
+- **`generate_architecture_report.py`**: Automation script that computes confusion matrices and dynamic speed metrics.
 
 ### Visualizations
 The PR curves are generated using standard VOC/COCO interpolation (monotonic decreasing) and are bounded from 0 to 1 recall. They include shaded areas and macro-averaged metrics (mAP, AR) in the legend.
@@ -55,6 +60,11 @@ python3 run_all_evaluations.py --cycles 0 --models yolo --full_sequence --batch_
 **3. Generate Preprocessing Report:**
 ```bash
 python3 generate_preprocessing_report.py
+```
+
+**4. Generate Architecture Benchmark Report:**
+```bash
+python3 generate_architecture_report.py
 ```
 
 ---
