@@ -1,6 +1,7 @@
 import os
 import subprocess
 import re
+import sys
 from itertools import product
 from config import Config
 
@@ -33,8 +34,8 @@ def run_search():
 
         # 1. Train
         train_cmd = [
-            "./.venv/bin/python",
-            "identification/sim_clr/train.py",
+            sys.executable,
+            "train.py",
             "--data_dir",
             data_dir,
             "--epochs",
@@ -59,8 +60,8 @@ def run_search():
         # 2. Evaluate
         weights_path = os.path.join(weights_dir, "resnet50_backbone_final.pth")
         eval_cmd = [
-            "./.venv/bin/python",
-            "identification/sim_clr/evaluate_reid.py",
+            sys.executable,
+            "evaluate_reid.py",
             "--data_dir",
             data_dir,
             "--weights_path",

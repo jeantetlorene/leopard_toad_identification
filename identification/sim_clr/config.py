@@ -5,9 +5,9 @@ import os
 class Config:
     # Default paths
     BASE_DATA_DIR = "/home/Joshua/Downloads/leopard_toad_identification/identification"
-    DATA_DIR = os.path.join(BASE_DATA_DIR, "toads_by_id_crop")
-    WEIGHTS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/weights")
-    LOGS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/logs")
+    DATA_DIR = os.path.join(BASE_DATA_DIR, "all_leopard_toad_chips")
+    WEIGHTS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/weights/chips")
+    LOGS_DIR = os.path.join(BASE_DATA_DIR, "sim_clr/logs/chips")
     PRETRAINED_BACKBONE = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn/train_resnet50/weights/best.pt"
 
     IMG_SIZE = 640
