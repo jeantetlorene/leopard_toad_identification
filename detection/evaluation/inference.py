@@ -25,6 +25,9 @@ def generate_predictions(
     limit=None,
     batch_size=DEFAULT_BATCH_SIZE,
     full_sequence=False,
+    processed_paths=None,
+    output_file=None,
+    existing_results=None,
 ):
     """
     Run inference on a dataset and return the raw prediction results.
@@ -41,8 +44,15 @@ def generate_predictions(
     if limit:
         all_images = all_images[:limit]
 
+    if processed_paths:
+        all_images = [p for p in all_images if p not in processed_paths]
+
     label_map = load_labels(os.path.join(ds_info["gt_dir"], "labels"))
-    results = []
+    results = existing_results if existing_results else []
+
+    if not all_images:
+        print(f"All images already processed for {dataset_name}.")
+        return results
 
     print(
         f"Generating predictions on {dataset_name} ({len(all_images)} images, CLAHE={use_clahe})"
@@ -91,5 +101,17 @@ def generate_predictions(
                     "predictions": preds,
                 }
             )
+            
+        # Incrementally save every 50 batches if output_file is provided
+        if output_file and (i // batch_size) % 50 == 0:
+            import json
+            with open(output_file, "w") as f:
+                json.dump(results, f, indent=2)
+
+    # Final save
+    if output_file:
+        import json
+        with open(output_file, "w") as f:
+            json.dump(results, f, indent=2)
 
     return results

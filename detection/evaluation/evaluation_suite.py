@@ -22,7 +22,7 @@ def get_eval_info(filename):
     parts = filename.replace("_raw.json", "").split("_")
     cycle = int(parts[1])
     variant = parts[2]
-    dataset = parts[3]
+    dataset = "_".join(parts[3:])
     return cycle, variant, dataset
 
 
@@ -49,7 +49,7 @@ def generate_roc_plots(plot_data):
     if df_plot.empty:
         return
 
-    for dataset in ["test", "val"]:
+    for dataset in df_plot["dataset"].unique():
         for cls_id, cls_name in CLASSES.items():
             subset = df_plot[
                 (df_plot["dataset"] == dataset) & (df_plot["class_id"] == cls_id)
@@ -80,7 +80,7 @@ def generate_roc_plots(plot_data):
             print(f"ROC plot saved to {plot_path}")
 
 
-def run_evaluation_suite():
+def run_evaluation_suite(target_models=None, target_processing=None, target_cycles=None, target_variants=None):
     all_metrics = []
     all_per_class_sweep = []
     all_binary_sweep = []
@@ -104,10 +104,19 @@ def run_evaluation_suite():
             continue
 
         model_type, processing = get_model_info(model_folder)
+        if target_models and model_type not in target_models:
+            continue
+        if target_processing and processing not in target_processing:
+            continue
+        
         print(f"\n>>> Evaluating {model_type} ({processing})...")
 
         for filename in tqdm(filenames, desc=f"Models in {model_folder}"):
             cycle, variant, dataset = get_eval_info(filename)
+            if target_cycles and cycle not in target_cycles:
+                continue
+            if target_variants and variant not in target_variants:
+                continue
 
             with open(os.path.join(folder_path, filename), "r") as f:
                 results = json.load(f)
@@ -295,4 +304,17 @@ def run_evaluation_suite():
 
 
 if __name__ == "__main__":
-    run_evaluation_suite()
+    import argparse
+    parser = argparse.ArgumentParser(description="Run Evaluation Suite")
+    parser.add_argument("--models", nargs="+", default=None, help="Target models (e.g., yolo rtdetr faster_rcnn)")
+    parser.add_argument("--processing", nargs="+", default=None, help="Target processing (e.g., plain clahe)")
+    parser.add_argument("--cycles", type=int, nargs="+", default=None, help="Target cycles (e.g., 0 4)")
+    parser.add_argument("--variants", nargs="+", default=None, help="Target variants (e.g., pretrained scratch)")
+    args = parser.parse_args()
+
+    run_evaluation_suite(
+        target_models=args.models,
+        target_processing=args.processing,
+        target_cycles=args.cycles,
+        target_variants=args.variants,
+    )
