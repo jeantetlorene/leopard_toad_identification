@@ -159,7 +159,7 @@ def run_all(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--models", nargs="+", default=None)
     parser.add_argument("--cycles", type=int, nargs="+", default=None)
     parser.add_argument("--variants", nargs="+", default=None)

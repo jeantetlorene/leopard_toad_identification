@@ -58,55 +58,52 @@ def generate_predictions(
         f"Generating predictions on {dataset_name} ({len(all_images)} images, CLAHE={use_clahe})"
     )
 
-    for i in tqdm(range(0, len(all_images), batch_size)):
-        batch_paths = all_images[i : i + batch_size]
+    def load_and_prep(p):
+        im = cv2.imread(p)
+        if im is None:
+            return None, p
+        if use_clahe:
+            im = apply_clahe(im)
+        return im, p
 
-        # Load and preprocess in parallel
-        imgs = []
-        valid_paths = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
+        for i in tqdm(range(0, len(all_images), batch_size)):
+            batch_paths = all_images[i : i + batch_size]
 
-            def load_and_prep(p):
-                im = cv2.imread(p)
-                if im is None:
-                    return None
-                if use_clahe:
-                    im = apply_clahe(im)
-                return im
-
-            futures = {executor.submit(load_and_prep, p): p for p in batch_paths}
-            for future in concurrent.futures.as_completed(futures):
-                p = futures[future]
-                im = future.result()
+            # Load and preprocess in parallel
+            imgs = []
+            valid_paths = []
+            
+            for im, p in executor.map(load_and_prep, batch_paths):
                 if im is not None:
                     imgs.append(im)
                     valid_paths.append(p)
 
-        if not imgs:
-            continue
+            if not imgs:
+                continue
 
-        batch_preds = model_wrapper.predict_batch(
-            imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
-        )
-
-        for path, preds in zip(valid_paths, batch_preds):
-            is_positive = path in positives
-            results.append(
-                {
-                    "path": path,
-                    "is_positive": is_positive,
-                    "gt_boxes": get_best_label_match(path, label_map)
-                    if is_positive
-                    else [],
-                    "predictions": preds,
-                }
+            batch_preds = model_wrapper.predict_batch(
+                imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
             )
+
+            for path, preds in zip(valid_paths, batch_preds):
+                is_positive = path in positives
+                results.append(
+                    {
+                        "path": path,
+                        "is_positive": is_positive,
+                        "gt_boxes": get_best_label_match(path, label_map)
+                        if is_positive
+                        else [],
+                        "predictions": preds,
+                    }
+                )
             
-        # Incrementally save every 50 batches if output_file is provided
-        if output_file and (i // batch_size) % 50 == 0:
-            import json
-            with open(output_file, "w") as f:
-                json.dump(results, f, indent=2)
+            # Incrementally save every 50 batches if output_file is provided
+            if output_file and (i // batch_size) % 50 == 0:
+                import json
+                with open(output_file, "w") as f:
+                    json.dump(results, f, indent=2)
 
     # Final save
     if output_file:
