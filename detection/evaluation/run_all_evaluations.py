@@ -48,7 +48,7 @@ def run_all(
                             model_variants.add(parts[2])
                         except ValueError:
                             continue
-            
+
             model_cycles = sorted(list(model_cycles))
             model_variants = sorted(list(model_variants))
 
@@ -64,13 +64,15 @@ def run_all(
                     best_pt = None
                     for folder in os.listdir(runs_dir):
                         if folder.startswith(f"cycle_{cycle}_{var}_"):
-                            path_attempt = os.path.join(runs_dir, folder, "weights", "best.pt")
+                            path_attempt = os.path.join(
+                                runs_dir, folder, "weights", "best.pt"
+                            )
                             if os.path.exists(path_attempt):
                                 best_pt = path_attempt
                                 # Prefer phase2 or scratch over phase1 if available
                                 if "phase2" in folder or "scratch" in folder:
                                     break
-                    
+
                     if not best_pt:
                         continue
                     model_path = best_pt
@@ -117,18 +119,24 @@ def run_all(
 
                         existing_results = []
                         processed_paths = set()
-                        
+
                         if os.path.exists(raw_file):
                             if overwrite:
                                 print(f"Overwriting existing dataset {ds_name}...")
                             else:
-                                print(f"Found existing predictions for {ds_name}, attempting to resume...")
+                                print(
+                                    f"Found existing predictions for {ds_name}, attempting to resume..."
+                                )
                                 try:
                                     with open(raw_file, "r") as f:
                                         existing_results = json.load(f)
-                                        processed_paths = {res["path"] for res in existing_results}
+                                        processed_paths = {
+                                            res["path"] for res in existing_results
+                                        }
                                 except (json.JSONDecodeError, KeyError):
-                                    print("Failed to read existing JSON, starting fresh.")
+                                    print(
+                                        "Failed to read existing JSON, starting fresh."
+                                    )
                                     existing_results = []
                                     processed_paths = set()
 

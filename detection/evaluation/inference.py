@@ -73,7 +73,7 @@ def generate_predictions(
             # Load and preprocess in parallel
             imgs = []
             valid_paths = []
-            
+
             for im, p in executor.map(load_and_prep, batch_paths):
                 if im is not None:
                     imgs.append(im)
@@ -98,16 +98,18 @@ def generate_predictions(
                         "predictions": preds,
                     }
                 )
-            
+
             # Incrementally save every 50 batches if output_file is provided
             if output_file and (i // batch_size) % 50 == 0:
                 import json
+
                 with open(output_file, "w") as f:
                     json.dump(results, f, indent=2)
 
     # Final save
     if output_file:
         import json
+
         with open(output_file, "w") as f:
             json.dump(results, f, indent=2)
 

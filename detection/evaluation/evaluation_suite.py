@@ -80,7 +80,9 @@ def generate_roc_plots(plot_data):
             print(f"ROC plot saved to {plot_path}")
 
 
-def run_evaluation_suite(target_models=None, target_processing=None, target_cycles=None, target_variants=None):
+def run_evaluation_suite(
+    target_models=None, target_processing=None, target_cycles=None, target_variants=None
+):
     all_metrics = []
     all_per_class_sweep = []
     all_binary_sweep = []
@@ -108,7 +110,7 @@ def run_evaluation_suite(target_models=None, target_processing=None, target_cycl
             continue
         if target_processing and processing not in target_processing:
             continue
-        
+
         print(f"\n>>> Evaluating {model_type} ({processing})...")
 
         for filename in tqdm(filenames, desc=f"Models in {model_folder}"):
@@ -305,11 +307,29 @@ def run_evaluation_suite(target_models=None, target_processing=None, target_cycl
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Run Evaluation Suite")
-    parser.add_argument("--models", nargs="+", default=None, help="Target models (e.g., yolo rtdetr faster_rcnn)")
-    parser.add_argument("--processing", nargs="+", default=None, help="Target processing (e.g., plain clahe)")
-    parser.add_argument("--cycles", type=int, nargs="+", default=None, help="Target cycles (e.g., 0 4)")
-    parser.add_argument("--variants", nargs="+", default=None, help="Target variants (e.g., pretrained scratch)")
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=None,
+        help="Target models (e.g., yolo rtdetr faster_rcnn)",
+    )
+    parser.add_argument(
+        "--processing",
+        nargs="+",
+        default=None,
+        help="Target processing (e.g., plain clahe)",
+    )
+    parser.add_argument(
+        "--cycles", type=int, nargs="+", default=None, help="Target cycles (e.g., 0 4)"
+    )
+    parser.add_argument(
+        "--variants",
+        nargs="+",
+        default=None,
+        help="Target variants (e.g., pretrained scratch)",
+    )
     args = parser.parse_args()
 
     run_evaluation_suite(
