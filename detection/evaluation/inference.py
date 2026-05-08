@@ -2,6 +2,8 @@ import os
 import cv2
 import concurrent.futures
 from tqdm import tqdm
+import threading
+import json
 
 from config import (
     DATASETS,
@@ -58,6 +60,17 @@ def generate_predictions(
         f"Generating predictions on {dataset_name} ({len(all_images)} images, CLAHE={use_clahe})"
     )
 
+    save_lock = threading.Lock()
+
+    def async_save(data, path):
+        if not save_lock.acquire(blocking=False):
+            return  # Skip saving if another thread is already saving
+        try:
+            with open(path, "w") as f:
+                json.dump(data, f)
+        finally:
+            save_lock.release()
+
     def load_and_prep(p):
         im = cv2.imread(p)
         if im is None:
@@ -100,17 +113,16 @@ def generate_predictions(
                 )
 
             # Incrementally save every 50 batches if output_file is provided
-            if output_file and (i // batch_size) % 50 == 0:
-                import json
-
-                with open(output_file, "w") as f:
-                    json.dump(results, f, indent=2)
+            if output_file and i > 0 and (i // batch_size) % 50 == 0:
+                # Make a shallow copy of the list to avoid RuntimeError during iteration
+                res_copy = list(results)
+                threading.Thread(
+                    target=async_save, args=(res_copy, output_file)
+                ).start()
 
     # Final save
     if output_file:
-        import json
-
         with open(output_file, "w") as f:
-            json.dump(results, f, indent=2)
+            json.dump(results, f)
 
     return results

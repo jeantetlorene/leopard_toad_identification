@@ -1,9 +1,10 @@
 import os
 import argparse
 import json
-from config import MODEL_ROOTS, RESULTS_DIR, DEVICE
+from config import MODEL_ROOTS, RESULTS_DIR, DEVICE, DATASETS
 from inference import generate_predictions
 from evaluation_suite import run_evaluation_suite
+from data_utils import get_camera_images, get_dataset_images
 
 
 def run_all(
@@ -20,6 +21,17 @@ def run_all(
     model_types = ["yolo", "rtdetr", "faster_rcnn"]
     processing_types = ["plain", "clahe"]
     datasets = ["test", "val"]
+
+    expected_lengths = {}
+    for ds_name in datasets:
+        if full_sequence:
+            expected_lengths[ds_name] = len(
+                get_camera_images(DATASETS[ds_name]["camera"])
+            )
+        else:
+            expected_lengths[ds_name] = len(get_dataset_images(ds_name))
+        if limit:
+            expected_lengths[ds_name] = min(expected_lengths[ds_name], limit)
 
     for m_type in model_types:
         if target_models and m_type not in target_models:
@@ -87,7 +99,18 @@ def run_all(
                         if full_sequence:
                             file_prefix += "_full_seq"
                         raw_file = os.path.join(res_dir, f"{file_prefix}_raw.json")
-                        if not os.path.exists(raw_file):
+
+                        if not os.path.exists(raw_file) or overwrite:
+                            all_cached = False
+                            break
+
+                        try:
+                            with open(raw_file, "r") as f:
+                                existing_data = json.load(f)
+                                if len(existing_data) < expected_lengths[ds_name]:
+                                    all_cached = False
+                                    break
+                        except (json.JSONDecodeError, KeyError):
                             all_cached = False
                             break
 

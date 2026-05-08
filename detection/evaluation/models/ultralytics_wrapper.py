@@ -16,7 +16,7 @@ class UltralyticsWrapper(BaseModel):
 
     def predict_batch(self, images, **kwargs):
         results = self.model(
-            images, imgsz=self.imgsz, conf=0.001, device=self.device, verbose=False
+            images, imgsz=self.imgsz, conf=0.01, device=self.device, verbose=False
         )
         batch_preds = []
         for res in results:
@@ -25,8 +25,8 @@ class UltralyticsWrapper(BaseModel):
                 preds.append(
                     {
                         "cls": int(box.cls[0]),
-                        "conf": float(box.conf[0]),
-                        "bbox": box.xywhn[0].tolist(),
+                        "conf": round(float(box.conf[0]), 4),
+                        "bbox": [round(x, 4) for x in box.xywhn[0].tolist()],
                     }
                 )
             batch_preds.append(preds)
