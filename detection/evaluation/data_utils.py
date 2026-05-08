@@ -3,6 +3,7 @@ import cv2
 import pandas as pd
 from tqdm import tqdm
 import concurrent.futures
+from functools import lru_cache
 from config import DATASETS
 
 
@@ -59,6 +60,7 @@ def get_best_label_match(original_path, label_map):
     return matches[0]["boxes"]
 
 
+@lru_cache(maxsize=None)
 def get_camera_images(camera_id, root_path="/srv/shared_leopard_toad"):
     """Find all image paths for a specific camera ID in the shared drive."""
     all_images = []
@@ -75,6 +77,7 @@ def get_camera_images(camera_id, root_path="/srv/shared_leopard_toad"):
     return all_images
 
 
+@lru_cache(maxsize=None)
 def get_ground_truth_positives(dataset_name):
     """Get a set of paths for known positive images from the consensus CSV."""
     ds_info = DATASETS[dataset_name]
@@ -88,6 +91,7 @@ def get_ground_truth_positives(dataset_name):
     return positives
 
 
+@lru_cache(maxsize=None)
 def get_dataset_images(dataset_name):
     """Get all image paths for a dataset from its consensus CSV."""
     ds_info = DATASETS[dataset_name]
