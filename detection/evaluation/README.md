@@ -41,6 +41,8 @@ The evaluation pipeline is highly optimized to **decouple heavy inference from m
 - **[`metrics.py`](metrics.py)**: Mathematical implementation of binary image-level metrics and IoU-based detection matching.
 - **[`inference.py`](inference.py)**: Core logic for loading a single model variant and generating spatial predictions. Supports a `--full_sequence` mode for large-scale filtering analysis.
 - **[`evaluation_suite.py`](evaluation_suite.py)**: Comprehensive metric calculator. Aggregates cached prediction JSONs to output threshold sweeps, ROC-AUCs, and unified comparison CSVs. Can be run independently with filtering arguments (`--models`, `--cycles`, `--processing`, `--variants`).
+- **[`binary_eval_test_pool.py`](binary_eval_test_pool.py)**: Dedicated script for computing binary image-level metrics strictly on the test unlabeled pool (`test_full_seq`), generating ROC-AUC and threshold sweeps.
+- **[`plot_binary_roc_baseline.py`](plot_binary_roc_baseline.py)**: Specialized script to plot bounded (0 to 1) ROC curves for the baseline architectures (YOLO, Faster R-CNN, RT-DETR) directly from raw predictions.
 - **[`run_all_evaluations.py`](run_all_evaluations.py)**: Master orchestration script for bulk evaluation. It dynamically discovers available cycles and model variants from the active learning directories, manages inference caching, and triggers the full evaluation suite automatically. Accepts arguments to filter target models, variants, processing, and cycles. It features smart resuming, automatically appending to existing JSONs to prevent data loss.
 
 ### Usage
@@ -78,6 +80,13 @@ python3 generate_preprocessing_report.py
 **4. Generate Architecture Benchmark Report:**
 ```bash
 python3 generate_architecture_report.py
+```
+
+**5. Evaluate Image-Level Binary Filtering:**
+Calculate sweep metrics and plot bounded ROC curves for the test unlabeled pool.
+```bash
+python3 binary_eval_test_pool.py
+python3 plot_binary_roc_baseline.py
 ```
 
 ---
