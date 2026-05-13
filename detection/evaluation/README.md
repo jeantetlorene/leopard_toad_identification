@@ -73,16 +73,32 @@ python3 evaluation_suite.py --models yolo rtdetr --processing clahe plain --cycl
 ```
 
 **3. Generate Preprocessing Report:**
+Gathers data for preprocessing effects.
 ```bash
 python3 generate_preprocessing_report.py
 ```
+Plot the PR Curves for the baselines:
+```bash
+python3 plot_preprocessing.py
+```
 
 **4. Generate Architecture Benchmark Report:**
+Gathers data for architecture effects (requires inference benchmarking).
 ```bash
 python3 generate_architecture_report.py
 ```
+Plot the Confusion Matrices for the baselines:
+```bash
+python3 plot_architecture.py
+```
 
-**5. Evaluate Image-Level Binary Filtering:**
+**5. Generate Transfer Learning Report:**
+Gathers data across cycles to track mAP progression.
+```bash
+python3 generate_transfer_learning_report.py
+```
+
+**6. Evaluate Image-Level Binary Filtering:**
 Calculate sweep metrics and plot bounded ROC curves for the test unlabeled pool.
 ```bash
 python3 binary_eval_test_pool.py

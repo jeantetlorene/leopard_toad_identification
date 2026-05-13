@@ -3,13 +3,12 @@ import json
 import torch
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import time
 
 from config import MODEL_ROOTS, RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, DEVICE
 from models.faster_rcnn_wrapper import FasterRCNNWrapper
 from models.ultralytics_wrapper import UltralyticsWrapper
-from metrics import box_iou
+from metrics import box_iou, calculate_map50_95
 
 CYCLE = 0
 VARIANT = "scratch"
@@ -119,45 +118,14 @@ def generate_confusion_matrix(raw_results, arch_name):
     # True Negatives (Background -> Background) are not strictly counted in standard object detection CMs,
     # as they represent infinite empty space. We leave it as 0 or empty for clarity.
 
-    plot_cm(cm, arch_name)
+    # Save the CM data
+    os.makedirs(FILES_DIR, exist_ok=True)
+    cm_path = os.path.join(FILES_DIR, f"confusion_matrix_{arch_name}_cycle0.json")
+    with open(cm_path, "w") as f:
+        json.dump(cm.tolist(), f)
+
+    print(f"Saved CM data to {cm_path}")
     return cm
-
-
-def plot_cm(cm, arch_name):
-    fig, ax = plt.subplots(figsize=(8, 6))
-    cax = ax.matshow(cm, cmap="Blues")
-    plt.colorbar(cax)
-
-    for i in range(NUM_CLASSES):
-        for j in range(NUM_CLASSES):
-            if i == len(CLASSES) and j == len(CLASSES):
-                continue  # Skip bg-bg
-            c = cm[i, j]
-            ax.text(
-                j,
-                i,
-                str(c),
-                va="center",
-                ha="center",
-                color="white" if c > np.max(cm) / 2 else "black",
-            )
-
-    ax.set_xticks(np.arange(NUM_CLASSES))
-    ax.set_yticks(np.arange(NUM_CLASSES))
-    ax.set_xticklabels(CM_CLASSES, rotation=45, ha="left")
-    ax.set_yticklabels(CM_CLASSES)
-
-    plt.xlabel("Predicted Class")
-    plt.ylabel("Ground Truth Class")
-    plt.title(
-        f"Confusion Matrix: {arch_name.upper()} (Threshold={CONF_THRESH})", pad=20
-    )
-
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    plot_path = os.path.join(PLOTS_DIR, f"confusion_matrix_{arch_name}_cycle0.png")
-    plt.savefig(plot_path, bbox_inches="tight", dpi=300)
-    print(f"Saved CM plot to: {plot_path}")
-    plt.close()
 
 
 def generate_report():
@@ -200,10 +168,14 @@ def generate_report():
         raw_json_path = os.path.join(
             RESULTS_DIR, root_key, f"cycle_{CYCLE}_{VARIANT}_{DATASET}_raw.json"
         )
+        map50_95 = "N/A"
         if os.path.exists(raw_json_path):
             with open(raw_json_path, "r") as f:
                 raw_results = json.load(f)
+            # 2. Confusion Matrix
             generate_confusion_matrix(raw_results, m_type)
+            # Calculate mAP50-95
+            map50_95 = calculate_map50_95(raw_results)
         else:
             print(f"Raw JSON not found for {m_type}: {raw_json_path}")
 
@@ -233,8 +205,13 @@ def generate_report():
         results_table.append(
             {
                 "Architecture": m_type.upper(),
-                "mAP50": f"{map50:.4f}" if isinstance(map50, float) else map50,
-                "AR": f"{ar:.4f}" if isinstance(ar, float) else ar,
+                "mAP50": f"{map50:.4f}"
+                if isinstance(map50, (float, np.floating))
+                else map50,
+                "mAP50-95": f"{map50_95:.4f}"
+                if isinstance(map50_95, (float, np.floating))
+                else map50_95,
+                "AR": f"{ar:.4f}" if isinstance(ar, (float, np.floating)) else ar,
                 "Params (M)": params,
                 "GFLOPs": flops,
                 "Inference (ms)": f"{ms_per_img:.1f}",
@@ -253,14 +230,14 @@ def generate_report():
 
         f.write("### Comprehensive Architectural Benchmarking Table\n")
         f.write(
-            "| Architecture | mAP50 | Average Recall | Params (M) | GFLOPs | Inference Speed (ms) | FPS |\n"
+            "| Architecture | mAP50 | mAP50-95 | Average Recall | Params (M) | GFLOPs | Inference Speed (ms) | FPS |\n"
         )
         f.write(
-            "|--------------|-------|----------------|------------|--------|----------------------|-----|\n"
+            "|--------------|-------|----------|----------------|------------|--------|----------------------|-----|\n"
         )
         for row in results_table:
             f.write(
-                f"| {row['Architecture']} | {row['mAP50']} | {row['AR']} | {row['Params (M)']} | {row['GFLOPs']} | {row['Inference (ms)']} | {row['FPS']} |\n"
+                f"| {row['Architecture']} | {row['mAP50']} | {row['mAP50-95']} | {row['AR']} | {row['Params (M)']} | {row['GFLOPs']} | {row['Inference (ms)']} | {row['FPS']} |\n"
             )
 
         f.write("\n### Architecture-Specific Confusion Matrices\n")

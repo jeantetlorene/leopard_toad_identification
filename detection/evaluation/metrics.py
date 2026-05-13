@@ -154,3 +154,14 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
 
     mAP = np.mean(list(class_aps.values())) if class_aps else 0.0
     return {"mAP": mAP, "class_aps": class_aps}
+
+
+def calculate_map50_95(results):
+    """Calculate mAP@0.5:0.95 by averaging mAP across IoU thresholds from 0.5 to 0.95 with step 0.05."""
+    iou_thresholds = np.arange(0.5, 1.0, 0.05)
+    maps = []
+    for iou in iou_thresholds:
+        det_metrics = calculate_detection_metrics(results, iou_threshold=iou)
+        maps.append(det_metrics["mAP"])
+
+    return float(np.mean(maps)) if maps else 0.0
