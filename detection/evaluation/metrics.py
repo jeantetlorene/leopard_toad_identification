@@ -95,6 +95,7 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
 
     classes = np.unique([g["cls"] for g in all_gts])
     class_aps = {}
+    class_curves = {}
 
     for c in classes:
         cls_preds = [p for p in all_preds if p["cls"] == c]
@@ -151,9 +152,10 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
         idx = np.where(mrec[1:] != mrec[:-1])[0]
         ap = np.sum((mrec[idx + 1] - mrec[idx]) * mpre[idx + 1])
         class_aps[int(c)] = ap
+        class_curves[int(c)] = {"recall": mrec, "precision": mpre}
 
     mAP = np.mean(list(class_aps.values())) if class_aps else 0.0
-    return {"mAP": mAP, "class_aps": class_aps}
+    return {"mAP": mAP, "class_aps": class_aps, "class_curves": class_curves}
 
 
 def calculate_map50_95(results):

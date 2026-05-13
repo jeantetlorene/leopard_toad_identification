@@ -73,7 +73,7 @@ def generate_report():
             run_name = (
                 f"cycle_{CYCLE}_{variant}_scratch"
                 if variant == "scratch"
-                else f"cycle_{CYCLE}_{variant}"
+                else f"cycle_{CYCLE}_{variant}_phase2"
             )
             model_path = os.path.join(runs_dir, run_name, "weights", "best.pt")
 

@@ -1,75 +1,83 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import json
 import numpy as np
 
-from config import FILES_DIR, PLOTS_DIR
+from config import RESULTS_DIR, PLOTS_DIR
+from metrics import calculate_detection_metrics
 
-SWEEP_CSV = os.path.join(FILES_DIR, "per_class_threshold_sweep.csv")
+
+def get_exact_macro_pr(raw_json_path):
+    if not os.path.exists(raw_json_path):
+        return None, None, None, None
+
+    with open(raw_json_path, "r") as f:
+        results = json.load(f)
+
+    metrics = calculate_detection_metrics(results, iou_threshold=0.5)
+    class_curves = metrics.get("class_curves", {})
+    if not class_curves:
+        return None, None, None, None
+
+    recalls = np.linspace(0, 1.0, 101)
+    precisions = []
+
+    for c, curve in class_curves.items():
+        mrec = curve["recall"]
+        mpre = curve["precision"]
+
+        # numpy interp requires increasing x-values.
+        # VOC mrec is [0.0, ..., 1.0] and monotonically increasing
+        p_interp = np.interp(recalls, mrec, mpre)
+        precisions.append(p_interp)
+
+    if not precisions:
+        return None, None, None, None
+
+    macro_precisions = np.mean(precisions, axis=0)
+
+    max_recalls = []
+    for c, curve in class_curves.items():
+        mrec = curve["recall"]
+        if len(mrec) >= 2:
+            max_recalls.append(mrec[-2])  # last point before [1.0] endpoint
+        else:
+            max_recalls.append(0.0)
+    ar = np.mean(max_recalls) if max_recalls else 0.0
+
+    mAP = metrics["mAP"]
+
+    return recalls, macro_precisions, mAP, ar
 
 
 def plot_pr_curves():
-    if not os.path.exists(SWEEP_CSV):
-        print(f"Error: {SWEEP_CSV} not found.")
-        return
-
-    df_sweep = pd.read_csv(SWEEP_CSV)
-
-    # Filter for baseline models
-    # Preprocessing evaluation focuses on Cycle 0 Test set
-    df_sweep = df_sweep[(df_sweep["cycle"] == 0) & (df_sweep["dataset"] == "test")]
-
-    architectures = df_sweep["model"].unique()
+    architectures = ["yolo", "faster_rcnn", "rtdetr"]
 
     for arch in architectures:
         fig, ax = plt.subplots(figsize=(8, 8))
 
-        # Focus on 'pretrained' variant for the primary plot
-        df_arch = df_sweep[
-            (df_sweep["model"] == arch) & (df_sweep["variant"] == "pretrained")
-        ]
-
+        has_data = False
         for proc in ["plain", "clahe"]:
-            df_proc = df_arch[df_arch["processing"] == proc]
-            if df_proc.empty:
+            root_key = f"{arch}_{proc}"
+            json_path = os.path.join(
+                RESULTS_DIR, root_key, "cycle_0_pretrained_test_raw.json"
+            )
+
+            rec, prec, mAP, ar = get_exact_macro_pr(json_path)
+            if rec is None:
+                print(f"Skipping {root_key} - no data")
                 continue
 
-            # Macro-average Precision and Recall at each threshold
-            mean_metrics = (
-                df_proc.groupby("threshold")
-                .agg({"precision": "mean", "recall": "mean"})
-                .sort_index(ascending=False)
-            )
-
-            # Sort by recall for better plotting
-            mean_metrics = mean_metrics.sort_values("recall")
-
-            rec = mean_metrics["recall"].values
-            prec = mean_metrics["precision"].values.copy()
-
-            # Interpolate to make it monotonic (typical PR curve)
-            for i in range(len(prec) - 2, -1, -1):
-                prec[i] = np.maximum(prec[i], prec[i + 1])
-
-            # Add endpoints to bound the curve [0, 1]
-            rec = np.concatenate(([0.0], rec, [1.0]))
-            prec = np.concatenate(([prec[0]], prec, [0.0]))
-
-            # Calculate AP-like area (Trapezoidal integration on interpolated curve)
-            ap = np.sum((rec[1:] - rec[:-1]) * (prec[1:] + prec[:-1]) / 2)
-            max_recall = mean_metrics["recall"].max()
-
-            label = f"{proc.capitalize()} (mAP: {ap:.3f}, AR: {max_recall:.3f})"
+            has_data = True
+            label = f"{proc.capitalize()} (mAP: {mAP:.3f}, AR: {ar:.3f})"
             color = "#1f77b4" if proc == "plain" else "#ff7f0e"
-            ax.plot(
-                rec,
-                prec,
-                label=label,
-                color=color,
-                linewidth=3,
-            )
-            # Fill area under curve
-            ax.fill_between(rec, prec, alpha=0.1, color=color)
+
+            ax.plot(rec, prec, label=label, color=color, linewidth=1.5)
+
+        if not has_data:
+            plt.close()
+            continue
 
         ax.set_title(
             f"Precision-Recall Curve: {arch.upper()} (Cycle 0)",
@@ -79,9 +87,9 @@ def plot_pr_curves():
         ax.set_xlabel("Recall", fontsize=14)
         ax.set_ylabel("Precision", fontsize=14)
         ax.legend(fontsize=12, loc="lower left")
-        ax.grid(True, linestyle="--", alpha=0.6)
-        ax.set_ylim([0, 1.05])
-        ax.set_xlim([0, 1.05])
+        ax.grid(False)
+        ax.set_ylim([0.0, 1.0])
+        ax.set_xlim([0.0, 1.0])
         ax.set_aspect("equal")
 
         ax.text(
@@ -103,7 +111,7 @@ def plot_pr_curves():
 
         plt.savefig(png_path, dpi=300)
         plt.savefig(pdf_path, dpi=300)
-        print(f"Saved PR curve plot to: {png_path} and {pdf_path}")
+        print(f"Saved exact PR curve plot to: {png_path} and {pdf_path}")
         plt.close()
 
 
