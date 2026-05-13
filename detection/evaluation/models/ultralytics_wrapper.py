@@ -17,8 +17,13 @@ class UltralyticsWrapper(BaseModel):
     def predict_batch(self, images, **kwargs):
         sub_batch = kwargs.get("sub_batch_size", 128)
         results = self.model(
-            images, imgsz=self.imgsz, conf=0.01, device=self.device, verbose=False,
-            stream=True, batch=sub_batch
+            images,
+            imgsz=self.imgsz,
+            conf=0.01,
+            device=self.device,
+            verbose=False,
+            stream=True,
+            batch=sub_batch,
         )
         batch_preds = []
         for res in results:

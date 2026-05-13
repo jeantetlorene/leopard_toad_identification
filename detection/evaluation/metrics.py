@@ -3,21 +3,21 @@ import numpy as np
 
 def calculate_image_level_metrics(results, thresholds):
     """Calculate Recall and Specificity for binary classification (image-level)."""
+    if not results:
+        return []
+
+    max_confs = np.array(
+        [max([p["conf"] for p in res["predictions"]] + [0.0]) for res in results]
+    )
+    is_positive = np.array([res["is_positive"] for res in results], dtype=bool)
+
     metrics = []
     for thresh in thresholds:
-        tp, fp, tn, fn = 0, 0, 0, 0
-        for res in results:
-            has_detection = any(p["conf"] >= thresh for p in res["predictions"])
-            if res["is_positive"]:
-                if has_detection:
-                    tp += 1
-                else:
-                    fn += 1
-            else:
-                if has_detection:
-                    fp += 1
-                else:
-                    tn += 1
+        has_detection = max_confs >= thresh
+        tp = np.sum(has_detection & is_positive)
+        fn = np.sum(~has_detection & is_positive)
+        fp = np.sum(has_detection & ~is_positive)
+        tn = np.sum(~has_detection & ~is_positive)
 
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0
         specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
@@ -30,17 +30,20 @@ def calculate_image_level_metrics(results, thresholds):
         metrics.append(
             {
                 "threshold": thresh,
-                "tp": tp,
-                "fp": fp,
-                "tn": tn,
-                "fn": fn,
-                "recall": recall,
-                "specificity": specificity,
-                "precision": precision,
-                "f1_score": f1,
+                "tp": int(tp),
+                "fp": int(fp),
+                "tn": int(tn),
+                "fn": int(fn),
+                "recall": float(recall),
+                "specificity": float(specificity),
+                "precision": float(precision),
+                "f1_score": float(f1),
             }
         )
     return metrics
+
+
+from collections import defaultdict
 
 
 def box_iou(box1, box2):
@@ -105,9 +108,13 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
         tp = np.zeros(len(cls_preds))
         fp = np.zeros(len(cls_preds))
 
+        gts_by_img = defaultdict(list)
+        for g in cls_gts:
+            gts_by_img[g["img_id"]].append(g)
+
         for i, pred in enumerate(cls_preds):
             # Find GTs in same image
-            img_gts = [g for g in cls_gts if g["img_id"] == pred["img_id"]]
+            img_gts = gts_by_img.get(pred["img_id"], [])
             best_iou = -1
             best_gt = None
 

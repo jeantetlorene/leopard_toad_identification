@@ -1,5 +1,6 @@
 import os
 import cv2
+
 cv2.setNumThreads(0)
 import concurrent.futures
 from tqdm import tqdm
@@ -134,9 +135,7 @@ def generate_predictions(
         if output_file and i > 0 and i % 50 == 0:
             # Make a shallow copy of the list to avoid RuntimeError during iteration
             res_copy = list(results)
-            threading.Thread(
-                target=async_save, args=(res_copy, output_file)
-            ).start()
+            threading.Thread(target=async_save, args=(res_copy, output_file)).start()
 
     # Final save
     if output_file:
