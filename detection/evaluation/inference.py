@@ -1,9 +1,12 @@
 import os
 import cv2
+cv2.setNumThreads(0)
 import concurrent.futures
 from tqdm import tqdm
 import threading
 import json
+import torch
+from torch.utils.data import Dataset, DataLoader
 
 from config import (
     DATASETS,
@@ -18,6 +21,30 @@ from data_utils import (
     get_ground_truth_positives,
     get_dataset_images,
 )
+
+
+class ImageDataset(Dataset):
+    def __init__(self, paths, use_clahe=False):
+        self.paths = paths
+        self.use_clahe = use_clahe
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, idx):
+        path = self.paths[idx]
+        im = cv2.imread(path)
+        if im is None:
+            return None, path
+        if self.use_clahe:
+            im = apply_clahe(im)
+        return im, path
+
+
+def custom_collate(batch):
+    imgs = [item[0] for item in batch if item[0] is not None]
+    paths = [item[1] for item in batch if item[0] is not None]
+    return imgs, paths
 
 
 def generate_predictions(
@@ -71,54 +98,45 @@ def generate_predictions(
         finally:
             save_lock.release()
 
-    def load_and_prep(p):
-        im = cv2.imread(p)
-        if im is None:
-            return None, p
-        if use_clahe:
-            im = apply_clahe(im)
-        return im, p
+    num_workers = min(16, os.cpu_count() or 4)
+    dataset = ImageDataset(all_images, use_clahe)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        collate_fn=custom_collate,
+        prefetch_factor=2 if num_workers > 0 else None,
+        persistent_workers=True if num_workers > 0 else False,
+    )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
-        for i in tqdm(range(0, len(all_images), batch_size)):
-            batch_paths = all_images[i : i + batch_size]
+    for i, (imgs, valid_paths) in enumerate(tqdm(dataloader)):
+        if not imgs:
+            continue
 
-            # Load and preprocess in parallel
-            imgs = []
-            valid_paths = []
+        batch_preds = model_wrapper.predict_batch(
+            imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
+        )
 
-            for im, p in executor.map(load_and_prep, batch_paths):
-                if im is not None:
-                    imgs.append(im)
-                    valid_paths.append(p)
-
-            if not imgs:
-                continue
-
-            batch_preds = model_wrapper.predict_batch(
-                imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
+        for path, preds in zip(valid_paths, batch_preds):
+            is_positive = path in positives
+            results.append(
+                {
+                    "path": path,
+                    "is_positive": is_positive,
+                    "gt_boxes": get_best_label_match(path, label_map)
+                    if is_positive
+                    else [],
+                    "predictions": preds,
+                }
             )
 
-            for path, preds in zip(valid_paths, batch_preds):
-                is_positive = path in positives
-                results.append(
-                    {
-                        "path": path,
-                        "is_positive": is_positive,
-                        "gt_boxes": get_best_label_match(path, label_map)
-                        if is_positive
-                        else [],
-                        "predictions": preds,
-                    }
-                )
-
-            # Incrementally save every 50 batches if output_file is provided
-            if output_file and i > 0 and (i // batch_size) % 50 == 0:
-                # Make a shallow copy of the list to avoid RuntimeError during iteration
-                res_copy = list(results)
-                threading.Thread(
-                    target=async_save, args=(res_copy, output_file)
-                ).start()
+        # Incrementally save every 50 batches if output_file is provided
+        if output_file and i > 0 and i % 50 == 0:
+            # Make a shallow copy of the list to avoid RuntimeError during iteration
+            res_copy = list(results)
+            threading.Thread(
+                target=async_save, args=(res_copy, output_file)
+            ).start()
 
     # Final save
     if output_file:
