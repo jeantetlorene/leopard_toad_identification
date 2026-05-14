@@ -100,7 +100,8 @@ def run_evaluation_suite(
     for model_folder in folders:
         folder_path = os.path.join(RESULTS_DIR, model_folder)
         filenames = sorted(
-            [f for f in os.listdir(folder_path) if f.endswith("_raw.json")]
+            [f for f in os.listdir(folder_path) if f.endswith("_raw.json")],
+            key=lambda x: (0 if "_val_raw.json" in x else 1, x),
         )
         if not filenames:
             continue
@@ -123,10 +124,16 @@ def run_evaluation_suite(
             with open(os.path.join(folder_path, filename), "r") as f:
                 results = json.load(f)
 
-            # 1. Detection-level Metrics (mAP)
-            det_metrics = calculate_detection_metrics(results)
-            mAP = det_metrics["mAP"]
-            class_aps = det_metrics["class_aps"]
+            is_full_seq = "full_seq" in dataset
+
+            if not is_full_seq:
+                # 1. Detection-level Metrics (mAP)
+                det_metrics = calculate_detection_metrics(results)
+                mAP = det_metrics["mAP"]
+                class_aps = det_metrics["class_aps"]
+            else:
+                mAP = np.nan
+                class_aps = {}
 
             # 2. Image-level Binary Metrics (Any Animal vs None)
             binary_gt = np.array([res["is_positive"] for res in results])
@@ -137,31 +144,41 @@ def run_evaluation_suite(
                 ]
             )
 
-            # Full Sweep for Binary
-            binary_sweep_data = calculate_image_level_metrics(results, CONF_THRESHOLDS)
-            for entry in binary_sweep_data:
-                entry.update(
-                    {
-                        "model": model_type,
-                        "processing": processing,
-                        "cycle": cycle,
-                        "variant": variant,
-                        "dataset": dataset,
-                    }
+            if is_full_seq:
+                # Full Sweep for Binary
+                binary_sweep_data = calculate_image_level_metrics(
+                    results, CONF_THRESHOLDS
                 )
-                all_binary_sweep.append(entry)
+                for entry in binary_sweep_data:
+                    entry.update(
+                        {
+                            "model": model_type,
+                            "processing": processing,
+                            "cycle": cycle,
+                            "variant": variant,
+                            "dataset": dataset,
+                        }
+                    )
+                    all_binary_sweep.append(entry)
 
-            # ROC-AUC using all unique thresholds
-            binary_fpr, binary_tpr, _ = roc_curve(binary_gt, binary_scores)
-            binary_auc = auc(binary_fpr, binary_tpr)
+                # ROC-AUC using all unique thresholds
+                binary_fpr, binary_tpr, _ = roc_curve(binary_gt, binary_scores)
+                binary_auc = auc(binary_fpr, binary_tpr)
 
-            # Metrics at 0.1 for summary
-            binary_preds_01 = binary_scores >= 0.1
-            binary_recall_01 = recall_score(binary_gt, binary_preds_01, zero_division=0)
-            binary_precision_01 = precision_score(
-                binary_gt, binary_preds_01, zero_division=0
-            )
-            binary_f1_01 = f1_score(binary_gt, binary_preds_01, zero_division=0)
+                # Metrics at 0.1 for summary (legacy)
+                binary_preds_01 = binary_scores >= 0.1
+                binary_recall_01 = recall_score(
+                    binary_gt, binary_preds_01, zero_division=0
+                )
+                binary_precision_01 = precision_score(
+                    binary_gt, binary_preds_01, zero_division=0
+                )
+                binary_f1_01 = f1_score(binary_gt, binary_preds_01, zero_division=0)
+            else:
+                binary_auc = np.nan
+                binary_recall_01 = np.nan
+                binary_precision_01 = np.nan
+                binary_f1_01 = np.nan
 
             # 3. Per-Class Image-level Metrics
             per_class_results = {}
@@ -186,68 +203,101 @@ def run_evaluation_suite(
                     ]
                 )
 
-                # Full Sweep for Per-Class
-                for thresh in CONF_THRESHOLDS:
-                    preds = cls_scores >= thresh
-                    tp = np.sum(preds & cls_gt)
-                    fp = np.sum(preds & ~cls_gt)
-                    fn = np.sum(~preds & cls_gt)
-                    tn = np.sum(~preds & ~cls_gt)
+                best_thresh = np.nan
+                opt_recall, opt_precision, opt_f1 = np.nan, np.nan, np.nan
+                def_recall, def_precision, def_f1 = np.nan, np.nan, np.nan
+                cls_auc, fpr, tpr = np.nan, None, None
 
-                    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-                    spec = tn / (tn + fp) if (tn + fp) > 0 else 0
-                    prec = tp / (tp + fp) if (tp + fp) > 0 else 0
-                    f1 = (
-                        2 * (prec * recall) / (prec + recall)
-                        if (prec + recall) > 0
-                        else 0
-                    )
+                if dataset in ["test", "val"]:
+                    # Sweep to calculate metrics across all thresholds
+                    best_thresh = 0.5
+                    best_score = -1
+                    for thresh in CONF_THRESHOLDS:
+                        preds = cls_scores >= thresh
+                        tp = np.sum(preds & cls_gt)
+                        fp = np.sum(preds & ~cls_gt)
+                        fn = np.sum(~preds & cls_gt)
+                        tn = np.sum(~preds & ~cls_gt)
 
-                    all_per_class_sweep.append(
-                        {
-                            "model": model_type,
-                            "processing": processing,
-                            "cycle": cycle,
-                            "variant": variant,
-                            "dataset": dataset,
-                            "class_id": cls_id,
-                            "class_name": cls_name,
-                            "threshold": thresh,
-                            "recall": recall,
-                            "specificity": spec,
-                            "precision": prec,
-                            "f1_score": f1,
-                            "tp": tp,
-                            "fp": fp,
-                            "tn": tn,
-                            "fn": fn,
-                        }
-                    )
+                        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+                        spec = tn / (tn + fp) if (tn + fp) > 0 else 0
+                        prec = tp / (tp + fp) if (tp + fp) > 0 else 0
+                        f1 = (
+                            2 * (prec * recall) / (prec + recall)
+                            if (prec + recall) > 0
+                            else 0
+                        )
 
-                # ROC-AUC using all unique thresholds
-                if len(np.unique(cls_gt)) > 1:
-                    fpr, tpr, _ = roc_curve(cls_gt, cls_scores)
-                    cls_auc = auc(fpr, tpr)
-                else:
-                    cls_auc = np.nan
-                    fpr, tpr = None, None
+                        if dataset == "val":
+                            score = recall + spec
+                            if score > best_score:
+                                best_score = score
+                                best_thresh = thresh
 
-                # Metrics at 0.1 for summary
-                cls_preds_01 = cls_scores >= 0.1
-                cls_recall_01 = recall_score(cls_gt, cls_preds_01, zero_division=0)
-                cls_precision_01 = precision_score(
-                    cls_gt, cls_preds_01, zero_division=0
-                )
-                cls_f1_01 = f1_score(cls_gt, cls_preds_01, zero_division=0)
+                        all_per_class_sweep.append(
+                            {
+                                "model": model_type,
+                                "processing": processing,
+                                "cycle": cycle,
+                                "variant": variant,
+                                "dataset": dataset,
+                                "class_id": cls_id,
+                                "class_name": cls_name,
+                                "threshold": thresh,
+                                "recall": recall,
+                                "specificity": spec,
+                                "precision": prec,
+                                "f1_score": f1,
+                                "tp": tp,
+                                "fp": fp,
+                                "tn": tn,
+                                "fn": fn,
+                            }
+                        )
+
+                    if dataset == "val":
+                        # Save optimal threshold
+                        if not hasattr(run_evaluation_suite, "optimal_thresholds"):
+                            run_evaluation_suite.optimal_thresholds = {}
+                        key = f"{model_type}_{processing}_{cycle}_{variant}_{cls_id}"
+                        run_evaluation_suite.optimal_thresholds[key] = best_thresh
+
+                    elif dataset == "test":
+                        # Retrieve optimal threshold found during val pass
+                        key = f"{model_type}_{processing}_{cycle}_{variant}_{cls_id}"
+                        best_thresh = getattr(run_evaluation_suite, "optimal_thresholds", {}).get(key, 0.5)
+
+                if dataset in ["test", "val"]:
+                    # Calculate default metrics (0.5)
+                    def_preds = cls_scores >= 0.5
+                    def_recall = recall_score(cls_gt, def_preds, zero_division=0)
+                    def_precision = precision_score(cls_gt, def_preds, zero_division=0)
+                    def_f1 = f1_score(cls_gt, def_preds, zero_division=0)
+
+                    # Calculate optimal metrics
+                    opt_preds = cls_scores >= best_thresh
+                    opt_recall = recall_score(cls_gt, opt_preds, zero_division=0)
+                    opt_precision = precision_score(cls_gt, opt_preds, zero_division=0)
+                    opt_f1 = f1_score(cls_gt, opt_preds, zero_division=0)
+
+                if is_full_seq:
+                    # ROC-AUC using all unique thresholds
+                    if len(np.unique(cls_gt)) > 1:
+                        fpr, tpr, _ = roc_curve(cls_gt, cls_scores)
+                        cls_auc = auc(fpr, tpr)
 
                 per_class_results[cls_id] = {
                     "auc": cls_auc,
                     "fpr": fpr,
                     "tpr": tpr,
-                    "recall_0.1": cls_recall_01,
-                    "precision_0.1": cls_precision_01,
-                    "f1_01": cls_f1_01,
-                    "ap": class_aps.get(cls_id, 0.0),
+                    "ap": class_aps.get(cls_id, np.nan) if not is_full_seq else np.nan,
+                    "f1_default": def_f1,
+                    "recall_default": def_recall,
+                    "precision_default": def_precision,
+                    "f1_optimal": opt_f1,
+                    "recall_optimal": opt_recall,
+                    "precision_optimal": opt_precision,
+                    "optimal_threshold": best_thresh,
                 }
 
             # Record metrics
@@ -268,14 +318,18 @@ def run_evaluation_suite(
                 res = per_class_results[cls_id]
                 row[f"{cls_name}_auc"] = res["auc"]
                 row[f"{cls_name}_ap"] = res["ap"]
-                row[f"{cls_name}_recall_0.1"] = res["recall_0.1"]
-                row[f"{cls_name}_precision_0.1"] = res["precision_0.1"]
-                row[f"{cls_name}_f1_0.1"] = res["f1_01"]
+                row[f"{cls_name}_f1_default"] = res["f1_default"]
+                row[f"{cls_name}_recall_default"] = res["recall_default"]
+                row[f"{cls_name}_precision_default"] = res["precision_default"]
+                row[f"{cls_name}_f1_optimal"] = res["f1_optimal"]
+                row[f"{cls_name}_recall_optimal"] = res["recall_optimal"]
+                row[f"{cls_name}_precision_optimal"] = res["precision_optimal"]
+                row[f"{cls_name}_optimal_threshold"] = res["optimal_threshold"]
 
             all_metrics.append(row)
 
             # Store FPR/TPR for plotting (only for Cycle 4)
-            if cycle == 4:
+            if cycle == 4 and is_full_seq:
                 save_plot_data(
                     model_type,
                     processing,
