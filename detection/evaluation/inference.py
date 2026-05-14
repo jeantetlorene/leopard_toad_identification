@@ -99,7 +99,14 @@ def generate_predictions(
         finally:
             save_lock.release()
 
-    num_workers = min(16, os.cpu_count() or 4)
+    # Dynamically scale workers to prevent over-prefetching overhead on small datasets
+    max_workers = 16 if full_sequence else 4
+    num_workers = min(max_workers, os.cpu_count() or 4)
+
+    # Cap workers if we have fewer batches than workers
+    num_batches = (len(all_images) + batch_size - 1) // batch_size
+    num_workers = min(num_workers, max(1, num_batches))
+
     dataset = ImageDataset(all_images, use_clahe)
     dataloader = DataLoader(
         dataset,

@@ -265,7 +265,9 @@ def run_evaluation_suite(
                     elif dataset == "test":
                         # Retrieve optimal threshold found during val pass
                         key = f"{model_type}_{processing}_{cycle}_{variant}_{cls_id}"
-                        best_thresh = getattr(run_evaluation_suite, "optimal_thresholds", {}).get(key, 0.5)
+                        best_thresh = getattr(
+                            run_evaluation_suite, "optimal_thresholds", {}
+                        ).get(key, 0.5)
 
                 if dataset in ["test", "val"]:
                     # Calculate default metrics (0.5)
