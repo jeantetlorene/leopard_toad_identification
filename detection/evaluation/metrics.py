@@ -96,6 +96,7 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
     classes = np.unique([g["cls"] for g in all_gts])
     class_aps = {}
     class_curves = {}
+    class_optimal = {}
 
     for c in classes:
         cls_preds = [p for p in all_preds if p["cls"] == c]
@@ -154,8 +155,40 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
         class_aps[int(c)] = ap
         class_curves[int(c)] = {"recall": mrec, "precision": mpre}
 
+        # Calculate optimal threshold based on maximum F1-Score
+        confs = np.array([p["conf"] for p in cls_preds])
+        best_recall = 0.0
+        best_precision = 0.0
+        best_thresh = 0.0
+
+        if len(recall) > 0:
+            f1_scores = np.zeros_like(recall)
+            valid = (precision + recall) > 0
+            f1_scores[valid] = (
+                2
+                * (precision[valid] * recall[valid])
+                / (precision[valid] + recall[valid])
+            )
+
+            best_idx = np.argmax(f1_scores)
+
+            best_recall = float(recall[best_idx])
+            best_precision = float(precision[best_idx])
+            best_thresh = float(confs[best_idx])
+
+        class_optimal[int(c)] = {
+            "best_recall": best_recall,
+            "best_precision": best_precision,
+            "best_thresh": best_thresh,
+        }
+
     mAP = np.mean(list(class_aps.values())) if class_aps else 0.0
-    return {"mAP": mAP, "class_aps": class_aps, "class_curves": class_curves}
+    return {
+        "mAP": mAP,
+        "class_aps": class_aps,
+        "class_curves": class_curves,
+        "class_optimal": class_optimal,
+    }
 
 
 def calculate_map50_95(results):

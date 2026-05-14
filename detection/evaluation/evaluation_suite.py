@@ -127,13 +127,17 @@ def run_evaluation_suite(
             is_full_seq = "full_seq" in dataset
 
             if not is_full_seq:
-                # 1. Detection-level Metrics (mAP)
+                # 1. Detection-level Metrics (mAP and BB-level optimal thresholds)
                 det_metrics = calculate_detection_metrics(results)
                 mAP = det_metrics["mAP"]
                 class_aps = det_metrics["class_aps"]
+                class_optimal = det_metrics.get("class_optimal", {})
+                class_curves = det_metrics.get("class_curves", {})
             else:
                 mAP = np.nan
                 class_aps = {}
+                class_optimal = {}
+                class_curves = {}
 
             # 2. Image-level Binary Metrics (Any Animal vs None)
             binary_gt = np.array([res["is_positive"] for res in results])
@@ -204,83 +208,40 @@ def run_evaluation_suite(
                 )
 
                 best_thresh = np.nan
-                opt_recall, opt_precision, opt_f1 = np.nan, np.nan, np.nan
+                opt_recall, opt_precision, opt_f1, opt_specificity = (
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                )
                 def_recall, def_precision, def_f1 = np.nan, np.nan, np.nan
                 cls_auc, fpr, tpr = np.nan, None, None
 
-                if dataset in ["test", "val"]:
-                    # Sweep to calculate metrics across all thresholds
-                    best_thresh = 0.5
-                    best_score = -1
-                    for thresh in CONF_THRESHOLDS:
-                        preds = cls_scores >= thresh
-                        tp = np.sum(preds & cls_gt)
-                        fp = np.sum(preds & ~cls_gt)
-                        fn = np.sum(~preds & cls_gt)
-                        tn = np.sum(~preds & ~cls_gt)
+                if not is_full_seq:
+                    # Retrieve bounding-box level optimal metrics calculated analytically
+                    opt = class_optimal.get(cls_id, {})
+                    best_thresh = opt.get("best_thresh", np.nan)
+                    opt_recall = opt.get("best_recall", np.nan)
+                    opt_precision = opt.get("best_precision", np.nan)
+                    opt_f1 = (
+                        2 * (opt_precision * opt_recall) / (opt_precision + opt_recall)
+                        if (opt_precision + opt_recall) > 0
+                        else 0
+                    )
 
-                        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-                        spec = tn / (tn + fp) if (tn + fp) > 0 else 0
-                        prec = tp / (tp + fp) if (tp + fp) > 0 else 0
-                        f1 = (
-                            2 * (prec * recall) / (prec + recall)
-                            if (prec + recall) > 0
-                            else 0
+                    # Calculate image-level specificity at this optimal bounding-box threshold
+                    if pd.notna(best_thresh):
+                        opt_preds = cls_scores >= best_thresh
+                        tn = np.sum(~opt_preds & ~cls_gt)
+                        fp_img = np.sum(opt_preds & ~cls_gt)
+                        opt_specificity = (
+                            tn / (tn + fp_img) if (tn + fp_img) > 0 else 0.0
                         )
 
-                        if dataset == "val":
-                            score = recall + spec
-                            if score > best_score:
-                                best_score = score
-                                best_thresh = thresh
-
-                        all_per_class_sweep.append(
-                            {
-                                "model": model_type,
-                                "processing": processing,
-                                "cycle": cycle,
-                                "variant": variant,
-                                "dataset": dataset,
-                                "class_id": cls_id,
-                                "class_name": cls_name,
-                                "threshold": thresh,
-                                "recall": recall,
-                                "specificity": spec,
-                                "precision": prec,
-                                "f1_score": f1,
-                                "tp": tp,
-                                "fp": fp,
-                                "tn": tn,
-                                "fn": fn,
-                            }
-                        )
-
-                    if dataset == "val":
-                        # Save optimal threshold
-                        if not hasattr(run_evaluation_suite, "optimal_thresholds"):
-                            run_evaluation_suite.optimal_thresholds = {}
-                        key = f"{model_type}_{processing}_{cycle}_{variant}_{cls_id}"
-                        run_evaluation_suite.optimal_thresholds[key] = best_thresh
-
-                    elif dataset == "test":
-                        # Retrieve optimal threshold found during val pass
-                        key = f"{model_type}_{processing}_{cycle}_{variant}_{cls_id}"
-                        best_thresh = getattr(
-                            run_evaluation_suite, "optimal_thresholds", {}
-                        ).get(key, 0.5)
-
-                if dataset in ["test", "val"]:
-                    # Calculate default metrics (0.5)
-                    def_preds = cls_scores >= 0.5
-                    def_recall = recall_score(cls_gt, def_preds, zero_division=0)
-                    def_precision = precision_score(cls_gt, def_preds, zero_division=0)
-                    def_f1 = f1_score(cls_gt, def_preds, zero_division=0)
-
-                    # Calculate optimal metrics
-                    opt_preds = cls_scores >= best_thresh
-                    opt_recall = recall_score(cls_gt, opt_preds, zero_division=0)
-                    opt_precision = precision_score(cls_gt, opt_preds, zero_division=0)
-                    opt_f1 = f1_score(cls_gt, opt_preds, zero_division=0)
+                    # We still compute default (0.5) bounding box metrics by extracting from the curve
+                    # For simplicity, we just save the optimal ones. If def is needed, we could extract it from the curve too.
+                    # Setting def_f1 etc to np.nan as optimal is the new standard
+                    def_recall, def_precision, def_f1 = np.nan, np.nan, np.nan
 
                 if is_full_seq:
                     # ROC-AUC using all unique thresholds
@@ -299,8 +260,24 @@ def run_evaluation_suite(
                     "f1_optimal": opt_f1,
                     "recall_optimal": opt_recall,
                     "precision_optimal": opt_precision,
+                    "specificity_optimal": opt_specificity,
                     "optimal_threshold": best_thresh,
                 }
+
+            # Calculate Average Recall (AR) exactly from the PR curves
+            ar = np.nan
+            if not is_full_seq and class_curves:
+                max_recalls = []
+                for c, curve in class_curves.items():
+                    mrec = curve.get("recall", [])
+                    if len(mrec) >= 2:
+                        max_recalls.append(
+                            mrec[-2]
+                        )  # mrec ends with [1.0] from VOC interpolation
+                    else:
+                        max_recalls.append(0.0)
+                if max_recalls:
+                    ar = float(np.mean(max_recalls))
 
             # Record metrics
             row = {
@@ -310,6 +287,7 @@ def run_evaluation_suite(
                 "variant": variant,
                 "dataset": dataset,
                 "mAP": mAP,
+                "AR": ar,
                 "binary_auc": binary_auc,
                 "binary_recall_0.1": binary_recall_01,
                 "binary_precision_0.1": binary_precision_01,
@@ -326,6 +304,9 @@ def run_evaluation_suite(
                 row[f"{cls_name}_f1_optimal"] = res["f1_optimal"]
                 row[f"{cls_name}_recall_optimal"] = res["recall_optimal"]
                 row[f"{cls_name}_precision_optimal"] = res["precision_optimal"]
+                row[f"{cls_name}_specificity_optimal"] = res.get(
+                    "specificity_optimal", np.nan
+                )
                 row[f"{cls_name}_optimal_threshold"] = res["optimal_threshold"]
 
             all_metrics.append(row)

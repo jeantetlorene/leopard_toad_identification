@@ -89,7 +89,7 @@ def plot_trajectories(df):
         plt.close()
 
 
-def plot_confidence_distributions():
+def plot_confidence_distributions(df):
     cycle = 4
     MODELS = ["yolo", "faster_rcnn", "rtdetr"]
     PROCESSINGS = ["clahe", "plain"]
@@ -111,6 +111,13 @@ def plot_confidence_distributions():
     for m_type in MODELS:
         for proc in PROCESSINGS:
             for var in VARIANTS:
+                df_u = df[
+                    (df["model"] == m_type)
+                    & (df["processing"] == proc)
+                    & (df["variant"] == var)
+                    & (df["cycle"] == cycle)
+                ]
+
                 raw_json_path = os.path.join(
                     RESULTS_DIR,
                     f"{m_type}_{proc}",
@@ -153,24 +160,44 @@ def plot_confidence_distributions():
                 # Now plot KDE for each class
                 for cls in CLASS_MAP.values():
                     plt.figure(figsize=(8, 5))
+
                     if tp_scores[cls]:
-                        sns.kdeplot(
-                            tp_scores[cls],
-                            fill=True,
-                            color="green",
-                            label="True Positives (Correct Detections)",
-                            alpha=0.5,
-                            bw_adjust=0.5,
-                        )
+                        try:
+                            sns.kdeplot(
+                                tp_scores[cls],
+                                fill=True,
+                                color="green",
+                                label="True Positives (Correct Detections)",
+                                alpha=0.5,
+                                bw_adjust=0.5,
+                            )
+                        except Exception:
+                            pass
+
                     if fp_scores[cls]:
-                        sns.kdeplot(
-                            fp_scores[cls],
-                            fill=True,
-                            color="red",
-                            label="False Positives (Background Artefacts)",
-                            alpha=0.5,
-                            bw_adjust=0.5,
-                        )
+                        try:
+                            sns.kdeplot(
+                                fp_scores[cls],
+                                fill=True,
+                                color="red",
+                                label="False Positives (Background Artefacts)",
+                                alpha=0.5,
+                                bw_adjust=0.5,
+                            )
+                        except Exception:
+                            pass
+
+                    opt_thresh_col = f"{cls}_optimal_threshold"
+                    if not df_u.empty and opt_thresh_col in df_u.columns:
+                        opt_thresh = df_u[opt_thresh_col].values[0]
+                        if pd.notna(opt_thresh):
+                            plt.axvline(
+                                x=opt_thresh,
+                                color="blue",
+                                linestyle="--",
+                                linewidth=2,
+                                label=f"Optimal Threshold ({opt_thresh:.2f})",
+                            )
 
                     plt.xlabel("Confidence Score")
                     plt.ylabel("Density")
@@ -179,7 +206,6 @@ def plot_confidence_distributions():
                     )
                     plt.xlim(0, 1)
                     plt.legend()
-                    plt.grid(True, alpha=0.3)
                     plt.tight_layout()
                     plt.savefig(
                         os.path.join(
@@ -200,5 +226,5 @@ if __name__ == "__main__":
     df = load_data()
     if df is not None:
         plot_trajectories(df)
-        plot_confidence_distributions()
+        plot_confidence_distributions(df)
         print("Active learning plots generated successfully in results/plots/")

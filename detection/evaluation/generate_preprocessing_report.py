@@ -5,41 +5,25 @@ import numpy as np
 from config import FILES_DIR, PLOTS_DIR
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
-SWEEP_CSV = os.path.join(FILES_DIR, "per_class_threshold_sweep.csv")
 
 
 def generate_report():
-    if not os.path.exists(UNIFIED_CSV) or not os.path.exists(SWEEP_CSV):
+    if not os.path.exists(UNIFIED_CSV):
         print(
-            "Error: Evaluation CSVs not found. Please run evaluate_all_models.py first."
+            "Error: Evaluation CSV not found. Please run evaluate_all_models.py first."
         )
         return
 
     # 1. Load Data
     df_unified = pd.read_csv(UNIFIED_CSV)
-    df_sweep = pd.read_csv(SWEEP_CSV)
 
     # Filter for Cycle 0 and Test set
     df_unified = df_unified[
         (df_unified["cycle"] == 0) & (df_unified["dataset"] == "test")
     ]
-    df_sweep = df_sweep[(df_sweep["cycle"] == 0) & (df_sweep["dataset"] == "test")]
 
-    # 2. Calculate Average Recall (AR)
-    # AR is defined as the macro-average of max recall per class
-    ar_data = []
-    for (model, proc, var), group in df_sweep.groupby(
-        ["model", "processing", "variant"]
-    ):
-        # For each class, find max recall
-        class_recalls = group.groupby("class_name")["recall"].max()
-        ar = class_recalls.mean()
-        ar_data.append({"model": model, "processing": proc, "variant": var, "AR": ar})
-    df_ar = pd.DataFrame(ar_data)
-
-    # 3. Merge with mAP
-    df_metrics = df_unified[["model", "processing", "variant", "mAP"]]
-    df_final = pd.merge(df_metrics, df_ar, on=["model", "processing", "variant"])
+    # 3. Get metrics
+    df_final = df_unified[["model", "processing", "variant", "mAP", "AR"]].copy()
 
     # 4. Generate Table (Markdown)
     report_path = os.path.join(FILES_DIR, "preprocessing_results.md")

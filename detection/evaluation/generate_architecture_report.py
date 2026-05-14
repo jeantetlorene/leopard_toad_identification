@@ -132,14 +132,12 @@ def generate_report():
     print("Starting Architecture Benchmarking...")
 
     unified_csv = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
-    sweep_csv = os.path.join(FILES_DIR, "per_class_threshold_sweep.csv")
 
-    if not os.path.exists(unified_csv) or not os.path.exists(sweep_csv):
+    if not os.path.exists(unified_csv):
         print("Required CSVs not found in files/. Please run evaluations first.")
         return
 
     df_unified = pd.read_csv(unified_csv)
-    df_sweep = pd.read_csv(sweep_csv)
 
     results_table = []
 
@@ -190,17 +188,7 @@ def generate_report():
         map50 = df_u["mAP"].values[0] if not df_u.empty else "N/A"
 
         # AR
-        df_s = df_sweep[
-            (df_sweep["model"] == m_type)
-            & (df_sweep["variant"] == VARIANT)
-            & (df_sweep["processing"] == PROCESSING)
-            & (df_sweep["cycle"] == CYCLE)
-        ]
-        if not df_s.empty:
-            class_recalls = df_s.groupby("class_name")["recall"].max()
-            ar = class_recalls.mean()
-        else:
-            ar = "N/A"
+        ar = df_u["AR"].values[0] if not df_u.empty and "AR" in df_u else "N/A"
 
         results_table.append(
             {

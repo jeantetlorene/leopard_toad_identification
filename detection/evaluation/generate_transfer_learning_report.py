@@ -10,7 +10,6 @@ from models.ultralytics_wrapper import UltralyticsWrapper
 from generate_architecture_report import calculate_flops_params
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
-SWEEP_CSV = os.path.join(FILES_DIR, "per_class_threshold_sweep.csv")
 
 CYCLE = 0
 PROCESSING = "clahe"
@@ -19,12 +18,11 @@ VARIANTS = ["scratch", "pretrained"]
 
 
 def generate_report():
-    if not os.path.exists(UNIFIED_CSV) or not os.path.exists(SWEEP_CSV):
-        print("Error: CSVs not found.")
+    if not os.path.exists(UNIFIED_CSV):
+        print("Error: Evaluation CSV not found. Please run evaluation_suite.py first.")
         return
 
     df_unified = pd.read_csv(UNIFIED_CSV)
-    df_sweep = pd.read_csv(SWEEP_CSV)
 
     results_table = []
 
@@ -32,7 +30,7 @@ def generate_report():
         for variant in VARIANTS:
             root_key = f"{m_type}_{PROCESSING}"
 
-            # Extract mAP50 from unified CSV (test set)
+            # Extract metrics from unified CSV (test set)
             df_u = df_unified[
                 (df_unified["model"] == m_type)
                 & (df_unified["variant"] == variant)
@@ -41,20 +39,8 @@ def generate_report():
                 & (df_unified["dataset"] == "test")
             ]
             map50 = df_u["mAP"].values[0] if not df_u.empty else "N/A"
-
-            # Extract AR from sweep CSV
-            df_s = df_sweep[
-                (df_sweep["model"] == m_type)
-                & (df_sweep["variant"] == variant)
-                & (df_sweep["processing"] == PROCESSING)
-                & (df_sweep["cycle"] == CYCLE)
-                & (df_sweep["dataset"] == "test")
-            ]
-            if not df_s.empty:
-                class_recalls = df_s.groupby("class_name")["recall"].max()
-                ar = class_recalls.mean()
-            else:
-                ar = "N/A"
+            # Extract AR from unified CSV
+            ar = df_u["AR"].values[0] if not df_u.empty and "AR" in df_u else "N/A"
 
             # Calculate mAP50-95
             map50_95 = "N/A"
