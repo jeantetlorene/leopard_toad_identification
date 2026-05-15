@@ -7,7 +7,6 @@ from config import FILES_DIR, RESULTS_DIR, BASE_DIR
 from metrics import calculate_map50_95
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
-SWEEP_CSV = os.path.join(FILES_DIR, "per_class_threshold_sweep.csv")
 
 MODELS = ["yolo", "faster_rcnn", "rtdetr"]
 PROCESSINGS = ["clahe", "plain"]
@@ -50,7 +49,7 @@ def count_training_instances(m_type, var, cycle):
 
 
 def generate_report():
-    if not os.path.exists(UNIFIED_CSV) or not os.path.exists(SWEEP_CSV):
+    if not os.path.exists(UNIFIED_CSV):
         print("Error: Evaluation CSVs not found.")
         return
 

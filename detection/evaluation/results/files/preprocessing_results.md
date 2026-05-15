@@ -3,8 +3,8 @@
 This report summarizes the impact of CLAHE on Cycle 0 model performance.
 
 ### Comparative Performance Table (Cycle 0, Test Set)
-| Architecture | Variant | Processing | mAP | Average Recall |
-|--------------|---------|------------|-----|----------------|
+| Architecture | Variant | Processing | mAP | mean Average Recall |
+|--------------|---------|------------|-----|---------------------|
 | FASTER_RCNN | Pretrained | Clahe | 0.0670 | 0.2264 |
 | FASTER_RCNN | Pretrained | Plain | 0.0494 | 0.2492 |
 | FASTER_RCNN | Scratch | Clahe | 0.0879 | 0.4465 |

@@ -84,7 +84,6 @@ def run_evaluation_suite(
     target_models=None, target_processing=None, target_cycles=None, target_variants=None
 ):
     all_metrics = []
-    all_per_class_sweep = []
     all_binary_sweep = []
     plot_data = []
 
@@ -249,11 +248,17 @@ def run_evaluation_suite(
                         fpr, tpr, _ = roc_curve(cls_gt, cls_scores)
                         cls_auc = auc(fpr, tpr)
 
+                # Extract absolute maximum recall (AR) for this class
+                cls_curve = class_curves.get(cls_id, {})
+                mrec = cls_curve.get("recall", [])
+                cls_ar = mrec[-2] if len(mrec) >= 2 else 0.0
+
                 per_class_results[cls_id] = {
                     "auc": cls_auc,
                     "fpr": fpr,
                     "tpr": tpr,
                     "ap": class_aps.get(cls_id, np.nan) if not is_full_seq else np.nan,
+                    "ar": cls_ar,  # Absolute Max Recall
                     "f1_default": def_f1,
                     "recall_default": def_recall,
                     "precision_default": def_precision,
@@ -298,6 +303,7 @@ def run_evaluation_suite(
                 res = per_class_results[cls_id]
                 row[f"{cls_name}_auc"] = res["auc"]
                 row[f"{cls_name}_ap"] = res["ap"]
+                row[f"{cls_name}_ar"] = res["ar"]
                 row[f"{cls_name}_f1_default"] = res["f1_default"]
                 row[f"{cls_name}_recall_default"] = res["recall_default"]
                 row[f"{cls_name}_precision_default"] = res["precision_default"]
@@ -326,9 +332,6 @@ def run_evaluation_suite(
     os.makedirs(FILES_DIR, exist_ok=True)
     pd.DataFrame(all_metrics).to_csv(
         os.path.join(FILES_DIR, "unified_model_evaluation.csv"), index=False
-    )
-    pd.DataFrame(all_per_class_sweep).to_csv(
-        os.path.join(FILES_DIR, "per_class_threshold_sweep.csv"), index=False
     )
     pd.DataFrame(all_binary_sweep).to_csv(
         os.path.join(FILES_DIR, "binary_threshold_sweep.csv"), index=False

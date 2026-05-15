@@ -83,7 +83,9 @@ def generate_report():
                     "mAP50-95": f"{map50_95:.4f}"
                     if isinstance(map50_95, (float, np.floating))
                     else map50_95,
-                    "mAR": f"{mar:.4f}" if isinstance(mar, (float, np.floating)) else mar,
+                    "mAR": f"{mar:.4f}"
+                    if isinstance(mar, (float, np.floating))
+                    else mar,
                     "Trainable Parameters (M)": params,
                 }
             )
