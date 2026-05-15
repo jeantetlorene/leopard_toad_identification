@@ -264,8 +264,8 @@ def run_evaluation_suite(
                     "optimal_threshold": best_thresh,
                 }
 
-            # Calculate Average Recall (AR) exactly from the PR curves
-            ar = np.nan
+            # Calculate mean Average Recall (mAR) exactly from the PR curves
+            mar = np.nan
             if not is_full_seq and class_curves:
                 max_recalls = []
                 for c, curve in class_curves.items():
@@ -277,7 +277,7 @@ def run_evaluation_suite(
                     else:
                         max_recalls.append(0.0)
                 if max_recalls:
-                    ar = float(np.mean(max_recalls))
+                    mar = float(np.mean(max_recalls))
 
             # Record metrics
             row = {
@@ -287,7 +287,7 @@ def run_evaluation_suite(
                 "variant": variant,
                 "dataset": dataset,
                 "mAP": mAP,
-                "AR": ar,
+                "mAR": mar,
                 "binary_auc": binary_auc,
                 "binary_recall_0.1": binary_recall_01,
                 "binary_precision_0.1": binary_precision_01,

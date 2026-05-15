@@ -23,7 +23,7 @@ def generate_report():
     ]
 
     # 3. Get metrics
-    df_final = df_unified[["model", "processing", "variant", "mAP", "AR"]].copy()
+    df_final = df_unified[["model", "processing", "variant", "mAP", "mAR"]].copy()
 
     # 4. Generate Table (Markdown)
     report_path = os.path.join(FILES_DIR, "preprocessing_results.md")
@@ -33,15 +33,15 @@ def generate_report():
             "This report summarizes the impact of CLAHE on Cycle 0 model performance.\n\n"
         )
         f.write("### Comparative Performance Table (Cycle 0, Test Set)\n")
-        f.write("| Architecture | Variant | Processing | mAP | Average Recall |\n")
-        f.write("|--------------|---------|------------|-----|----------------|\n")
+        f.write("| Architecture | Variant | Processing | mAP | mean Average Recall |\n")
+        f.write("|--------------|---------|------------|-----|---------------------|\n")
 
         # Sort for consistent display
         df_final = df_final.sort_values(["model", "variant", "processing"])
 
         for _, row in df_final.iterrows():
             f.write(
-                f"| {row['model'].upper()} | {row['variant'].capitalize()} | {row['processing'].capitalize()} | {row['mAP']:.4f} | {row['AR']:.4f} |\n"
+                f"| {row['model'].upper()} | {row['variant'].capitalize()} | {row['processing'].capitalize()} | {row['mAP']:.4f} | {row['mAR']:.4f} |\n"
             )
 
         f.write("\n### Precision-Recall Visualizations\n\n")

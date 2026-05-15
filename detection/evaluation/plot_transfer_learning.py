@@ -42,11 +42,11 @@ def get_exact_macro_pr(raw_json_path):
             max_recalls.append(mrec[-2])
         else:
             max_recalls.append(0.0)
-    ar = np.mean(max_recalls) if max_recalls else 0.0
+    mar = np.mean(max_recalls) if max_recalls else 0.0
 
     mAP = metrics["mAP"]
 
-    return recalls, macro_precisions, mAP, ar
+    return recalls, macro_precisions, mAP, mar
 
 
 def plot_pr_curves():
@@ -63,13 +63,13 @@ def plot_pr_curves():
                 RESULTS_DIR, root_key, f"cycle_0_{variant}_test_raw.json"
             )
 
-            rec, prec, mAP, ar = get_exact_macro_pr(json_path)
+            rec, prec, mAP, mar = get_exact_macro_pr(json_path)
             if rec is None:
                 print(f"Skipping {root_key} {variant} - no data")
                 continue
 
             has_data = True
-            label = f"{variant.capitalize()} (mAP: {mAP:.3f}, AR: {ar:.3f})"
+            label = f"{variant.capitalize()} (mAP: {mAP:.3f}, mAR: {mar:.3f})"
             color = "#1f77b4" if variant == "scratch" else "#ff7f0e"
 
             ax.plot(rec, prec, label=label, color=color, linewidth=1.5)

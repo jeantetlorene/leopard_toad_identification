@@ -39,8 +39,8 @@ def generate_report():
                 & (df_unified["dataset"] == "test")
             ]
             map50 = df_u["mAP"].values[0] if not df_u.empty else "N/A"
-            # Extract AR from unified CSV
-            ar = df_u["AR"].values[0] if not df_u.empty and "AR" in df_u else "N/A"
+            # Extract mAR from unified CSV
+            mar = df_u["mAR"].values[0] if not df_u.empty and "mAR" in df_u else "N/A"
 
             # Calculate mAP50-95
             map50_95 = "N/A"
@@ -83,7 +83,7 @@ def generate_report():
                     "mAP50-95": f"{map50_95:.4f}"
                     if isinstance(map50_95, (float, np.floating))
                     else map50_95,
-                    "AR": f"{ar:.4f}" if isinstance(ar, (float, np.floating)) else ar,
+                    "mAR": f"{mar:.4f}" if isinstance(mar, (float, np.floating)) else mar,
                     "Trainable Parameters (M)": params,
                 }
             )
@@ -99,15 +99,15 @@ def generate_report():
 
         f.write("### Comprehensive Transfer Learning Performance Table\n")
         f.write(
-            "| Architecture | Variant | mAP50 | mAP50-95 | Average Recall | Trainable Parameters (M) |\n"
+            "| Architecture | Variant | mAP50 | mAP50-95 | mean Average Recall | Trainable Parameters (M) |\n"
         )
         f.write(
-            "|--------------|---------|-------|----------|----------------|--------------------------|\n"
+            "|--------------|---------|-------|----------|---------------------|--------------------------|\n"
         )
 
         for row in results_table:
             f.write(
-                f"| {row['Architecture']} | {row['Variant']} | {row['mAP50']} | {row['mAP50-95']} | {row['AR']} | {row['Trainable Parameters (M)']} |\n"
+                f"| {row['Architecture']} | {row['Variant']} | {row['mAP50']} | {row['mAP50-95']} | {row['mAR']} | {row['Trainable Parameters (M)']} |\n"
             )
 
     print(f"Transfer learning report saved to {report_path}")
