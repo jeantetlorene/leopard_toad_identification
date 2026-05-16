@@ -52,6 +52,31 @@ def main():
             with open(os.path.join(folder_path, filename), "r") as f:
                 results = json.load(f)
 
+            # Refresh ground truth from clean data
+            from eval_utils.data_utils import get_clean_ground_truth
+
+            refreshed_results = []
+            for res in results:
+                is_positive, gt_boxes, split = get_clean_ground_truth(res["path"])
+                if split is not None:
+                    # Found in clean mapping, update GT
+                    res["is_positive"] = is_positive
+                    res["gt_boxes"] = gt_boxes
+                    refreshed_results.append(res)
+                else:
+                    # Not in clean mapping. In this script we are ALWAYS
+                    # evaluating the full sequence/pool.
+                    # Treat as negative (empty background)
+                    res["is_positive"] = False
+                    res["gt_boxes"] = []
+                    refreshed_results.append(res)
+
+            if not refreshed_results:
+                print(f"Warning: No images from {filename} found. Skipping.")
+                continue
+
+            results = refreshed_results
+
             binary_gt = np.array([res["is_positive"] for res in results])
             binary_scores = np.array(
                 [

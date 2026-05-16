@@ -2,6 +2,14 @@ import pandas as pd
 import os
 import shutil
 from PIL import Image
+import hashlib
+
+
+def get_unique_name(img_path):
+    # Use a short hash of the full path to avoid collisions for same filenames in different dirs
+    path_hash = hashlib.md5(img_path.encode()).hexdigest()[:8]
+    base_name = os.path.basename(img_path)
+    return f"{path_hash}-{base_name}"
 
 
 def convert_to_yolo(xmin, ymin, xmax, ymax, img_width, img_height):
@@ -47,13 +55,23 @@ def process_split(eval_csv, final_csv, split_name, base_dir, sample_classes_txt)
     os.makedirs(missed_dir, exist_ok=True)
 
     print(
-        f"  Found {len(correct_images)} correct images and {len(missed_images)} missed images."
+        f"  Found {len(correct_images)} correct image entries and {len(missed_images)} missed images."
     )
+
+    mapping = []
 
     # Process missed images
     for img_path in missed_images:
         if not pd.isna(img_path) and os.path.exists(img_path):
-            img_name = os.path.basename(img_path)
+            img_name = get_unique_name(img_path)
+            mapping.append(
+                {
+                    "unique_name": img_name,
+                    "original_path": img_path,
+                    "split": split_name,
+                    "type": "missed",
+                }
+            )
             dest_path = os.path.join(missed_dir, img_name)
             if not os.path.exists(dest_path):
                 shutil.copy2(img_path, dest_path)
@@ -64,9 +82,19 @@ def process_split(eval_csv, final_csv, split_name, base_dir, sample_classes_txt)
     correct_df = final_df[final_df["image_path"].isin(correct_images)]
     grouped = correct_df.groupby("image_path")
 
+    print(f"  Exporting {len(grouped)} unique images for {split_name} split...")
+
     for img_path, group in grouped:
         if not pd.isna(img_path) and os.path.exists(img_path):
-            img_name = os.path.basename(img_path)
+            img_name = get_unique_name(img_path)
+            mapping.append(
+                {
+                    "unique_name": img_name,
+                    "original_path": img_path,
+                    "split": split_name,
+                    "type": "correct",
+                }
+            )
             dest_img_path = os.path.join(images_dir, img_name)
 
             # Read image to get dimensions
@@ -108,7 +136,15 @@ def process_split(eval_csv, final_csv, split_name, base_dir, sample_classes_txt)
     correct_images_without_boxes = set(correct_images) - set(grouped.groups.keys())
     for img_path in correct_images_without_boxes:
         if not pd.isna(img_path) and os.path.exists(img_path):
-            img_name = os.path.basename(img_path)
+            img_name = get_unique_name(img_path)
+            mapping.append(
+                {
+                    "unique_name": img_name,
+                    "original_path": img_path,
+                    "split": split_name,
+                    "type": "correct_empty",
+                }
+            )
             dest_img_path = os.path.join(images_dir, img_name)
             if not os.path.exists(dest_img_path):
                 shutil.copy2(img_path, dest_img_path)
@@ -116,18 +152,42 @@ def process_split(eval_csv, final_csv, split_name, base_dir, sample_classes_txt)
             label_path = os.path.join(labels_dir, label_name)
             open(label_path, "w").close()
 
+    return mapping
+
 
 if __name__ == "__main__":
-    evaluation_dir = "/home/Joshua/Downloads/leopard_toad_identification/evaluation"
+    base_repo_dir = "/home/Joshua/Downloads/leopard_toad_identification"
+    evaluation_dir = os.path.join(base_repo_dir, "detection", "evaluation")
     consensus_dir = os.path.join(evaluation_dir, "consensus_predictions")
     output_base_dir = os.path.join(evaluation_dir, "data")
-    sample_classes_txt = "/home/Joshua/Downloads/leopard_toad_identification/detection/active learning/data/detect_1/test/classes.txt"
+    sample_classes_txt = os.path.join(
+        base_repo_dir,
+        "detection",
+        "active learning",
+        "data",
+        "detect_1",
+        "test",
+        "classes.txt",
+    )
+
+    # Clear existing directories for a fresh start
+    for d in ["val", "test", "missed"]:
+        dir_path = os.path.join(output_base_dir, d)
+        if os.path.exists(dir_path):
+            print(f"Cleaning up {dir_path}...")
+            shutil.rmtree(dir_path)
+
+    all_mappings = []
 
     # Process Val
     val_eval = os.path.join(consensus_dir, "val_consensus_final_evaluations.csv")
     val_final = os.path.join(consensus_dir, "val_consensus_final.csv")
     if os.path.exists(val_eval) and os.path.exists(val_final):
-        process_split(val_eval, val_final, "val", output_base_dir, sample_classes_txt)
+        all_mappings.extend(
+            process_split(
+                val_eval, val_final, "val", output_base_dir, sample_classes_txt
+            )
+        )
     else:
         print("Val files missing")
 
@@ -135,8 +195,17 @@ if __name__ == "__main__":
     test_eval = os.path.join(consensus_dir, "test_consensus_final_evaluations.csv")
     test_final = os.path.join(consensus_dir, "test_consensus_final.csv")
     if os.path.exists(test_eval) and os.path.exists(test_final):
-        process_split(
-            test_eval, test_final, "test", output_base_dir, sample_classes_txt
+        all_mappings.extend(
+            process_split(
+                test_eval, test_final, "test", output_base_dir, sample_classes_txt
+            )
         )
     else:
         print("Test files missing")
+
+    # Save mapping file
+    if all_mappings:
+        mapping_df = pd.DataFrame(all_mappings)
+        mapping_path = os.path.join(output_base_dir, "image_mapping.csv")
+        mapping_df.to_csv(mapping_path, index=False)
+        print(f"Saved image mapping to {mapping_path}")

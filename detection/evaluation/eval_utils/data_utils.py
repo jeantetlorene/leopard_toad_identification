@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 import concurrent.futures
 from functools import lru_cache
-from .config import DATASETS
+from eval_utils.config import DATASETS, MAPPING_PATH
 
 
 def apply_clahe(im):
@@ -18,46 +18,62 @@ def apply_clahe(im):
     return im_clahe
 
 
-def load_labels(label_dir):
-    """Load all YOLO-format labels from a directory into a map."""
-    labels = {}
-    if not os.path.exists(label_dir):
-        return labels
-    for label_file in os.listdir(label_dir):
-        if label_file.endswith(".txt"):
-            # Extract original basename by splitting off Label Studio hash
-            parts = label_file.replace(".txt", "").split("-", 1)
-            original_name = parts[-1] if len(parts) > 1 else parts[0]
-
-            with open(os.path.join(label_dir, label_file), "r") as f:
-                boxes = []
-                for line in f:
-                    try:
-                        cls, x, y, w, h = map(float, line.strip().split())
-                        boxes.append({"cls": int(cls), "bbox": [x, y, w, h]})
-                    except ValueError:
-                        continue
-                if original_name not in labels:
-                    labels[original_name] = []
-                labels[original_name].append({"full_name": label_file, "boxes": boxes})
-    return labels
+@lru_cache(maxsize=1)
+def get_image_mapping():
+    """Load the image mapping CSV into a DataFrame."""
+    if not os.path.exists(MAPPING_PATH):
+        return pd.DataFrame()
+    return pd.read_csv(MAPPING_PATH)
 
 
-def get_best_label_match(original_path, label_map):
-    """Disambiguate label matching using folder context if necessary."""
-    basename = os.path.basename(original_path).replace(".JPG", "").replace(".jpg", "")
-    if basename not in label_map:
-        return []
+@lru_cache(maxsize=1)
+def get_image_mapping_dict():
+    """Load the image mapping CSV into a dictionary for O(1) lookup."""
+    df = get_image_mapping()
+    if df.empty:
+        return {}
+    # Map normalized original_path to (unique_name, split)
+    return {
+        os.path.normpath(row["original_path"]): (row["unique_name"], row["split"])
+        for _, row in df.iterrows()
+    }
 
-    matches = label_map[basename]
-    if len(matches) == 1:
-        return matches[0]["boxes"]
 
-    parent_folder = os.path.basename(os.path.dirname(original_path)).lower()
-    for match in matches:
-        if parent_folder in match["full_name"].lower():
-            return match["boxes"]
-    return matches[0]["boxes"]
+def get_clean_ground_truth(original_path):
+    """
+    Get clean ground truth boxes and image-level label for an original image path.
+    Returns: (is_positive, gt_boxes, split)
+    """
+    mapping_dict = get_image_mapping_dict()
+    if not mapping_dict:
+        return False, [], None
+
+    # Normalize path for comparison
+    norm_path = os.path.normpath(original_path)
+    match = mapping_dict.get(norm_path)
+
+    if not match:
+        return False, [], None
+
+    unique_name, split = match
+
+    label_dir = DATASETS[split]["labels_dir"]
+    label_path = os.path.join(label_dir, os.path.splitext(unique_name)[0] + ".txt")
+
+    gt_boxes = []
+    if os.path.exists(label_path):
+        with open(label_path, "r") as f:
+            for line in f:
+                try:
+                    parts = line.strip().split()
+                    if len(parts) == 5:
+                        cls, x, y, w, h = map(float, parts)
+                        gt_boxes.append({"cls": int(cls), "bbox": [x, y, w, h]})
+                except ValueError:
+                    continue
+
+    is_positive = len(gt_boxes) > 0
+    return is_positive, gt_boxes, split
 
 
 @lru_cache(maxsize=None)
@@ -66,7 +82,6 @@ def get_camera_images(camera_id, root_path="/srv/shared_leopard_toad"):
     all_images = []
     print(f"Crawling {root_path} for camera {camera_id} images...")
     for root, dirs, files in os.walk(root_path):
-        # Normalize root to ensure consistent comparison
         norm_root = os.path.normpath(root)
         path_parts = norm_root.split(os.sep)
 
@@ -79,25 +94,34 @@ def get_camera_images(camera_id, root_path="/srv/shared_leopard_toad"):
 
 @lru_cache(maxsize=None)
 def get_ground_truth_positives(dataset_name):
-    """Get a set of paths for known positive images from the consensus CSV."""
-    ds_info = DATASETS[dataset_name]
-    df = pd.read_csv(ds_info["csv"], header=0)  # Use header=0 since CSV has a header
-    # Correct columns are: image_path, evaluation, row_idx
-    positives = set(
-        df[df["evaluation"].isin(["Correct", "Missed Animal"])]["image_path"]
-        .map(os.path.normpath)
-        .tolist()
-    )
-    return positives
+    """Get a set of original paths for known positive images from the clean labels."""
+    mapping = get_image_mapping()
+    if mapping.empty:
+        return set()
+
+    split_mapping = mapping[mapping["split"] == dataset_name]
+    positives = []
+
+    for _, row in split_mapping.iterrows():
+        unique_name = row["unique_name"]
+        label_dir = DATASETS[dataset_name]["labels_dir"]
+        label_path = os.path.join(label_dir, os.path.splitext(unique_name)[0] + ".txt")
+
+        if os.path.exists(label_path) and os.path.getsize(label_path) > 0:
+            positives.append(os.path.normpath(row["original_path"]))
+
+    return set(positives)
 
 
 @lru_cache(maxsize=None)
 def get_dataset_images(dataset_name):
-    """Get all image paths for a dataset from its consensus CSV."""
-    ds_info = DATASETS[dataset_name]
-    if not os.path.exists(ds_info["csv"]):
-        print(f"Warning: Consensus CSV not found at {ds_info['csv']}")
+    """Get all original image paths for a dataset split from the mapping."""
+    mapping = get_image_mapping()
+    if mapping.empty:
         return []
 
-    df = pd.read_csv(ds_info["csv"], header=0)
-    return df["image_path"].map(os.path.normpath).tolist()
+    return (
+        mapping[mapping["split"] == dataset_name]["original_path"]
+        .map(os.path.normpath)
+        .tolist()
+    )

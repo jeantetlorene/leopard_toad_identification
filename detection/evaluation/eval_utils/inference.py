@@ -9,18 +9,17 @@ import json
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from .config import (
+from eval_utils.config import (
     DATASETS,
     DEFAULT_BATCH_SIZE,
     FASTER_RCNN_SUB_BATCH_SIZE,
 )
-from .data_utils import (
+from eval_utils.data_utils import (
     apply_clahe,
-    load_labels,
-    get_best_label_match,
     get_camera_images,
     get_ground_truth_positives,
     get_dataset_images,
+    get_clean_ground_truth,
 )
 
 
@@ -77,7 +76,6 @@ def generate_predictions(
     if processed_paths:
         all_images = [p for p in all_images if p not in processed_paths]
 
-    label_map = load_labels(os.path.join(ds_info["gt_dir"], "labels"))
     results = existing_results if existing_results else []
 
     if not all_images:
@@ -126,14 +124,12 @@ def generate_predictions(
         )
 
         for path, preds in zip(valid_paths, batch_preds):
-            is_positive = path in positives
+            is_positive, gt_boxes, _ = get_clean_ground_truth(path)
             results.append(
                 {
                     "path": path,
                     "is_positive": is_positive,
-                    "gt_boxes": get_best_label_match(path, label_map)
-                    if is_positive
-                    else [],
+                    "gt_boxes": gt_boxes,
                     "predictions": preds,
                 }
             )

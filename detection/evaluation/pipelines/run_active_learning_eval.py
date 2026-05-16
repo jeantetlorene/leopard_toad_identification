@@ -207,7 +207,7 @@ def run_evaluation():
                         wrapper,
                         split,
                         use_clahe=is_clahe,
-                        batch_size=128,
+                        batch_size=64,
                     )
 
                     det_metrics = calculate_detection_metrics(eval_results)

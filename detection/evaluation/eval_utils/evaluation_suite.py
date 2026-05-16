@@ -5,8 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import roc_curve, auc, precision_score, recall_score, f1_score
-from .metrics import calculate_detection_metrics, calculate_image_level_metrics
-from .config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, CONF_THRESHOLDS
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.metrics import calculate_detection_metrics, calculate_image_level_metrics
+from eval_utils.config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, CONF_THRESHOLDS
 
 
 def get_model_info(folder_name):
@@ -124,6 +128,32 @@ def run_evaluation_suite(
                 results = json.load(f)
 
             is_full_seq = "full_seq" in dataset
+
+            # Refresh ground truth from clean data
+            from eval_utils.data_utils import get_clean_ground_truth
+
+            refreshed_results = []
+            for res in results:
+                is_positive, gt_boxes, split = get_clean_ground_truth(res["path"])
+                if split is not None:
+                    # Found in clean mapping, update GT
+                    res["is_positive"] = is_positive
+                    res["gt_boxes"] = gt_boxes
+                    refreshed_results.append(res)
+                elif is_full_seq:
+                    # Not in clean mapping but we are in full sequence mode
+                    # Treat as negative (empty background)
+                    res["is_positive"] = False
+                    res["gt_boxes"] = []
+                    refreshed_results.append(res)
+
+            if not refreshed_results:
+                print(
+                    f"      Warning: No images from {filename} found in clean mapping. Skipping."
+                )
+                continue
+
+            results = refreshed_results
 
             if not is_full_seq:
                 # 1. Detection-level Metrics (mAP and BB-level optimal thresholds)

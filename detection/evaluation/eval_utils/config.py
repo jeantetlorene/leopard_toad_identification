@@ -28,16 +28,18 @@ FASTER_RCNN_SUB_BATCH_SIZE = 128
 CONF_THRESHOLDS = [round(x, 2) for x in torch.linspace(0.01, 0.95, 30).tolist()]
 
 # Dataset Mappings
+MAPPING_PATH = os.path.join(DATA_DIR, "image_mapping.csv")
+
 # Mapping CSV files to camera IDs and local GT directories
 DATASETS = {
     "test": {
-        "csv": os.path.join(CONSENSUS_DIR, "test_consensus_final_evaluations.csv"),
-        "gt_dir": os.path.join(DATA_DIR, "test"),
+        "images_dir": os.path.join(DATA_DIR, "test", "images"),
+        "labels_dir": os.path.join(DATA_DIR, "test", "labels"),
         "camera": "5Z",
     },
     "val": {
-        "csv": os.path.join(CONSENSUS_DIR, "val_consensus_final_evaluations.csv"),
-        "gt_dir": os.path.join(DATA_DIR, "val"),
+        "images_dir": os.path.join(DATA_DIR, "val", "images"),
+        "labels_dir": os.path.join(DATA_DIR, "val", "labels"),
         "camera": "4R",
     },
 }

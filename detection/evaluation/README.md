@@ -112,8 +112,7 @@ python3 reporting/plot_binary_roc_baseline.py
 - `reporting/`: Scripts for generating reports and plotting results.
 - `eval_utils/`: Shared logic, configuration, metrics, and model wrappers.
 - `docs/`: Supplemental documentation and instructions.
-- `consensus_predictions/`: Ground truth mapping CSVs generated from manual audits.
-- `data/`: Manually verified YOLO-format labels for the test and val sets.
+- `data/`: The authoritative ground truth. Contains `test/` and `val/` directories with `images/`, `labels/`, and `image_mapping.csv`.
 - `results/files/`: Target directory for all generated evaluation metrics, unified sweep CSVs, and `preprocessing_results.md`.
 - `results/plots/`: Target directory for all generated ROC plots and PR curve visualizations.
 - `results/<model_type>_<processing>/`: Contains the raw prediction JSON files (`_raw.json`).
