@@ -114,6 +114,10 @@ def run_evaluation():
                     model_path=model_path,
                     device=DEVICE,
                     confidence_threshold=0.001,
+                    sahi_batch_size=64,
+                    no_standard_prediction=True,
+                    overlap_height_ratio=0.1,
+                    overlap_width_ratio=0.1,
                 )
 
                 # Run SAHI inference
@@ -123,7 +127,7 @@ def run_evaluation():
                     wrapper,
                     split,
                     use_clahe=is_clahe,
-                    batch_size=128,  # Small batch for SAHI because of memory/overhead
+                    batch_size=32,
                 )
 
                 # Calculate metrics
