@@ -2,6 +2,7 @@ import os
 import argparse
 import json
 import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import MODEL_ROOTS, RESULTS_DIR, DEVICE, DATASETS
@@ -129,11 +130,15 @@ def run_all(
 
                     # Lazy import to save memory/time if all are cached
                     if m_type in ["yolo", "rtdetr"]:
-                        from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
+                        from eval_utils.models.ultralytics_wrapper import (
+                            UltralyticsWrapper,
+                        )
 
                         wrapper = UltralyticsWrapper(m_type, model_path, device=DEVICE)
                     else:
-                        from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
+                        from eval_utils.models.faster_rcnn_wrapper import (
+                            FasterRCNNWrapper,
+                        )
 
                         wrapper = FasterRCNNWrapper(model_path, device=DEVICE)
 
