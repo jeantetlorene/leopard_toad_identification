@@ -9,12 +9,12 @@ import json
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from config import (
+from .config import (
     DATASETS,
     DEFAULT_BATCH_SIZE,
     FASTER_RCNN_SUB_BATCH_SIZE,
 )
-from data_utils import (
+from .data_utils import (
     apply_clahe,
     load_labels,
     get_best_label_match,

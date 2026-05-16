@@ -3,7 +3,10 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
-from config import RESULTS_DIR, PLOTS_DIR
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import RESULTS_DIR, PLOTS_DIR
 
 
 def main():

@@ -5,10 +5,13 @@ import numpy as np
 import pandas as pd
 import time
 
-from config import MODEL_ROOTS, RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, DEVICE
-from models.faster_rcnn_wrapper import FasterRCNNWrapper
-from models.ultralytics_wrapper import UltralyticsWrapper
-from metrics import box_iou, calculate_map50_95
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import MODEL_ROOTS, RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, DEVICE
+from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
+from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
+from eval_utils.metrics import box_iou, calculate_map50_95
 
 CYCLE = 0
 VARIANT = "scratch"

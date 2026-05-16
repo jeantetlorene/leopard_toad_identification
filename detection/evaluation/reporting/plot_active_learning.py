@@ -5,7 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from config import FILES_DIR, PLOTS_DIR, RESULTS_DIR
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import FILES_DIR, PLOTS_DIR, RESULTS_DIR
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
 CLASSES = ["Western_Leopard_Toad", "Small_Mammal", "Other_Amphibian"]

@@ -7,7 +7,7 @@ from torchvision.models.detection import (
 )
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import numpy as np
-from models.base import BaseModel
+from .base import BaseModel
 
 
 class FasterRCNNWrapper(BaseModel):

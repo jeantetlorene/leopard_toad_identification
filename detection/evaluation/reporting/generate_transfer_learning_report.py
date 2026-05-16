@@ -3,11 +3,14 @@ import os
 import json
 import numpy as np
 
-from config import FILES_DIR, MODEL_ROOTS, RESULTS_DIR, DEVICE
-from metrics import calculate_map50_95
-from models.faster_rcnn_wrapper import FasterRCNNWrapper
-from models.ultralytics_wrapper import UltralyticsWrapper
-from generate_architecture_report import calculate_flops_params
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import FILES_DIR, MODEL_ROOTS, RESULTS_DIR, DEVICE
+from eval_utils.metrics import calculate_map50_95
+from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
+from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
+from reporting.generate_architecture_report import calculate_flops_params
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
 

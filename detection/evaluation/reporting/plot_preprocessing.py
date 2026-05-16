@@ -4,8 +4,11 @@ import os
 import json
 import numpy as np
 
-from config import RESULTS_DIR, PLOTS_DIR
-from metrics import calculate_detection_metrics
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import RESULTS_DIR, PLOTS_DIR
+from eval_utils.metrics import calculate_detection_metrics
 
 
 def get_exact_macro_pr(raw_json_path):

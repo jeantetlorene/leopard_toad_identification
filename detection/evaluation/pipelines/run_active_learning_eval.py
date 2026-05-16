@@ -11,15 +11,15 @@ import shutil
 import sys
 
 sys.path.append(
-    "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation"
+    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 )
 
-from config import MODEL_ROOTS, DEVICE, CLASSES, DEFAULT_BATCH_SIZE
-from data_utils import apply_clahe, load_labels
-from metrics import calculate_detection_metrics, calculate_map50_95
-from models.faster_rcnn_wrapper import FasterRCNNWrapper
+from eval_utils.config import MODEL_ROOTS, DEVICE, CLASSES, DEFAULT_BATCH_SIZE
+from eval_utils.data_utils import apply_clahe, load_labels
+from eval_utils.metrics import calculate_detection_metrics, calculate_map50_95
+from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from ultralytics import YOLO, RTDETR
-from inference import generate_predictions
+from eval_utils.inference import generate_predictions
 
 DATA_DIR = (
     "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/data"

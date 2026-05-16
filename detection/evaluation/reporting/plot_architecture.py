@@ -2,7 +2,10 @@ import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-from config import FILES_DIR, PLOTS_DIR, CLASSES
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import FILES_DIR, PLOTS_DIR, CLASSES
 
 CONF_THRESH = 0.5
 MODELS_TO_PLOT = ["yolo", "rtdetr", "faster_rcnn"]

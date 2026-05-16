@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import roc_curve, auc, precision_score, recall_score, f1_score
-from metrics import calculate_detection_metrics, calculate_image_level_metrics
-from config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, CONF_THRESHOLDS
+from .metrics import calculate_detection_metrics, calculate_image_level_metrics
+from .config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, CONF_THRESHOLDS
 
 
 def get_model_info(folder_name):

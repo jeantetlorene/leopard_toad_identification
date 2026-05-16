@@ -1,5 +1,5 @@
 from ultralytics import YOLO, RTDETR
-from models.base import BaseModel
+from .base import BaseModel
 import torch
 
 

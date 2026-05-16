@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 import concurrent.futures
 from functools import lru_cache
-from config import DATASETS
+from .config import DATASETS
 
 
 def apply_clahe(im):

@@ -1,6 +1,6 @@
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
-from models.base import BaseModel
+from .base import BaseModel
 import numpy as np
 import torch
 from torchvision.models.detection import (

@@ -3,8 +3,11 @@ import os
 import json
 import numpy as np
 
-from config import FILES_DIR, RESULTS_DIR, BASE_DIR
-from metrics import calculate_map50_95
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import FILES_DIR, RESULTS_DIR, BASE_DIR
+from eval_utils.metrics import calculate_map50_95
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
 

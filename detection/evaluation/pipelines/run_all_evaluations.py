@@ -1,10 +1,13 @@
 import os
 import argparse
 import json
-from config import MODEL_ROOTS, RESULTS_DIR, DEVICE, DATASETS
-from inference import generate_predictions
-from evaluation_suite import run_evaluation_suite
-from data_utils import get_camera_images, get_dataset_images
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import MODEL_ROOTS, RESULTS_DIR, DEVICE, DATASETS
+from eval_utils.inference import generate_predictions
+from eval_utils.evaluation_suite import run_evaluation_suite
+from eval_utils.data_utils import get_camera_images, get_dataset_images
 
 
 def run_all(
@@ -126,11 +129,11 @@ def run_all(
 
                     # Lazy import to save memory/time if all are cached
                     if m_type in ["yolo", "rtdetr"]:
-                        from models.ultralytics_wrapper import UltralyticsWrapper
+                        from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
 
                         wrapper = UltralyticsWrapper(m_type, model_path, device=DEVICE)
                     else:
-                        from models.faster_rcnn_wrapper import FasterRCNNWrapper
+                        from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 
                         wrapper = FasterRCNNWrapper(model_path, device=DEVICE)
 

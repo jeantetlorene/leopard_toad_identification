@@ -2,7 +2,10 @@ import pandas as pd
 import os
 import numpy as np
 
-from config import FILES_DIR, PLOTS_DIR
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from eval_utils.config import FILES_DIR, PLOTS_DIR
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
 

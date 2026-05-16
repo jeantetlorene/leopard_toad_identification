@@ -11,14 +11,14 @@ import shutil
 import sys
 
 sys.path.append(
-    "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation"
+    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 )
 
-from config import MODEL_ROOTS, DEVICE, CLASSES, DEFAULT_BATCH_SIZE
-from data_utils import apply_clahe
-from metrics import calculate_detection_metrics, calculate_map50_95
-from models.sahi_wrapper import SAHIWrapper
-from inference import generate_predictions
+from eval_utils.config import MODEL_ROOTS, DEVICE, CLASSES, DEFAULT_BATCH_SIZE
+from eval_utils.data_utils import apply_clahe
+from eval_utils.metrics import calculate_detection_metrics, calculate_map50_95
+from eval_utils.models.sahi_wrapper import SAHIWrapper
+from eval_utils.inference import generate_predictions
 
 DATA_DIR = (
     "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/data"
