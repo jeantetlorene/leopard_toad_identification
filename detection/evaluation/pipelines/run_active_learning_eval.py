@@ -6,6 +6,7 @@ from tqdm import tqdm
 import torch
 import cv2
 import shutil
+import argparse
 
 # Project imports
 import sys
@@ -13,7 +14,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import MODEL_ROOTS, DEVICE, CLASSES, DEFAULT_BATCH_SIZE
-from eval_utils.data_utils import apply_clahe, load_labels
+from eval_utils.data_utils import apply_clahe
 from eval_utils.metrics import calculate_detection_metrics, calculate_map50_95
 from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from ultralytics import YOLO, RTDETR
@@ -25,28 +26,40 @@ DATA_DIR = (
 RESULTS_DIR_FILES = "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/results/files"
 
 
-def prepare_clahe_set(split):
-    base_dir = os.path.join(DATA_DIR, split)
-    # Use a standard YOLO structure: clahe_set/images and clahe_set/labels
-    clahe_root = os.path.join(base_dir, "clahe_set")
+def prepare_clahe_set(split, overwrite=False):
+    """
+    Prepares a CLAHE-processed version of the dataset split.
+    Saves to data/<split>_clahe/ structure compatible with YOLO.
+    """
+    split_dir = os.path.join(DATA_DIR, split)
+    clahe_root = os.path.join(DATA_DIR, f"{split}_clahe")
     clahe_images_dir = os.path.join(clahe_root, "images")
     clahe_labels_dir = os.path.join(clahe_root, "labels")
 
-    if os.path.exists(clahe_images_dir) and len(os.listdir(clahe_images_dir)) > 0:
-        if not os.path.exists(clahe_labels_dir):
-            print(f"Creating missing symlink for {split} CLAHE labels...")
-            os.symlink(os.path.join(base_dir, "labels"), clahe_labels_dir)
-        return clahe_root
-
     os.makedirs(clahe_images_dir, exist_ok=True)
 
-    # Create symlink for labels to the original labels directory
+    # Symlink labels for YOLO compatibility
     if not os.path.exists(clahe_labels_dir):
-        print(f"Creating symlink for {split} CLAHE labels...")
-        os.symlink(os.path.join(base_dir, "labels"), clahe_labels_dir)
+        print(f"Creating symlink for {split} labels -> {clahe_labels_dir}")
+        os.symlink(os.path.join(split_dir, "labels"), clahe_labels_dir)
+
+    # Tracking manifest
+    manifest_path = os.path.join(clahe_root, "manifest.csv")
+
+    # Check if already processed
+    if not overwrite and len(os.listdir(clahe_images_dir)) > 0:
+        print(f"CLAHE set for {split} already exists. Skipping generation.")
+        return clahe_root
 
     print(f"Generating CLAHE-processed {split} set...")
-    images_dir = os.path.join(base_dir, "images")
+    images_dir = os.path.join(split_dir, "images")
+
+    # Load mapping for manifest tracking
+    from eval_utils.data_utils import get_image_mapping
+
+    mapping_df = get_image_mapping()
+    manifest_data = []
+
     for img_name in tqdm(os.listdir(images_dir)):
         if img_name.lower().endswith((".jpg", ".jpeg")):
             img_path = os.path.join(images_dir, img_name)
@@ -54,6 +67,22 @@ def prepare_clahe_set(split):
             if img is not None:
                 img_clahe = apply_clahe(img)
                 cv2.imwrite(os.path.join(clahe_images_dir, img_name), img_clahe)
+
+                # Track original path if available
+                orig_path = "Unknown"
+                if not mapping_df.empty:
+                    match = mapping_df[mapping_df["unique_name"] == img_name]
+                    if not match.empty:
+                        orig_path = match["original_path"].values[0]
+
+                manifest_data.append(
+                    {"unique_name": img_name, "original_path": orig_path}
+                )
+
+    # Save manifest
+    pd.DataFrame(manifest_data).to_csv(manifest_path, index=False)
+    print(f"Saved tracking manifest to {manifest_path}")
+
     return clahe_root
 
 
@@ -74,7 +103,7 @@ names:
         f.write(content)
 
 
-def run_evaluation():
+def run_evaluation(overwrite=False):
     os.makedirs(RESULTS_DIR_FILES, exist_ok=True)
 
     splits = ["test", "val"]
@@ -83,12 +112,12 @@ def run_evaluation():
     yamls = {}
     for split in splits:
         split_dir = os.path.join(DATA_DIR, split)
-        clahe_root = prepare_clahe_set(split)
+        clahe_root = prepare_clahe_set(split, overwrite=overwrite)
 
-        plain_yaml = os.path.join(split_dir, f"{split}_plain.yaml")
+        plain_yaml = os.path.join(DATA_DIR, f"{split}_plain.yaml")
         create_yaml(split_dir, "images", plain_yaml)
 
-        clahe_yaml = os.path.join(split_dir, f"{split}_clahe.yaml")
+        clahe_yaml = os.path.join(DATA_DIR, f"{split}_clahe.yaml")
         create_yaml(clahe_root, "images", clahe_yaml)
 
         yamls[split] = {"plain": plain_yaml, "clahe": clahe_yaml}
@@ -123,7 +152,9 @@ def run_evaluation():
                 eval_dir = os.path.join(runs_dir, run_name, eval_name)
 
                 # Check if evaluation already exists
-                if os.path.exists(os.path.join(eval_dir, "results_dict.json")):
+                if not overwrite and os.path.exists(
+                    os.path.join(eval_dir, "results_dict.json")
+                ):
                     print(f"Skipping {run_name} on {split} (already evaluated).")
                     # If Faster R-CNN, we still want to load it for the combined CSV if it was missed
                     if model_type == "faster_rcnn":
@@ -248,4 +279,14 @@ def run_evaluation():
 
 
 if __name__ == "__main__":
-    run_evaluation()
+    parser = argparse.ArgumentParser(
+        description="Run Active Learning Evaluation Pipeline"
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Force re-evaluation of all models and re-generation of CLAHE sets.",
+    )
+    args = parser.parse_args()
+
+    run_evaluation(overwrite=args.overwrite)

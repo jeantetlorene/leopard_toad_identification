@@ -18,11 +18,9 @@ If we isolate WLT-specific metrics, the hierarchy changes compared to the genera
 
 ## 2. Active Learning Impact on WLT
 
-An interesting trend emerged during the active learning cycles:
-
-*   **The "Toad Plateau"**: While overall mAP often increased significantly (driven by "Small Mammals" and "Other Amphibians"), the **WLT AP50 remained stubbornly between 0.28 and 0.35**. 
-*   **Querying Efficiency**: The number of WLT instances in the test set is fixed, but the training pool grew from 55 to 59 instances. This indicates that while we are querying more toads, they are likely the "complex boundary cases" (highly camouflaged or partially occluded), which prevents the AP from skyrocketing despite better training data.
-*   **Specificity Trade-off**: At Cycle 4, **RT-DETR (Plain Pretrained)** achieved high specificity (0.96) for WLT, but its recall dropped slightly. This suggests the model is becoming more "cautious," which might be undesirable if the goal is maximum monitoring coverage.
+*   **The "Toad Plateau"**: While overall mAP often increased significantly (driven by "Small Mammals" and "Other Amphibians"), the **WLT AP50 remained stubbornly between 0.28 and 0.35**. This suggests that while we can detect *more* individuals, the model struggles to increase its precision on the most cryptic samples.
+*   **Recall vs. Precision Dynamics**: The active learning cycles successfully traded off some raw recall for significantly better precision in the later cycles (especially for RT-DETR), reducing the human auditing burden.
+*   **The Cycle 3 Peak**: For WLT-specific recall, **RT-DETR (Clahe Pretrained)** reached its zenith at Cycle 3 (**0.6172 recall**), before consolidating into a more precise but slightly lower-recall state in Cycle 4.
 
 ## 3. Optimization Recommendations (WLT-First)
 
@@ -30,7 +28,15 @@ An interesting trend emerged during the active learning cycles:
 2.  **Thresholding**: Because the **WLT Precision** is generally lower (0.35 - 0.50) than other classes, a class-specific **low confidence threshold** must be used for WLT detections to maintain the high recall capacity of the model.
 3.  **Active Learning Bias**: The current AL strategy successfully improved "Small Mammal" performance to near-perfect levels. To break the "Toad Plateau," future cycles should be heavily biased toward Toad uncertainty, even at the expense of other classes.
 
-## 4. Summary Table: WLT Performance at Cycle 4
+## 4. Final Deployment Recommendation
+
+After 4 cycles of targeted active learning, the following models are recommended for different monitoring objectives:
+
+1.  **For Maximum Species Recovery**: **RT-DETR (Clahe Pretrained) Cycle 3**. It offers the highest confirmed capture rate (61.7%) of Western Leopard Toads.
+2.  **For Automated Auditing (Low FP)**: **RT-DETR (Plain Pretrained) Cycle 4**. It achieved the highest overall mAP (0.5596) and superior specificity, minimizing the time human experts spend filtering background noise.
+3.  **For Rapid Deployment**: **YOLO (Clahe Pretrained) Cycle 4**. It provides a "ready-to-use" performance level (52.3% recall) at high inference speeds, suitable for processing multi-terabyte datasets on standard workstations.
+
+## 5. Summary Table: WLT Performance at Cycle 4 (Final)
 
 | Model | Variant | WLT AP50 | WLT Recall | WLT Precision |
 |-------|---------|----------|------------|---------------|

@@ -4,19 +4,19 @@ This report synthesizes the results from Architectural, Preprocessing, Transfer 
 
 ## 1. Architectural Comparison (The Speed-Accuracy Trade-off)
 
-*   **RT-DETR**: The strongest performer in terms of raw localization capability at Cycle 0 (mAP: 0.2446, mAR: 0.5808). However, it is the most computationally expensive model (6.4 FPS), making it unsuitable for real-time edge deployment but excellent for batch server processing.
-*   **YOLO**: Offers the best balance. While its Cycle 0 mAP (0.1712) is lower than RT-DETR, it is **14x faster** (88.4 FPS). Its recall (0.4259) is respectable for a baseline.
-*   **Faster R-CNN**: Consistently underperformed in this domain, showing the lowest mAP and mAR across almost all tests. It appears less capable of handling the specific cryptic nature of leopard toads in infrared time-lapse data.
+*   **RT-DETR**: The strongest performer in terms of raw localization capability at Cycle 0 (mAP: 0.7147, mAR: 0.8351). However, it is the most computationally expensive model (2.1 FPS), making it unsuitable for real-time edge deployment but excellent for batch server processing.
+*   **YOLO**: Offers a strong balance. While its Cycle 0 mAP (0.3088) is lower than RT-DETR, it is **12x faster** (25.9 FPS). Its recall (0.6938) is excellent for a baseline.
+*   **Faster R-CNN**: Consistently underperformed in this domain, showing the lowest mAP and mAR across almost all tests (mAP: 0.3565). It appears less capable of handling the specific cryptic nature of leopard toads in infrared time-lapse data.
 
 ## 2. Optimization Pointers
 
 ### Preprocessing (CLAHE)
-*   **YOLO is the primary beneficiary**: Applying CLAHE to YOLO (Pretrained) boosted mAP from 0.25 to 0.30 and mAR from 0.55 to 0.72. CLAHE should be considered a mandatory preprocessing step if using YOLO.
-*   **RT-DETR Sensitivity**: Surprisingly, RT-DETR (Pretrained) performed better on "Plain" images at Cycle 0. This suggests that the transformer-based architecture might be sensitive to the local noise amplification that CLAHE can sometimes introduce.
+*   **YOLO is a consistent beneficiary**: Applying CLAHE to YOLO (Pretrained) boosted mAP from 0.5366 to 0.5511. CLAHE should be considered a standard preprocessing step if using YOLO to maximize feature extraction.
+*   **RT-DETR Sensitivity**: RT-DETR (Pretrained) performed better on "Plain" images at Cycle 0 (mAP 0.6231 vs 0.4766). This suggests that the transformer-based architecture might be sensitive to the local noise amplification that CLAHE can sometimes introduce in high-contrast night shots.
 
 ### Transfer Learning
-*   **Crucial for YOLO**: Using domain-specific pretrained weights more than doubled YOLO's performance (mAP 0.14 -> 0.30). 
-*   **Mixed for RT-DETR**: Scratch training actually yielded higher mAP than the Pretrained variant at Cycle 0. This indicates that RT-DETR might require longer fine-tuning or a different learning rate schedule to fully leverage pretrained weights without "forgetting" general features.
+*   **Crucial for YOLO**: Using domain-specific pretrained weights significantly improved YOLO's performance (mAP 0.3720 -> 0.5511). 
+*   **Mixed for RT-DETR**: Scratch training actually yielded higher mAP (0.5905) than the Pretrained variant (0.4766) at Cycle 0. This indicates that RT-DETR might require longer fine-tuning or a different learning rate schedule to fully leverage pretrained weights without "forgetting" general features.
 
 ### Active Learning Dynamics
 *   **The Cycle 3 Anomaly**: Most models (especially YOLO) experienced a significant performance dip at Cycle 3. This often occurs in active learning when the model is presented with a batch of "highly informative" but extremely difficult boundary cases that temporarily confuse the decision boundary.
