@@ -1,0 +1,14 @@
+- run your commands using .venv
+- structure your outputs well and clean any left over files you may have generated during your cause of action.
+- Write clean and modular codes always.
+- If you find a file that does something you want to do, use it instead of creating multiple files that do the same thing.
+- Do not leave any code running in the background after you are done, instead tell me how to run it myself
+- make sure not to run inference on the models again if it's already been done, use the already generated json prediction files. When generating the prediction, use a low confidence interval of 0.001
+- Validation Set: Camera 4R
+- Test Set: Camera 5Z
+- the full unlabelled data can be found in /srv however for the test and validation set, I have extracted and annotated images that have organisms of interest in them and saved them in /home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/data This data is gotten as a combined prediction of 3 different models from the previous active learning cycle, which was manually reviewed and corrected for accuracy, the missed images are added back into the test and val set. 
+- In the process of annotaing this ground truth, the image names have being changed but can be mapped back to the original image names using the "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/consensus_predictions/test_consensus_final_evaluations.csv" and "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/consensus_predictions/val_consensus_final_evaluations.csv" files by comparing the "image_path" column in the ground truth data to the "original_name" column in the consensus prediction files. 
+- You should also check the evaluation column in the consensus prediction files to check for correct and missed predictions as this is what is reflected in the ground truth data.  
+- To evaluate the image-level binary classification filtering capability of the models on the unlabelled pool, execute `binary_eval_test_pool.py` followed by `plot_binary_roc_baseline.py` using `.venv`.
+- For the `evaluation_suite.py`, image-level binary metrics (ROC-AUC) are exclusively calculated using the full unlabelled sequence (`_full_seq_raw.json`), while precise detection-level metrics (mAP) are exclusively calculated on the annotated ground-truth subsets (`_raw.json`).
+- Optimal per-class confidence thresholds are calculated dynamically by strictly maximizing bounding-box recall (IoU >= 0.5) while simultaneously picking the highest threshold to minimize false positives, establishing a rigorously calibrated boundary for high-recall wildlife monitoring.

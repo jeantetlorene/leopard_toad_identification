@@ -1,0 +1,10 @@
+{
+    "metrics/precision(B)": 0.7277734210354024,
+    "metrics/recall(B)": 0.5626618393772441,
+    "metrics/mAP50(B)": 0.6246098937468233,
+    "metrics/mAP50-95(B)": 0.5013851105455013,
+    "fitness": 0.5013851105455013,
+    "metrics/AP50(Other_Amphibian)": 0.44650110012796684,
+    "metrics/AP50(Small_Mammal)": 0.995,
+    "metrics/AP50(Western_Leopard_Toad)": 0.43232858111250316
+}

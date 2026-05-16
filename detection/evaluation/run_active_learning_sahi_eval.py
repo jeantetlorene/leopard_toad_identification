@@ -123,7 +123,7 @@ def run_evaluation():
                     wrapper,
                     split,
                     use_clahe=is_clahe,
-                    batch_size=8,  # Small batch for SAHI because of memory/overhead
+                    batch_size=128,  # Small batch for SAHI because of memory/overhead
                 )
 
                 # Calculate metrics
