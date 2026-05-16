@@ -9,6 +9,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import RESULTS_DIR, PLOTS_DIR
+from eval_utils.data_utils import refresh_results
 from eval_utils.metrics import calculate_detection_metrics
 
 
@@ -18,6 +19,9 @@ def get_exact_macro_pr(raw_json_path):
 
     with open(raw_json_path, "r") as f:
         results = json.load(f)
+
+    # Refresh ground truth from clean data
+    results = refresh_results(results, is_full_seq=False)
 
     metrics = calculate_detection_metrics(results, iou_threshold=0.5)
     class_curves = metrics.get("class_curves", {})

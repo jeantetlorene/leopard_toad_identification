@@ -10,6 +10,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import FILES_DIR, PLOTS_DIR, RESULTS_DIR
+from eval_utils.data_utils import refresh_results
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
 CLASSES = ["Western_Leopard_Toad", "Small_Mammal", "Other_Amphibian"]
@@ -132,6 +133,9 @@ def plot_confidence_distributions(df):
 
                 with open(raw_json_path, "r") as f:
                     results = json.load(f)
+
+                # Refresh ground truth from clean data
+                results = refresh_results(results, is_full_seq=False)
 
                 tp_scores = {c: [] for c in CLASS_MAP.values()}
                 fp_scores = {c: [] for c in CLASS_MAP.values()}

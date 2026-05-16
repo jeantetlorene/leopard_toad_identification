@@ -40,9 +40,7 @@ def plot_cm(cm, arch_name):
 
     plt.xlabel("Predicted Class")
     plt.ylabel("Ground Truth Class")
-    plt.title(
-        f"Confusion Matrix: {arch_name.upper()} (Threshold={CONF_THRESH})", pad=20
-    )
+    plt.title(f"Confusion Matrix: {arch_name.upper()} (Optimal Thresholds)", pad=20)
 
     os.makedirs(PLOTS_DIR, exist_ok=True)
 

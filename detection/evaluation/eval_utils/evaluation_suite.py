@@ -9,8 +9,17 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from eval_utils.metrics import calculate_detection_metrics, calculate_image_level_metrics
-from eval_utils.config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CLASSES, CONF_THRESHOLDS
+from eval_utils.metrics import (
+    calculate_detection_metrics,
+    calculate_image_level_metrics,
+)
+from eval_utils.config import (
+    RESULTS_DIR,
+    FILES_DIR,
+    PLOTS_DIR,
+    CLASSES,
+    CONF_THRESHOLDS,
+)
 
 
 def get_model_info(folder_name):

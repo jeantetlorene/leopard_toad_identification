@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import FILES_DIR, MODEL_ROOTS, RESULTS_DIR, DEVICE
 from eval_utils.metrics import calculate_map50_95
+from eval_utils.data_utils import refresh_results
 from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
 from reporting.generate_architecture_report import calculate_flops_params
@@ -54,6 +55,8 @@ def generate_report():
             if os.path.exists(raw_json_path):
                 with open(raw_json_path, "r") as f:
                     raw_results = json.load(f)
+                # Refresh ground truth from clean data
+                raw_results = refresh_results(raw_results, is_full_seq=False)
                 map50_95 = calculate_map50_95(raw_results)
 
             # Calculate Parameters

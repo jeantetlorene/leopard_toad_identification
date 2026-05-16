@@ -125,3 +125,25 @@ def get_dataset_images(dataset_name):
         .map(os.path.normpath)
         .tolist()
     )
+
+
+def refresh_results(results, is_full_seq=False):
+    """
+    Synchronize a list of raw prediction results with the latest clean ground truth.
+    Returns a new list containing only images present in the mapping (or all images if is_full_seq).
+    """
+    refreshed = []
+    for res in results:
+        is_positive, gt_boxes, split = get_clean_ground_truth(res["path"])
+        if split is not None:
+            # Found in clean mapping, update GT
+            res["is_positive"] = is_positive
+            res["gt_boxes"] = gt_boxes
+            refreshed.append(res)
+        elif is_full_seq:
+            # Not in clean mapping but we are in full sequence mode
+            # Treat as negative (empty background)
+            res["is_positive"] = False
+            res["gt_boxes"] = []
+            refreshed.append(res)
+    return refreshed

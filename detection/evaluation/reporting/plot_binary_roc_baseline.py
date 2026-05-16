@@ -8,6 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import RESULTS_DIR, PLOTS_DIR
+from eval_utils.data_utils import refresh_results
 
 
 def main():
@@ -34,6 +35,10 @@ def main():
         print(f"Loading predictions for {m_type}...")
         with open(filepath, "r") as f:
             results = json.load(f)
+
+        # Refresh ground truth from clean data
+        is_full_seq = "full_seq" in DATASET
+        results = refresh_results(results, is_full_seq=is_full_seq)
 
         binary_gt = np.array([res["is_positive"] for res in results])
         binary_scores = np.array(

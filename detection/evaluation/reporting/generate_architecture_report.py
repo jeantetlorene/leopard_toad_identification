@@ -20,6 +20,7 @@ from eval_utils.config import (
 from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
 from eval_utils.metrics import box_iou, calculate_map50_95
+from eval_utils.data_utils import refresh_results
 
 CYCLE = 0
 VARIANT = "scratch"
@@ -87,7 +88,7 @@ def benchmark_inference(wrapper, model_type):
     return ms_per_img, fps
 
 
-def generate_confusion_matrix(raw_results, arch_name):
+def generate_confusion_matrix(raw_results, arch_name, threshold_map=None):
     print(f"Generating Confusion Matrix for {arch_name}...")
     cm = np.zeros((NUM_CLASSES, NUM_CLASSES), dtype=int)
 
@@ -95,7 +96,17 @@ def generate_confusion_matrix(raw_results, arch_name):
 
     for res in raw_results:
         gts = res["gt_boxes"]
-        preds = [p for p in res["predictions"] if p["conf"] >= CONF_THRESH]
+        # Filter predictions by per-class threshold
+        preds = []
+        for p in res["predictions"]:
+            cls_name = CLASSES[p["cls"]]
+            thresh = (
+                threshold_map.get(cls_name, CONF_THRESH)
+                if threshold_map
+                else CONF_THRESH
+            )
+            if p["conf"] >= thresh:
+                preds.append(p)
 
         # Track which predictions have been matched
         pred_matched = [False] * len(preds)
@@ -164,7 +175,19 @@ def generate_report():
             print(f"Warning: Weights not found for {m_type} at {model_path}")
             continue
 
-        # 1. Benchmark speed and params
+        # 1. Aggregate AP/AR metrics from unified CSV
+        df_u = df_unified[
+            (df_unified["model"] == m_type)
+            & (df_unified["variant"] == VARIANT)
+            & (df_unified["processing"] == PROCESSING)
+            & (df_unified["cycle"] == CYCLE)
+        ]
+        map50 = df_u["mAP"].values[0] if not df_u.empty else "N/A"
+        mar = (
+            df_u["mAR"].values[0] if not df_u.empty and "mAR" in df_u.columns else "N/A"
+        )
+
+        # 2. Benchmark speed and params
         if m_type in ["yolo", "rtdetr"]:
             wrapper = UltralyticsWrapper(m_type, model_path, device=DEVICE)
         else:
@@ -173,7 +196,7 @@ def generate_report():
         ms_per_img, fps = benchmark_inference(wrapper, m_type)
         params, flops = calculate_flops_params(wrapper, m_type)
 
-        # 2. Confusion Matrix
+        # 3. Confusion Matrix
         raw_json_path = os.path.join(
             RESULTS_DIR, root_key, f"cycle_{CYCLE}_{VARIANT}_{DATASET}_raw.json"
         )
@@ -181,21 +204,23 @@ def generate_report():
         if os.path.exists(raw_json_path):
             with open(raw_json_path, "r") as f:
                 raw_results = json.load(f)
-            # 2. Confusion Matrix
-            generate_confusion_matrix(raw_results, m_type)
+            # Refresh ground truth from clean data
+            raw_results = refresh_results(raw_results, is_full_seq=False)
+
+            # Extract optimal thresholds for this specific model
+            threshold_map = {}
+            for cls_id, cls_name in CLASSES.items():
+                col = f"{cls_name}_optimal_threshold"
+                if not df_u.empty and col in df_u.columns:
+                    threshold_map[cls_name] = df_u[col].values[0]
+                else:
+                    threshold_map[cls_name] = CONF_THRESH
+
+            generate_confusion_matrix(raw_results, m_type, threshold_map=threshold_map)
             # Calculate mAP50-95
             map50_95 = calculate_map50_95(raw_results)
         else:
             print(f"Raw JSON not found for {m_type}: {raw_json_path}")
-
-        # 3. Aggregate AP/AR metrics
-        # mAP
-        df_u = df_unified[
-            (df_unified["model"] == m_type)
-            & (df_unified["variant"] == VARIANT)
-            & (df_unified["processing"] == PROCESSING)
-            & (df_unified["cycle"] == CYCLE)
-        ]
         map50 = df_u["mAP"].values[0] if not df_u.empty else "N/A"
 
         # mAR
