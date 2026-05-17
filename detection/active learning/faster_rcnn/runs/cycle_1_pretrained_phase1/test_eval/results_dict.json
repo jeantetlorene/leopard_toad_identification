@@ -1,0 +1,12 @@
+{
+    "model_key": "faster_rcnn",
+    "run_name": "cycle_1_pretrained_phase1",
+    "type": "faster_rcnn",
+    "clahe": false,
+    "split": "test",
+    "mAP50": 0.22961685747086488,
+    "mAP50-95": 0.11135881368043851,
+    "AP50_Other_Amphibian": 0.13442063445911953,
+    "AP50_Small_Mammal": 0.125,
+    "AP50_Western_Leopard_Toad": 0.4294299379534751
+}

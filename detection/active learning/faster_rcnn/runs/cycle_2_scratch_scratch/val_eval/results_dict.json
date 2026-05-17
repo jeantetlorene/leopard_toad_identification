@@ -1,0 +1,12 @@
+{
+    "model_key": "faster_rcnn",
+    "run_name": "cycle_2_scratch_scratch",
+    "type": "faster_rcnn",
+    "clahe": false,
+    "split": "val",
+    "mAP50": 0.39188351299605056,
+    "mAP50-95": 0.29955264647730107,
+    "AP50_Other_Amphibian": 0.11035683807039343,
+    "AP50_Small_Mammal": 1.0,
+    "AP50_Western_Leopard_Toad": 0.06529370091775831
+}

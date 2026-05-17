@@ -1,10 +1,10 @@
 {
-    "metrics/precision(B)": 0.36710004920281397,
-    "metrics/recall(B)": 0.619215899480488,
-    "metrics/mAP50(B)": 0.3742164027299853,
-    "metrics/mAP50-95(B)": 0.2904108506614344,
-    "fitness": 0.2904108506614344,
-    "metrics/AP50(Other_Amphibian)": 0.461909945572223,
-    "metrics/AP50(Small_Mammal)": 0.12677777777777777,
-    "metrics/AP50(Western_Leopard_Toad)": 0.5339614848399553
+    "metrics/precision(B)": 0.9052405634338085,
+    "metrics/recall(B)": 0.5437706500283223,
+    "metrics/mAP50(B)": 0.6329650986021212,
+    "metrics/mAP50-95(B)": 0.5078557510331017,
+    "fitness": 0.5078557510331017,
+    "metrics/AP50(Other_Amphibian)": 0.880350024244881,
+    "metrics/AP50(Small_Mammal)": 0.12602702702702703,
+    "metrics/AP50(Western_Leopard_Toad)": 0.8925182445344559
 }
