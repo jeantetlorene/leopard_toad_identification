@@ -92,53 +92,42 @@ def generate_confusion_matrix(raw_results, arch_name, threshold_map=None):
     print(f"Generating Confusion Matrix for {arch_name}...")
     cm = np.zeros((NUM_CLASSES, NUM_CLASSES), dtype=int)
 
-    bg_idx = len(CLASSES)
-
     for res in raw_results:
-        gts = res["gt_boxes"]
-        # Filter predictions by per-class threshold
-        preds = []
-        for p in res["predictions"]:
-            cls_name = CLASSES[p["cls"]]
-            thresh = (
-                threshold_map.get(cls_name, CONF_THRESH)
-                if threshold_map
-                else CONF_THRESH
-            )
-            if p["conf"] >= thresh:
-                preds.append(p)
+        # Ground truths for this image
+        gts_img = [
+            {"cls": gt["cls"], "bbox": gt["bbox"], "matched": False}
+            for gt in res["gt_boxes"]
+        ]
+        # Predictions with confidence >= 0.25 (Ultralytics standard)
+        preds_img = [
+            {"cls": p["cls"], "bbox": p["bbox"]}
+            for p in res["predictions"]
+            if p["conf"] >= 0.25
+        ]
 
-        # Track which predictions have been matched
-        pred_matched = [False] * len(preds)
-
-        for gt in gts:
-            gt_cls = gt["cls"]
-            best_iou = 0
-            best_pred_idx = -1
-
-            for i, p in enumerate(preds):
-                if pred_matched[i]:
+        # Greedy match predictions to GT
+        for pred in preds_img:
+            best_iou = -1
+            best_gt = None
+            for gt in gts_img:
+                if gt["matched"]:
                     continue
-                iou = box_iou(gt["bbox"], p["bbox"])
+                iou = box_iou(pred["bbox"], gt["bbox"])
                 if iou > best_iou:
                     best_iou = iou
-                    best_pred_idx = i
+                    best_gt = gt
 
-            if best_iou >= IOU_THRESH:
-                pred_cls = preds[best_pred_idx]["cls"]
-                cm[gt_cls, pred_cls] += 1
-                pred_matched[best_pred_idx] = True
+            if best_iou >= 0.5 and best_gt is not None:
+                best_gt["matched"] = True
+                cm[best_gt["cls"], pred["cls"]] += 1
             else:
-                # False Negative: GT missed
-                cm[gt_cls, bg_idx] += 1
+                # Unmatched prediction -> predicted class on background (FP)
+                cm[3, pred["cls"]] += 1
 
-        # False Positives: Predictions not matched to any GT
-        for i, p in enumerate(preds):
-            if not pred_matched[i]:
-                cm[bg_idx, p["cls"]] += 1
-
-    # True Negatives (Background -> Background) are not strictly counted in standard object detection CMs,
-    # as they represent infinite empty space. We leave it as 0 or empty for clarity.
+        # Unmatched ground truths -> true class on background (FN)
+        for gt in gts_img:
+            if not gt["matched"]:
+                cm[gt["cls"], 3] += 1
 
     # Save the CM data
     os.makedirs(FILES_DIR, exist_ok=True)

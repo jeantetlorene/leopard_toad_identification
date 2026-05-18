@@ -144,49 +144,75 @@ def generate_report():
                             "WLT Inst": cls_metrics["Western_Leopard_Toad"]["inst"],
                             "WLT AP50": f"{cls_metrics['Western_Leopard_Toad']['ap']:.4f}"
                             if isinstance(
-                                cls_metrics["Western_Leopard_Toad"]["ap"], float
+                                cls_metrics["Western_Leopard_Toad"]["ap"],
+                                (float, np.floating),
                             )
                             else cls_metrics["Western_Leopard_Toad"]["ap"],
                             "WLT Prec": f"{cls_metrics['Western_Leopard_Toad']['prec']:.4f}"
                             if isinstance(
-                                cls_metrics["Western_Leopard_Toad"]["prec"], float
+                                cls_metrics["Western_Leopard_Toad"]["prec"],
+                                (float, np.floating),
                             )
                             else cls_metrics["Western_Leopard_Toad"]["prec"],
                             "WLT Rec": f"{cls_metrics['Western_Leopard_Toad']['rec']:.4f}"
                             if isinstance(
-                                cls_metrics["Western_Leopard_Toad"]["rec"], float
+                                cls_metrics["Western_Leopard_Toad"]["rec"],
+                                (float, np.floating),
                             )
                             else cls_metrics["Western_Leopard_Toad"]["rec"],
                             "WLT Spec": f"{cls_metrics['Western_Leopard_Toad']['spec']:.4f}"
                             if isinstance(
-                                cls_metrics["Western_Leopard_Toad"]["spec"], float
+                                cls_metrics["Western_Leopard_Toad"]["spec"],
+                                (float, np.floating),
                             )
                             else cls_metrics["Western_Leopard_Toad"]["spec"],
                             "SM Inst": cls_metrics["Small_Mammal"]["inst"],
                             "SM AP50": f"{cls_metrics['Small_Mammal']['ap']:.4f}"
-                            if isinstance(cls_metrics["Small_Mammal"]["ap"], float)
+                            if isinstance(
+                                cls_metrics["Small_Mammal"]["ap"], (float, np.floating)
+                            )
                             else cls_metrics["Small_Mammal"]["ap"],
                             "SM Prec": f"{cls_metrics['Small_Mammal']['prec']:.4f}"
-                            if isinstance(cls_metrics["Small_Mammal"]["prec"], float)
+                            if isinstance(
+                                cls_metrics["Small_Mammal"]["prec"],
+                                (float, np.floating),
+                            )
                             else cls_metrics["Small_Mammal"]["prec"],
                             "SM Rec": f"{cls_metrics['Small_Mammal']['rec']:.4f}"
-                            if isinstance(cls_metrics["Small_Mammal"]["rec"], float)
+                            if isinstance(
+                                cls_metrics["Small_Mammal"]["rec"], (float, np.floating)
+                            )
                             else cls_metrics["Small_Mammal"]["rec"],
                             "SM Spec": f"{cls_metrics['Small_Mammal']['spec']:.4f}"
-                            if isinstance(cls_metrics["Small_Mammal"]["spec"], float)
+                            if isinstance(
+                                cls_metrics["Small_Mammal"]["spec"],
+                                (float, np.floating),
+                            )
                             else cls_metrics["Small_Mammal"]["spec"],
                             "OA Inst": cls_metrics["Other_Amphibian"]["inst"],
                             "OA AP50": f"{cls_metrics['Other_Amphibian']['ap']:.4f}"
-                            if isinstance(cls_metrics["Other_Amphibian"]["ap"], float)
+                            if isinstance(
+                                cls_metrics["Other_Amphibian"]["ap"],
+                                (float, np.floating),
+                            )
                             else cls_metrics["Other_Amphibian"]["ap"],
                             "OA Prec": f"{cls_metrics['Other_Amphibian']['prec']:.4f}"
-                            if isinstance(cls_metrics["Other_Amphibian"]["prec"], float)
+                            if isinstance(
+                                cls_metrics["Other_Amphibian"]["prec"],
+                                (float, np.floating),
+                            )
                             else cls_metrics["Other_Amphibian"]["prec"],
                             "OA Rec": f"{cls_metrics['Other_Amphibian']['rec']:.4f}"
-                            if isinstance(cls_metrics["Other_Amphibian"]["rec"], float)
+                            if isinstance(
+                                cls_metrics["Other_Amphibian"]["rec"],
+                                (float, np.floating),
+                            )
                             else cls_metrics["Other_Amphibian"]["rec"],
                             "OA Spec": f"{cls_metrics['Other_Amphibian']['spec']:.4f}"
-                            if isinstance(cls_metrics["Other_Amphibian"]["spec"], float)
+                            if isinstance(
+                                cls_metrics["Other_Amphibian"]["spec"],
+                                (float, np.floating),
+                            )
                             else cls_metrics["Other_Amphibian"]["spec"],
                         }
                     )

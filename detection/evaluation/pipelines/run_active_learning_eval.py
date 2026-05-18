@@ -398,18 +398,26 @@ def compile_active_learning_results():
         processing = "clahe" if is_clahe else "plain"
 
         for run_name in sorted(os.listdir(runs_dir)):
-            # Parse cycle and variant
+            # Parse cycle, variant, and phase
             parts = run_name.split("_")
             cycle = None
             variant = None
-            if len(parts) >= 3 and parts[0] == "cycle":
+            phase = None
+            if len(parts) >= 4 and parts[0] == "cycle":
                 try:
                     cycle = int(parts[1])
                     variant = parts[2]
+                    phase = parts[3]
                 except ValueError:
                     pass
 
-            if cycle is None or variant is None:
+            if cycle is None or variant is None or phase is None:
+                continue
+
+            # We only keep 'phase2' for pretrained and 'scratch' for scratch variants
+            if variant == "pretrained" and phase != "phase2":
+                continue
+            if variant == "scratch" and phase != "scratch":
                 continue
 
             for split in ["test", "val"]:
