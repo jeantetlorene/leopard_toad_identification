@@ -16,7 +16,7 @@ class FasterRCNNWrapper(BaseModel):
         # Replicate model creation logic from trainer.py
         weights = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
         self.model = fasterrcnn_resnet50_fpn_v2(
-            weights=weights, box_score_thresh=0.01, min_size=640, max_size=640
+            weights=weights, box_score_thresh=0.001, min_size=640, max_size=640
         )
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = FastRCNNPredictor(

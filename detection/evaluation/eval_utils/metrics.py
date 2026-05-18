@@ -121,12 +121,14 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
             best_gt = None
 
             for gt in img_gts:
+                if gt["matched"]:
+                    continue
                 iou = box_iou(pred["bbox"], gt["bbox"])
                 if iou > best_iou:
                     best_iou = iou
                     best_gt = gt
 
-            if best_iou >= iou_threshold and not best_gt["matched"]:
+            if best_iou >= iou_threshold and best_gt is not None:
                 tp[i] = 1
                 best_gt["matched"] = True
             else:

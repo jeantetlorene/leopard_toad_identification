@@ -19,7 +19,7 @@ class UltralyticsWrapper(BaseModel):
         results = self.model(
             images,
             imgsz=self.imgsz,
-            conf=0.01,
+            conf=0.001,
             device=self.device,
             verbose=False,
             stream=True,

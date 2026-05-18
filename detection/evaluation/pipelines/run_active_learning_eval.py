@@ -103,16 +103,22 @@ names:
         f.write(content)
 
 
-def run_evaluation(overwrite=False):
+def run_evaluation(
+    target_models=None,
+    target_cycles=None,
+    target_variants=None,
+    overwrite=False,
+):
     os.makedirs(RESULTS_DIR_FILES, exist_ok=True)
 
     splits = ["test", "val"]
 
-    # Prepare sets and YAMLs
+    # Prepare sets and YAMLs (only overwrite CLAHE if global overwrite is set with no target filters)
+    overwrite_clahe = overwrite and not (target_models or target_cycles or target_variants)
     yamls = {}
     for split in splits:
         split_dir = os.path.join(DATA_DIR, split)
-        clahe_root = prepare_clahe_set(split, overwrite=overwrite)
+        clahe_root = prepare_clahe_set(split, overwrite=overwrite_clahe)
 
         plain_yaml = os.path.join(DATA_DIR, f"{split}_plain.yaml")
         create_yaml(split_dir, "images", plain_yaml)
@@ -147,21 +153,52 @@ def run_evaluation(overwrite=False):
             if not os.path.exists(model_path):
                 continue
 
+            # Parse cycle and variant
+            parts = run_name.split("_")
+            cycle = None
+            variant = None
+            if len(parts) >= 3 and parts[0] == "cycle":
+                try:
+                    cycle = int(parts[1])
+                    variant = parts[2]
+                except ValueError:
+                    pass
+
             for split in splits:
                 eval_name = f"{split}_eval"
                 eval_dir = os.path.join(runs_dir, run_name, eval_name)
 
-                # Check if evaluation already exists
+                # Check if this run is excluded by the target filters
+                is_excluded = False
+                if target_models and model_type not in target_models:
+                    is_excluded = True
+                if target_cycles and cycle not in target_cycles:
+                    is_excluded = True
+                if target_variants and variant not in target_variants:
+                    is_excluded = True
+
+                if is_excluded:
+                    if model_type == "faster_rcnn" and os.path.exists(
+                        os.path.join(eval_dir, "results_dict.json")
+                    ):
+                        try:
+                            with open(os.path.join(eval_dir, "results_dict.json"), "r") as f:
+                                frcnn_combined_results.append(json.load(f))
+                        except Exception:
+                            pass
+                    continue
+
+                # Check if evaluation already exists and we are NOT overwriting it
                 if not overwrite and os.path.exists(
                     os.path.join(eval_dir, "results_dict.json")
                 ):
                     print(f"Skipping {run_name} on {split} (already evaluated).")
-                    # If Faster R-CNN, we still want to load it for the combined CSV if it was missed
                     if model_type == "faster_rcnn":
-                        with open(
-                            os.path.join(eval_dir, "results_dict.json"), "r"
-                        ) as f:
-                            frcnn_combined_results.append(json.load(f))
+                        try:
+                            with open(os.path.join(eval_dir, "results_dict.json"), "r") as f:
+                                frcnn_combined_results.append(json.load(f))
+                        except Exception:
+                            pass
                     continue
 
                 # Ensure the eval dir exists
@@ -285,8 +322,32 @@ if __name__ == "__main__":
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Force re-evaluation of all models and re-generation of CLAHE sets.",
+        help="Force re-evaluation of models (matches target filters if specified).",
+    )
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=None,
+        help="Target models to evaluate/overwrite (e.g., yolo rtdetr faster_rcnn)",
+    )
+    parser.add_argument(
+        "--cycles",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Target cycles to evaluate/overwrite (e.g., 0 4)",
+    )
+    parser.add_argument(
+        "--variants",
+        nargs="+",
+        default=None,
+        help="Target variants to evaluate/overwrite (e.g., pretrained scratch)",
     )
     args = parser.parse_args()
 
-    run_evaluation(overwrite=args.overwrite)
+    run_evaluation(
+        target_models=args.models,
+        target_cycles=args.cycles,
+        target_variants=args.variants,
+        overwrite=args.overwrite,
+    )
