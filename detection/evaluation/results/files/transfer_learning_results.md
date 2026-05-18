@@ -5,9 +5,9 @@ This report compares baseline architectures trained from scratch against identic
 ### Comprehensive Transfer Learning Performance Table
 | Architecture | Variant | mAP50 | mAP50-95 | mean Average Recall | Trainable Parameters (M) |
 |--------------|---------|-------|----------|---------------------|--------------------------|
-| YOLO | Scratch | 0.3720 | 0.1128 | 0.7555 | 21.78 |
-| YOLO | Pretrained | 0.5511 | 0.2615 | 0.8575 | 21.78 |
-| RTDETR | Scratch | 0.5905 | 0.1819 | 0.8446 | 32.81 |
-| RTDETR | Pretrained | 0.4766 | 0.1527 | 0.9174 | 32.81 |
-| FASTER_RCNN | Scratch | 0.2175 | 0.0518 | 0.5387 | 43.27 |
-| FASTER_RCNN | Pretrained | 0.1680 | 0.0366 | 0.2956 | 43.27 |
+| YOLO | Scratch | 0.5201 | 0.3506 | 0.3938 | 21.78 |
+| YOLO | Pretrained | 0.8904 | 0.5234 | 0.8189 | 21.78 |
+| RTDETR | Scratch | 0.6572 | 0.4263 | 0.5526 | 32.81 |
+| RTDETR | Pretrained | 0.5511 | 0.4507 | 0.4892 | 32.81 |
+| FASTER_RCNN | Scratch | 0.3096 | 0.1925 | 0.4581 | 43.27 |
+| FASTER_RCNN | Pretrained | 0.1735 | 0.1329 | 0.3406 | 43.27 |

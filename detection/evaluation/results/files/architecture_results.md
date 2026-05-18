@@ -5,9 +5,9 @@ This report benchmarks the baseline network paradigms (YOLO, RT-DETR, Faster R-C
 ### Comprehensive Architectural Benchmarking Table
 | Architecture | mAP50 | mAP50-95 | mean Average Recall | Params (M) | GFLOPs | Inference Speed (ms) | FPS |
 |--------------|-------|----------|---------------------|------------|--------|----------------------|-----|
-| YOLO | 0.3088 | 0.2980 | 0.6938 | 20.35 | 67.86 | 38.7 | 25.9 |
-| RTDETR | 0.7147 | 0.3783 | 0.8351 | 31.99 | 103.44 | 486.8 | 2.1 |
-| FASTER_RCNN | 0.3565 | 0.1362 | 0.4938 | 43.27 | 452.05 | 79.1 | 12.6 |
+| YOLO | 0.5201 | 0.3506 | 0.3938 | 20.35 | 67.86 | 12.0 | 83.0 |
+| RTDETR | 0.6572 | 0.4263 | 0.5526 | 31.99 | 103.44 | 162.5 | 6.2 |
+| FASTER_RCNN | 0.3096 | 0.1925 | 0.4581 | 43.27 | 452.05 | 40.5 | 24.7 |
 
 ### Architecture-Specific Confusion Matrices
 These matrices cross-reference predicted categories against actual ground-truth labels at a 0.5 confidence threshold, explicitly demonstrating inter-class confusion and background noise vulnerability.
