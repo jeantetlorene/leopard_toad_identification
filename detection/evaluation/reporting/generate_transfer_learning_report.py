@@ -14,7 +14,7 @@ from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
 from reporting.generate_architecture_report import calculate_flops_params
 
-UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
+UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
 
 CYCLE = 0
 PROCESSING = "clahe"

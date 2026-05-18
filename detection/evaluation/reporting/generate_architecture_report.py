@@ -153,7 +153,7 @@ def generate_confusion_matrix(raw_results, arch_name, threshold_map=None):
 def generate_report():
     print("Starting Architecture Benchmarking...")
 
-    unified_csv = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
+    unified_csv = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
 
     if not os.path.exists(unified_csv):
         print("Required CSVs not found in files/. Please run evaluations first.")

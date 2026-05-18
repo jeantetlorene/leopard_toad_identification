@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import FILES_DIR, PLOTS_DIR
 
-UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
+UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
 
 
 def generate_report():

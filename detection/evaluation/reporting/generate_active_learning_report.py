@@ -11,7 +11,7 @@ from eval_utils.config import FILES_DIR, RESULTS_DIR, BASE_DIR
 from eval_utils.metrics import calculate_map50_95
 from eval_utils.data_utils import refresh_results
 
-UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
+UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
 
 MODELS = ["yolo", "faster_rcnn", "rtdetr"]
 PROCESSINGS = ["clahe", "plain"]

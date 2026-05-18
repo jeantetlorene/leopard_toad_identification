@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from eval_utils.config import FILES_DIR, PLOTS_DIR, RESULTS_DIR
 from eval_utils.data_utils import refresh_results
 
-UNIFIED_CSV = os.path.join(FILES_DIR, "unified_model_evaluation.csv")
+UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
 CLASSES = ["Western_Leopard_Toad", "Small_Mammal", "Other_Amphibian"]
 BUDGET_MAP = {0: 130, 1: 230, 2: 330, 3: 430, 4: 530}
 

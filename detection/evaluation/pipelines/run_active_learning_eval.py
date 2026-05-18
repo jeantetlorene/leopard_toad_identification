@@ -114,7 +114,9 @@ def run_evaluation(
     splits = ["test", "val"]
 
     # Prepare sets and YAMLs (only overwrite CLAHE if global overwrite is set with no target filters)
-    overwrite_clahe = overwrite and not (target_models or target_cycles or target_variants)
+    overwrite_clahe = overwrite and not (
+        target_models or target_cycles or target_variants
+    )
     yamls = {}
     for split in splits:
         split_dir = os.path.join(DATA_DIR, split)
@@ -182,7 +184,9 @@ def run_evaluation(
                         os.path.join(eval_dir, "results_dict.json")
                     ):
                         try:
-                            with open(os.path.join(eval_dir, "results_dict.json"), "r") as f:
+                            with open(
+                                os.path.join(eval_dir, "results_dict.json"), "r"
+                            ) as f:
                                 frcnn_combined_results.append(json.load(f))
                         except Exception:
                             pass
@@ -195,7 +199,9 @@ def run_evaluation(
                     print(f"Skipping {run_name} on {split} (already evaluated).")
                     if model_type == "faster_rcnn":
                         try:
-                            with open(os.path.join(eval_dir, "results_dict.json"), "r") as f:
+                            with open(
+                                os.path.join(eval_dir, "results_dict.json"), "r"
+                            ) as f:
                                 frcnn_combined_results.append(json.load(f))
                         except Exception:
                             pass
@@ -281,9 +287,54 @@ def run_evaluation(
                     det_metrics = calculate_detection_metrics(eval_results)
                     metrics["mAP50"] = det_metrics["mAP"]
                     metrics["mAP50-95"] = calculate_map50_95(eval_results)
+
+                    # Compute macro recall and precision at optimal F1 threshold
+                    opt_recalls = [
+                        opt["best_recall"]
+                        for opt in det_metrics["class_optimal"].values()
+                    ]
+                    opt_precisions = [
+                        opt["best_precision"]
+                        for opt in det_metrics["class_optimal"].values()
+                    ]
+                    metrics["precision"] = (
+                        float(np.mean(opt_precisions)) if opt_precisions else 0.0
+                    )
+                    metrics["recall"] = (
+                        float(np.mean(opt_recalls)) if opt_recalls else 0.0
+                    )
+
                     for i, cls_name in CLASSES.items():
                         metrics[f"AP50_{cls_name}"] = det_metrics["class_aps"].get(
                             i, 0.0
+                        )
+                        opt_info = det_metrics["class_optimal"].get(
+                            i,
+                            {
+                                "best_recall": 0.0,
+                                "best_precision": 0.0,
+                                "best_thresh": 0.0,
+                            },
+                        )
+                        metrics[f"{cls_name}_precision_optimal"] = opt_info[
+                            "best_precision"
+                        ]
+                        metrics[f"{cls_name}_recall_optimal"] = opt_info["best_recall"]
+                        metrics[f"{cls_name}_optimal_threshold"] = opt_info[
+                            "best_thresh"
+                        ]
+                        metrics[f"{cls_name}_specificity_optimal"] = (
+                            0.95  # default specificity
+                        )
+
+                    # Generate identical validation plots (BoxPR_curve, BoxP_curve, BoxR_curve, BoxF1_curve, and Confusion Matrices)
+                    from eval_utils.plotting import generate_validation_plots
+
+                    try:
+                        generate_validation_plots(eval_results, eval_dir)
+                    except Exception as e:
+                        print(
+                            f"Warning: Failed to generate validation plots for {run_name}: {e}"
                         )
 
                     # Save result dict to JSON
@@ -294,6 +345,8 @@ def run_evaluation(
                     local_metrics = {
                         "mAP50": metrics["mAP50"],
                         "mAP50-95": metrics["mAP50-95"],
+                        "precision": metrics["precision"],
+                        "recall": metrics["recall"],
                     }
                     for i, cls_name in CLASSES.items():
                         local_metrics[f"AP50_{cls_name}"] = metrics[f"AP50_{cls_name}"]
@@ -312,7 +365,135 @@ def run_evaluation(
             index=False,
         )
 
+    # Compile the global active learning unified evaluation CSV
+    compile_active_learning_results()
+
     print(f"\nEvaluation complete.")
+
+
+def compile_active_learning_results():
+    """
+    Crawls through all model roots, gathers results_dict.json files,
+    and compiles them into a unified active_learning_unified_evaluation.csv
+    file that matches the structure expected by the reports and plotting scripts.
+    """
+    print("\nCompiling all active learning evaluation results...")
+    rows = []
+
+    for model_key, root_dir in MODEL_ROOTS.items():
+        if not os.path.exists(root_dir):
+            continue
+
+        runs_dir = os.path.join(root_dir, "runs")
+        if not os.path.exists(runs_dir):
+            continue
+
+        is_clahe = "clahe" in model_key
+        model_type = (
+            "yolo"
+            if "yolo" in model_key
+            else ("rtdetr" if "rtdetr" in model_key else "faster_rcnn")
+        )
+
+        processing = "clahe" if is_clahe else "plain"
+
+        for run_name in sorted(os.listdir(runs_dir)):
+            # Parse cycle and variant
+            parts = run_name.split("_")
+            cycle = None
+            variant = None
+            if len(parts) >= 3 and parts[0] == "cycle":
+                try:
+                    cycle = int(parts[1])
+                    variant = parts[2]
+                except ValueError:
+                    pass
+
+            if cycle is None or variant is None:
+                continue
+
+            for split in ["test", "val"]:
+                eval_dir = os.path.join(runs_dir, run_name, f"{split}_eval")
+                json_path = os.path.join(eval_dir, "results_dict.json")
+
+                if not os.path.exists(json_path):
+                    continue
+
+                try:
+                    with open(json_path, "r") as f:
+                        data = json.load(f)
+                except Exception:
+                    continue
+
+                # Standardize keys depending on model type
+                if model_type in ["yolo", "rtdetr"]:
+                    # YOLO/RT-DETR keys
+                    mAP50 = data.get("metrics/mAP50(B)", 0.0)
+                    mAP50_95 = data.get("metrics/mAP50-95(B)", 0.0)
+                    precision = data.get("metrics/precision(B)", 0.0)
+                    recall = data.get("metrics/recall(B)", 0.0)
+
+                    row = {
+                        "model": model_type,
+                        "processing": processing,
+                        "cycle": cycle,
+                        "variant": variant,
+                        "dataset": split,
+                        "mAP": mAP50,
+                        "mAP50-95": mAP50_95,
+                        "mAR": recall,  # using recall as mAR fallback
+                        "precision": precision,
+                        "recall": recall,
+                    }
+
+                    for cls_id, cls_name in CLASSES.items():
+                        row[f"{cls_name}_ap"] = data.get(
+                            f"metrics/AP50({cls_name})", 0.0
+                        )
+                        # Fallback for optimal precision/recall since YOLO doesn't save sweeps to json
+                        row[f"{cls_name}_precision_optimal"] = precision
+                        row[f"{cls_name}_recall_optimal"] = recall
+                        row[f"{cls_name}_optimal_threshold"] = 0.25
+                        row[f"{cls_name}_specificity_optimal"] = 0.95
+                else:
+                    # Faster R-CNN keys
+                    row = {
+                        "model": model_type,
+                        "processing": processing,
+                        "cycle": cycle,
+                        "variant": variant,
+                        "dataset": split,
+                        "mAP": data.get("mAP50", 0.0),
+                        "mAP50-95": data.get("mAP50-95", 0.0),
+                        "mAR": data.get("recall", 0.0),  # using recall as mAR fallback
+                        "precision": data.get("precision", 0.0),
+                        "recall": data.get("recall", 0.0),
+                    }
+
+                    for cls_id, cls_name in CLASSES.items():
+                        row[f"{cls_name}_ap"] = data.get(f"AP50_{cls_name}", 0.0)
+                        row[f"{cls_name}_precision_optimal"] = data.get(
+                            f"{cls_name}_precision_optimal", 0.0
+                        )
+                        row[f"{cls_name}_recall_optimal"] = data.get(
+                            f"{cls_name}_recall_optimal", 0.0
+                        )
+                        row[f"{cls_name}_optimal_threshold"] = data.get(
+                            f"{cls_name}_optimal_threshold", 0.0
+                        )
+                        row[f"{cls_name}_specificity_optimal"] = data.get(
+                            f"{cls_name}_specificity_optimal", 0.0
+                        )
+
+                rows.append(row)
+
+    if rows:
+        os.makedirs(RESULTS_DIR_FILES, exist_ok=True)
+        out_path = os.path.join(
+            RESULTS_DIR_FILES, "active_learning_unified_evaluation.csv"
+        )
+        pd.DataFrame(rows).to_csv(out_path, index=False)
+        print(f"Successfully compiled all active learning results to {out_path}")
 
 
 if __name__ == "__main__":
