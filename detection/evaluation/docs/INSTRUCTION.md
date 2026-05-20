@@ -13,3 +13,4 @@
 - To evaluate the image-level binary classification filtering capability of the models on the unlabelled pool, execute `binary_eval_test_pool.py` followed by `plot_binary_roc_baseline.py` using `.venv`.
 - For the `evaluation_suite.py`, image-level binary metrics (ROC-AUC) are exclusively calculated using the full unlabelled sequence (`_full_seq_raw.json`), while precise detection-level metrics (mAP) are exclusively calculated on the annotated ground-truth subsets (`_raw.json`).
 - Optimal per-class confidence thresholds are calculated dynamically by strictly maximizing bounding-box recall (IoU >= 0.5) while simultaneously picking the highest threshold to minimize false positives, establishing a rigorously calibrated boundary for high-recall wildlife monitoring.
+- To run inference using MegaDetector on the test pool, execute `.venv/bin/python pipelines/run_megadetector.py`. Ensure this finishes before evaluating the image-level binary classification capability.

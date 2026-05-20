@@ -24,7 +24,7 @@ However, a critical limitation must be explicitly flagged regarding the use of t
 
 Consequently, even if a model generates thousands of false positive pebble detections, the False Positive Rate remains suppressed near zero, yielding a misleading ROC-AUC score that completely masks the localisation errors of the model.
 
-To benchmark the fundamental capabilities of the models as an image-level filter, the baseline architectures (YOLO, Faster R-CNN, and RT-DETR at Cycle 0) were evaluated strictly on the test unlabeled pool. This produced bounded ROC curves explicitly demonstrating their capability to filter empty backgrounds before undergoing active learning.
+To benchmark the fundamental capabilities of the models as an image-level filter, the baseline architectures (YOLO, Faster R-CNN, RT-DETR at Cycle 0, and MegaDetector) were evaluated strictly on the test unlabeled pool. This produced bounded ROC curves explicitly demonstrating their capability to filter empty backgrounds before undergoing active learning.
 
 \subsection{Detection-Level Evaluation}
 

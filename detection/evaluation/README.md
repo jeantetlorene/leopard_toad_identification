@@ -21,7 +21,7 @@ We provide a specialized report for evaluating the impact of **Contrast Limited 
 
 ## Architecture Benchmarking (Cycle 0)
 
-We provide a report for benchmarking the fundamental baseline architectures (YOLO, RT-DETR, Faster R-CNN) at Cycle 0 before transfer learning.
+We provide a report for benchmarking the fundamental baseline architectures (YOLO, RT-DETR, Faster R-CNN, and MegaDetector) at Cycle 0 before transfer learning.
 
 - **`results/files/architecture_results.md`**: Final report containing computational benchmarking (Params, GFLOPs, Inference ms) and mAP50.
 - **`reporting/generate_architecture_report.py`**: Automation script that computes confusion matrices and dynamic speed metrics.
@@ -99,8 +99,9 @@ python3 reporting/generate_transfer_learning_report.py
 ```
 
 **6. Evaluate Image-Level Binary Filtering:**
-Calculate sweep metrics and plot bounded ROC curves for the test unlabeled pool.
+Calculate sweep metrics and plot bounded ROC curves for the test unlabeled pool. Make sure to generate the MegaDetector baseline first.
 ```bash
+python3 pipelines/run_megadetector.py
 python3 pipelines/binary_eval_test_pool.py
 python3 reporting/plot_binary_roc_baseline.py
 ```
