@@ -15,9 +15,7 @@ class MegaDetectorWrapper(BaseModel):
             self.model.half()
 
     def predict_batch(self, images, **kwargs):
-        sub_batch = (
-            16  # Force smaller inference chunk to prevent GPU OOM and RAM spikes
-        )
+        sub_batch = 32
         batch_preds = []
 
         # Process in chunks of sub_batch

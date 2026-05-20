@@ -45,7 +45,7 @@ def main():
         "test",  # The dataset split
         use_clahe=False,
         full_sequence=True,  # Entire test pool
-        batch_size=16,  # Reduced batch size to prevent System RAM OOM from dataloader prefetching
+        batch_size=64,
         processed_paths=processed_paths,
         output_file=raw_file,
         existing_results=existing_results,
