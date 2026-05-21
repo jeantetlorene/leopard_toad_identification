@@ -39,6 +39,11 @@ def get_image_mapping_dict():
     }
 
 
+# Cache for label directory listings to avoid expensive os.path.exists disk I/O calls
+_label_files_cache = {}
+
+
+@lru_cache(maxsize=None)
 def get_clean_ground_truth(original_path):
     """
     Get clean ground truth boxes and image-level label for an original image path.
@@ -58,10 +63,17 @@ def get_clean_ground_truth(original_path):
     unique_name, split = match
 
     label_dir = DATASETS[split]["labels_dir"]
-    label_path = os.path.join(label_dir, os.path.splitext(unique_name)[0] + ".txt")
+    if label_dir not in _label_files_cache:
+        if os.path.exists(label_dir):
+            _label_files_cache[label_dir] = set(os.listdir(label_dir))
+        else:
+            _label_files_cache[label_dir] = set()
+
+    label_filename = os.path.splitext(unique_name)[0] + ".txt"
+    label_path = os.path.join(label_dir, label_filename)
 
     gt_boxes = []
-    if os.path.exists(label_path):
+    if label_filename in _label_files_cache[label_dir]:
         with open(label_path, "r") as f:
             for line in f:
                 try:

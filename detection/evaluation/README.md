@@ -99,10 +99,11 @@ python3 reporting/generate_transfer_learning_report.py
 ```
 
 **6. Evaluate Image-Level Binary Filtering:**
-Calculate sweep metrics and plot bounded ROC curves for the test unlabeled pool. Make sure to generate the MegaDetector baseline first.
+Calculate sweep metrics, generate the image-level markdown report, and plot bounded ROC curves for the test unlabeled pool. Make sure to generate the MegaDetector baseline first.
 ```bash
 python3 pipelines/run_megadetector.py
 python3 pipelines/binary_eval_test_pool.py
+python3 reporting/generate_image_level_report.py
 python3 reporting/plot_binary_roc_baseline.py
 ```
 
