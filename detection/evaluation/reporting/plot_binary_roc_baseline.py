@@ -12,20 +12,28 @@ from eval_utils.data_utils import refresh_results
 
 
 def main():
-    # Baseline configuration as defined in the architecture report
     CYCLE = 0
-    VARIANT = "scratch"
-    PROCESSING = "clahe"
     DATASET = "test_full_seq"
 
     plot_data = []
-    models = ["yolo", "faster_rcnn", "rtdetr"]
 
-    for m_type in models:
-        model_folder = f"{m_type}_{PROCESSING}"
+    # Define models explicitly with their specific variant and processing types
+    models = [
+        {"type": "yolo", "processing": "clahe", "variant": "scratch"},
+        {"type": "faster_rcnn", "processing": "clahe", "variant": "scratch"},
+        {"type": "rtdetr", "processing": "clahe", "variant": "scratch"},
+        {"type": "megadetector", "processing": "plain", "variant": "pretrained"},
+    ]
+
+    for m_info in models:
+        m_type = m_info["type"]
+        processing = m_info["processing"]
+        variant = m_info["variant"]
+
+        model_folder = f"{m_type}_{processing}"
         folder_path = os.path.join(RESULTS_DIR, model_folder)
 
-        filename = f"cycle_{CYCLE}_{VARIANT}_{DATASET}_raw.json"
+        filename = f"cycle_{CYCLE}_{variant}_{DATASET}_raw.json"
         filepath = os.path.join(folder_path, filename)
 
         if not os.path.exists(filepath):
@@ -70,7 +78,12 @@ def main():
     plt.figure(figsize=(10, 8))
 
     # Map model_type to exact requested legend strings
-    name_map = {"yolo": "YOLO", "faster_rcnn": "Faster R-CNN", "rtdetr": "RT-DETR"}
+    name_map = {
+        "yolo": "YOLO",
+        "faster_rcnn": "Faster R-CNN",
+        "rtdetr": "RT-DETR",
+        "megadetector": "MegaDetector v5a",
+    }
 
     for d in plot_data:
         disp_name = name_map.get(d["model"], d["model"])
@@ -83,11 +96,11 @@ def main():
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.0])
 
-    plt.xlabel("False Positive Rate (1 - Specificity)")
-    plt.ylabel("True Positive Rate (Recall)")
-    plt.title("Image-Level ROC Curves - Baseline Architectures (Test Unlabeled Pool)")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    # plt.title("Image-Level ROC Curves - Baseline Architectures (Test Unlabeled Pool)")
     plt.legend(loc="lower right")
-    plt.grid(alpha=0.3)
+    # plt.grid(alpha=0.3)
     plt.gca().set_aspect("equal")
 
     png_path = os.path.join(PLOTS_DIR, "binary_roc_baseline.png")
