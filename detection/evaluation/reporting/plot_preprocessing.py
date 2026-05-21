@@ -78,7 +78,8 @@ def plot_pr_curves():
                 continue
 
             has_data = True
-            label = f"{proc.capitalize()} (mAP: {mAP:.3f}, mAR: {mar:.3f})"
+            label_name = "CLAHE" if proc == "clahe" else proc.capitalize()
+            label = f"{label_name} (mAP: {mAP:.3f}, mAR: {mar:.3f})"
             color = "#1f77b4" if proc == "plain" else "#ff7f0e"
 
             ax.plot(rec, prec, label=label, color=color, linewidth=1.5)
@@ -87,11 +88,11 @@ def plot_pr_curves():
             plt.close()
             continue
 
-        ax.set_title(
-            f"Precision-Recall Curve: {arch.upper()} (Cycle 0)",
-            fontsize=16,
-            fontweight="bold",
-        )
+        # ax.set_title(
+        #     f"Precision-Recall Curve: {arch.upper()} (Cycle 0)",
+        #     fontsize=16,
+        #     fontweight="bold",
+        # )
         ax.set_xlabel("Recall", fontsize=14)
         ax.set_ylabel("Precision", fontsize=14)
         ax.legend(fontsize=12, loc="lower left")
