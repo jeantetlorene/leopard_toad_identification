@@ -19,9 +19,9 @@ def main():
 
     # Define models explicitly with their specific variant and processing types
     models = [
-        {"type": "yolo", "processing": "clahe", "variant": "scratch"},
-        {"type": "faster_rcnn", "processing": "clahe", "variant": "scratch"},
-        {"type": "rtdetr", "processing": "clahe", "variant": "scratch"},
+        {"type": "yolo", "processing": "plain", "variant": "scratch"},
+        {"type": "faster_rcnn", "processing": "plain", "variant": "scratch"},
+        {"type": "rtdetr", "processing": "plain", "variant": "scratch"},
         {"type": "megadetector", "processing": "plain", "variant": "pretrained"},
     ]
 
