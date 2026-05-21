@@ -10,7 +10,13 @@ from eval_utils.config import FILES_DIR, PLOTS_DIR, CLASSES
 
 CONF_THRESH = 0.5
 MODELS_TO_PLOT = ["yolo", "rtdetr", "faster_rcnn"]
-CM_CLASSES = list(CLASSES.values()) + ["Background"]
+CM_CLASSES_RAW = list(CLASSES.values()) + ["Background"]
+class_display_map = {
+    "Western_Leopard_Toad": "WLT",
+    "Other_Amphibian": "Others",
+    "Small_Mammal": "Small Mammal"
+}
+CM_CLASSES = [class_display_map.get(c, c) for c in CM_CLASSES_RAW]
 NUM_CLASSES = len(CM_CLASSES)
 
 
@@ -40,7 +46,7 @@ def plot_cm(cm, arch_name):
 
     plt.xlabel("Predicted Class")
     plt.ylabel("Ground Truth Class")
-    plt.title(f"Confusion Matrix: {arch_name.upper()} (Optimal Thresholds)", pad=20)
+    # plt.title(f"Confusion Matrix: {arch_name.upper()} (Optimal Thresholds)", pad=20)
 
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
