@@ -175,7 +175,7 @@ def plot_confidence_distributions(df):
                                 tp_scores[cls],
                                 fill=True,
                                 color="green",
-                                label="True Positives (Correct Detections)",
+                                label="True Positives",
                                 alpha=0.5,
                                 bw_adjust=0.5,
                             )
@@ -188,7 +188,7 @@ def plot_confidence_distributions(df):
                                 fp_scores[cls],
                                 fill=True,
                                 color="red",
-                                label="False Positives (Background Artefacts)",
+                                label="False Positives",
                                 alpha=0.5,
                                 bw_adjust=0.5,
                             )
@@ -202,16 +202,16 @@ def plot_confidence_distributions(df):
                             plt.axvline(
                                 x=opt_thresh,
                                 color="blue",
-                                linestyle="--",
+                                # linestyle="--",
                                 linewidth=2,
-                                label=f"Optimal Threshold ({opt_thresh:.2f})",
+                                label="Optimal validation threshold",
                             )
 
                     plt.xlabel("Confidence Score")
                     plt.ylabel("Density")
-                    plt.title(
-                        f"Overlapping Confidence Score Distribution ({m_type.upper()} {proc} {var} Cycle 4)\nClass: {cls}"
-                    )
+                    # plt.title(
+                    #     f"Overlapping Confidence Score Distribution ({m_type.upper()} {proc} {var} Cycle 4)\nClass: {cls}"
+                    # )
                     plt.xlim(0, 1)
                     plt.legend()
                     plt.tight_layout()
