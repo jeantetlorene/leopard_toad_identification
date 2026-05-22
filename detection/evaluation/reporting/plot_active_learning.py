@@ -233,7 +233,7 @@ def plot_confidence_distributions(df):
 
 def plot_ap_ar_trajectories():
     MODELS = ["yolo", "faster_rcnn", "rtdetr"]
-    PROCESS = "clahe"
+    PROCESS = "plain"
     VARIANT = "pretrained"
     CYCLES = [0, 1, 2, 3, 4]
     CLASS_IDS = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
