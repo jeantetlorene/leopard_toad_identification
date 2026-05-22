@@ -96,7 +96,7 @@ def plot_trajectories(df):
 
 
 def plot_confidence_distributions(df):
-    cycle = 4
+    CYCLES = [0, 1, 2, 3, 4]
     MODELS = ["yolo", "faster_rcnn", "rtdetr"]
     PROCESSINGS = ["clahe", "plain"]
     VARIANTS = ["pretrained", "scratch"]
@@ -114,121 +114,119 @@ def plot_confidence_distributions(df):
 
     CLASS_MAP = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
 
-    for m_type in MODELS:
-        for proc in PROCESSINGS:
-            for var in VARIANTS:
-                df_u = df[
-                    (df["model"] == m_type)
-                    & (df["processing"] == proc)
-                    & (df["variant"] == var)
-                    & (df["cycle"] == cycle)
-                ]
+    for cycle in CYCLES:
+        for m_type in MODELS:
+            for proc in PROCESSINGS:
+                for var in VARIANTS:
+                    df_u = df[
+                        (df["model"] == m_type)
+                        & (df["processing"] == proc)
+                        & (df["variant"] == var)
+                        & (df["cycle"] == cycle)
+                    ]
 
-                raw_json_path = os.path.join(
-                    RESULTS_DIR,
-                    f"{m_type}_{proc}",
-                    f"cycle_{cycle}_{var}_test_raw.json",
-                )
-                if not os.path.exists(raw_json_path):
-                    continue
-
-                with open(raw_json_path, "r") as f:
-                    results = json.load(f)
-
-                # Refresh ground truth from clean data
-                results = refresh_results(results, is_full_seq=False)
-
-                tp_scores = {c: [] for c in CLASS_MAP.values()}
-                fp_scores = {c: [] for c in CLASS_MAP.values()}
-
-                for res in results:
-                    preds = res["predictions"]
-                    gts = res["gt_boxes"]
-
-                    gt_matched = [False] * len(gts)
-                    preds.sort(key=lambda x: x["conf"], reverse=True)
-
-                    for p in preds:
-                        c_name = CLASS_MAP[p["cls"]]
-                        best_iou = -1
-                        best_gt_idx = -1
-
-                        for i, gt in enumerate(gts):
-                            if gt["cls"] == p["cls"] and not gt_matched[i]:
-                                iou = box_iou(p["bbox"], gt["bbox"])
-                                if iou > best_iou:
-                                    best_iou = iou
-                                    best_gt_idx = i
-
-                        if best_iou >= 0.5:
-                            tp_scores[c_name].append(p["conf"])
-                            gt_matched[best_gt_idx] = True
-                        else:
-                            fp_scores[c_name].append(p["conf"])
-
-                # Now plot KDE for each class
-                for cls in CLASS_MAP.values():
-                    plt.figure(figsize=(8, 5))
-
-                    if tp_scores[cls]:
-                        try:
-                            sns.kdeplot(
-                                tp_scores[cls],
-                                fill=True,
-                                color="green",
-                                label="True Positives",
-                                alpha=0.5,
-                                bw_adjust=0.5,
-                            )
-                        except Exception:
-                            pass
-
-                    if fp_scores[cls]:
-                        try:
-                            sns.kdeplot(
-                                fp_scores[cls],
-                                fill=True,
-                                color="red",
-                                label="False Positives",
-                                alpha=0.5,
-                                bw_adjust=0.5,
-                            )
-                        except Exception:
-                            pass
-
-                    opt_thresh_col = f"{cls}_optimal_threshold"
-                    if not df_u.empty and opt_thresh_col in df_u.columns:
-                        opt_thresh = df_u[opt_thresh_col].values[0]
-                        if pd.notna(opt_thresh):
-                            plt.axvline(
-                                x=opt_thresh,
-                                color="blue",
-                                # linestyle="--",
-                                linewidth=2,
-                                label="Optimal validation threshold",
-                            )
-
-                    plt.xlabel("Confidence Score")
-                    plt.ylabel("Density")
-                    # plt.title(
-                    #     f"Overlapping Confidence Score Distribution ({m_type.upper()} {proc} {var} Cycle 4)\nClass: {cls}"
-                    # )
-                    plt.xlim(0, 1)
-                    plt.legend()
-                    plt.tight_layout()
-                    plt.savefig(
-                        os.path.join(
-                            PLOTS_DIR,
-                            f"al_confidence_kde_cycle4_{m_type}_{proc}_{var}_{cls}.png",
-                        )
+                    raw_json_path = os.path.join(
+                        RESULTS_DIR,
+                        f"{m_type}_{proc}",
+                        f"cycle_{cycle}_{var}_test_raw.json",
                     )
-                    plt.savefig(
-                        os.path.join(
-                            PLOTS_DIR,
-                            f"al_confidence_kde_cycle4_{m_type}_{proc}_{var}_{cls}.pdf",
+                    if not os.path.exists(raw_json_path):
+                        continue
+
+                    with open(raw_json_path, "r") as f:
+                        results = json.load(f)
+
+                    # Refresh ground truth from clean data
+                    results = refresh_results(results, is_full_seq=False)
+
+                    tp_scores = {c: [] for c in CLASS_MAP.values()}
+                    fp_scores = {c: [] for c in CLASS_MAP.values()}
+
+                    for res in results:
+                        preds = res["predictions"]
+                        gts = res["gt_boxes"]
+
+                        gt_matched = [False] * len(gts)
+                        preds.sort(key=lambda x: x["conf"], reverse=True)
+
+                        for p in preds:
+                            c_name = CLASS_MAP[p["cls"]]
+                            best_iou = -1
+                            best_gt_idx = -1
+
+                            for i, gt in enumerate(gts):
+                                if gt["cls"] == p["cls"] and not gt_matched[i]:
+                                    iou = box_iou(p["bbox"], gt["bbox"])
+                                    if iou > best_iou:
+                                        best_iou = iou
+                                        best_gt_idx = i
+
+                            if best_iou >= 0.5:
+                                tp_scores[c_name].append(p["conf"])
+                                gt_matched[best_gt_idx] = True
+                            else:
+                                fp_scores[c_name].append(p["conf"])
+
+                    # Now plot KDE for each class
+                    for cls in CLASS_MAP.values():
+                        plt.figure(figsize=(8, 5))
+
+                        if tp_scores[cls]:
+                            try:
+                                sns.kdeplot(
+                                    tp_scores[cls],
+                                    fill=True,
+                                    color="green",
+                                    label="True Positives",
+                                    alpha=0.5,
+                                    bw_adjust=0.5,
+                                )
+                            except Exception:
+                                pass
+
+                        if fp_scores[cls]:
+                            try:
+                                sns.kdeplot(
+                                    fp_scores[cls],
+                                    fill=True,
+                                    color="red",
+                                    label="False Positives",
+                                    alpha=0.5,
+                                    bw_adjust=0.5,
+                                )
+                            except Exception:
+                                pass
+
+                        opt_thresh_col = f"{cls}_optimal_threshold"
+                        if not df_u.empty and opt_thresh_col in df_u.columns:
+                            opt_thresh = df_u[opt_thresh_col].values[0]
+                            if pd.notna(opt_thresh):
+                                plt.axvline(
+                                    x=opt_thresh,
+                                    color="blue",
+                                    # linestyle="--",
+                                    linewidth=2,
+                                    label="Optimal validation threshold",
+                                )
+
+                        plt.xlabel("Confidence Score")
+                        plt.ylabel("Density")
+                        plt.xlim(0, 1)
+                        plt.legend()
+                        plt.tight_layout()
+                        plt.savefig(
+                            os.path.join(
+                                PLOTS_DIR,
+                                f"al_confidence_kde_cycle{cycle}_{m_type}_{proc}_{var}_{cls}.png",
+                            )
                         )
-                    )
-                    plt.close()
+                        plt.savefig(
+                            os.path.join(
+                                PLOTS_DIR,
+                                f"al_confidence_kde_cycle{cycle}_{m_type}_{proc}_{var}_{cls}.pdf",
+                            )
+                        )
+                        plt.close()
 
 
 def plot_ap_ar_trajectories():
