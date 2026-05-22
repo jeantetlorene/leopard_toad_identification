@@ -365,7 +365,7 @@ def plot_ap_ar_trajectories():
             ax.text(
                 max_ap_x,
                 max_ap + offset_ap,
-                f"{max_ap:.3f}",
+                f"{max_ap:.2f}",
                 color="red",
                 fontsize=9,
                 fontweight="bold",
@@ -376,7 +376,7 @@ def plot_ap_ar_trajectories():
             ax.text(
                 max_ar_x,
                 max_ar + offset_ar,
-                f"{max_ar:.3f}",
+                f"{max_ar:.2f}",
                 color="red",
                 fontsize=9,
                 fontweight="bold",
