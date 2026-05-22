@@ -14,7 +14,7 @@ CM_CLASSES_RAW = list(CLASSES.values()) + ["Background"]
 class_display_map = {
     "Western_Leopard_Toad": "WLT",
     "Other_Amphibian": "Others",
-    "Small_Mammal": "Small Mammal"
+    "Small_Mammal": "Small Mammal",
 }
 CM_CLASSES = [class_display_map.get(c, c) for c in CM_CLASSES_RAW]
 NUM_CLASSES = len(CM_CLASSES)

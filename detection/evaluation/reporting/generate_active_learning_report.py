@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import FILES_DIR, RESULTS_DIR, BASE_DIR
-from eval_utils.metrics import calculate_map50_95
+from eval_utils.metrics import calculate_map50_95, calculate_detection_metrics
 from eval_utils.data_utils import refresh_results
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
@@ -91,8 +91,9 @@ def generate_report():
 
                     map50 = df_u["mAP"].values[0]
 
-                    # Calculate mAP50-95
+                    # Calculate mAP50-95 and class AP/AR from raw JSON if available
                     map50_95 = "N/A"
+                    det_metrics = None
                     raw_json_path = os.path.join(
                         RESULTS_DIR, root_key, f"cycle_{cycle}_{var}_test_raw.json"
                     )
@@ -102,6 +103,7 @@ def generate_report():
                         # Refresh ground truth from clean data
                         raw_results = refresh_results(raw_results, is_full_seq=False)
                         map50_95 = calculate_map50_95(raw_results)
+                        det_metrics = calculate_detection_metrics(raw_results)
 
                     # Get training instance counts
                     train_counts = count_training_instances(m_type, var, cycle)
@@ -114,9 +116,20 @@ def generate_report():
                         rec_col = f"{cls_name}_recall_optimal"
                         spec_col = f"{cls_name}_specificity_optimal"
 
+                        ap_val = "N/A"
+                        ar_val = "N/A"
+                        if det_metrics is not None:
+                            ap_val = det_metrics["class_aps"].get(cls_id, 0.0)
+                            curves = det_metrics["class_curves"].get(cls_id, {})
+                            mrec = curves.get("recall", [])
+                            ar_val = mrec[-2] if len(mrec) >= 2 else 0.0
+                        else:
+                            ap_val = df_u[ap_col].values[0] if ap_col in df_u else "N/A"
+
                         cls_metrics[cls_name] = {
                             "inst": train_counts[cls_id],
-                            "ap": df_u[ap_col].values[0] if ap_col in df_u else "N/A",
+                            "ap": ap_val,
+                            "ar": ar_val,
                             "prec": df_u[prec_col].values[0]
                             if prec_col in df_u
                             else "N/A",
@@ -148,6 +161,12 @@ def generate_report():
                                 (float, np.floating),
                             )
                             else cls_metrics["Western_Leopard_Toad"]["ap"],
+                            "WLT AR50": f"{cls_metrics['Western_Leopard_Toad']['ar']:.4f}"
+                            if isinstance(
+                                cls_metrics["Western_Leopard_Toad"]["ar"],
+                                (float, np.floating),
+                            )
+                            else cls_metrics["Western_Leopard_Toad"]["ar"],
                             "WLT Prec": f"{cls_metrics['Western_Leopard_Toad']['prec']:.4f}"
                             if isinstance(
                                 cls_metrics["Western_Leopard_Toad"]["prec"],
@@ -172,6 +191,11 @@ def generate_report():
                                 cls_metrics["Small_Mammal"]["ap"], (float, np.floating)
                             )
                             else cls_metrics["Small_Mammal"]["ap"],
+                            "SM AR50": f"{cls_metrics['Small_Mammal']['ar']:.4f}"
+                            if isinstance(
+                                cls_metrics["Small_Mammal"]["ar"], (float, np.floating)
+                            )
+                            else cls_metrics["Small_Mammal"]["ar"],
                             "SM Prec": f"{cls_metrics['Small_Mammal']['prec']:.4f}"
                             if isinstance(
                                 cls_metrics["Small_Mammal"]["prec"],
@@ -196,6 +220,12 @@ def generate_report():
                                 (float, np.floating),
                             )
                             else cls_metrics["Other_Amphibian"]["ap"],
+                            "OA AR50": f"{cls_metrics['Other_Amphibian']['ar']:.4f}"
+                            if isinstance(
+                                cls_metrics["Other_Amphibian"]["ar"],
+                                (float, np.floating),
+                            )
+                            else cls_metrics["Other_Amphibian"]["ar"],
                             "OA Prec": f"{cls_metrics['Other_Amphibian']['prec']:.4f}"
                             if isinstance(
                                 cls_metrics["Other_Amphibian"]["prec"],
@@ -227,19 +257,38 @@ def generate_report():
 
         f.write("### Active Learning Progression Table\n")
         f.write(
-            "| Arch | Proc | Variant | Cycle | Budget | mAP50 | mAP50-95 | WLT Inst | WLT AP50 | WLT Prec | WLT Rec | WLT Spec | SM Inst | SM AP50 | SM Prec | SM Rec | SM Spec | OA Inst | OA AP50 | OA Prec | OA Rec | OA Spec |\n"
+            "| Arch | Proc | Variant | Cycle | Budget | mAP50 | mAP50-95 | WLT Inst | WLT AP50 | WLT AR50 | WLT Prec | WLT Rec | WLT Spec | SM Inst | SM AP50 | SM AR50 | SM Prec | SM Rec | SM Spec | OA Inst | OA AP50 | OA AR50 | OA Prec | OA Rec | OA Spec |\n"
         )
         f.write(
-            "|------|------|---------|-------|--------|-------|----------|----------|----------|----------|---------|----------|---------|---------|---------|--------|---------|---------|---------|---------|--------|---------|\n"
+            "|------|------|---------|-------|--------|-------|----------|----------|----------|----------|----------|----------|---------|----------|---------|---------|---------|---------|---------|--------|---------|---------|---------|---------|---------|--------|---------|\n"
         )
 
         for row in results_table:
             f.write(
                 f"| {row['Architecture']} | {row['Processing']} | {row['Variant']} | {row['Cycle']} | {row['Cumul Imgs']} | {row['mAP50']} | {row['mAP50-95']} | "
-                f"{row['WLT Inst']} | {row['WLT AP50']} | {row['WLT Prec']} | {row['WLT Rec']} | {row['WLT Spec']} | "
-                f"{row['SM Inst']} | {row['SM AP50']} | {row['SM Prec']} | {row['SM Rec']} | {row['SM Spec']} | "
-                f"{row['OA Inst']} | {row['OA AP50']} | {row['OA Prec']} | {row['OA Rec']} | {row['OA Spec']} |\n"
+                f"{row['WLT Inst']} | {row['WLT AP50']} | {row['WLT AR50']} | {row['WLT Prec']} | {row['WLT Rec']} | {row['WLT Spec']} | "
+                f"{row['SM Inst']} | {row['SM AP50']} | {row['SM AR50']} | {row['SM Prec']} | {row['SM Rec']} | {row['SM Spec']} | "
+                f"{row['OA Inst']} | {row['OA AP50']} | {row['OA AR50']} | {row['OA Prec']} | {row['OA Rec']} | {row['OA Spec']} |\n"
             )
+
+        f.write("\n## Metric Explanations\n\n")
+        f.write(
+            "To facilitate academic review and deployment planning, we distinguish between standard computer vision metrics and operational evaluation metrics:\n\n"
+        )
+        f.write("### 1. Precision vs. Recall (Operational Point Metrics)\n")
+        f.write(
+            "- **Precision (Prec)**: The proportion of positive detections that are correct: $\\frac{\\text{TP}}{\\text{TP} + \\text{FP}}$. In this report, it is calculated at the class-specific optimal validation threshold. It indicates the trustworthiness of model predictions in practical deployments (minimizing false alarms).\n"
+        )
+        f.write(
+            "- **Recall (Rec)**: The proportion of actual objects that the model successfully finds: $\\frac{\\text{TP}}{\\text{TP} + \\text{FN}}$, evaluated at the class-specific optimal validation threshold. It indicates the target species sensitivity during active monitoring.\n\n"
+        )
+        f.write("### 2. AP50 vs. AR50 (Global Integral Metrics)\n")
+        f.write(
+            "- **Average Precision ($\\text{AP}_{50}$)**: The area under the Precision-Recall curve constructed at an IoU threshold of 0.50. This is a **threshold-independent** metric measuring the overall classification and localization quality of the model across all possible operating thresholds.\n"
+        )
+        f.write(
+            "- **Absolute Recall ($\\text{AR}_{50}$)**: The absolute maximum recall the model can physically achieve at $\\text{IoU} = 0.50$ (i.e., when accepting all bounding boxes down to a confidence threshold of 0). It defines the upper bound sensitivity limit of the detector on the target dataset.\n"
+        )
 
     print(f"Active learning report saved to {report_path}")
 
