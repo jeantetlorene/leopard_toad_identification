@@ -323,7 +323,7 @@ def plot_ap_ar_trajectories(df):
             cycles_plot = [c + 1 for c in CYCLES]
 
             # 1. Plot AP and AR on the primary y-axis (Metric Value, scale 0 to 1.12)
-            line_ap, = ax.plot(
+            (line_ap,) = ax.plot(
                 cycles_plot,
                 ap_history[cls_name],
                 marker="o",
@@ -334,7 +334,7 @@ def plot_ap_ar_trajectories(df):
                 color=COLOR_AP,
                 label="AP$_{50}$",
             )
-            line_ar, = ax.plot(
+            (line_ar,) = ax.plot(
                 cycles_plot,
                 ar_history[cls_name],
                 marker="s",
@@ -350,7 +350,7 @@ def plot_ap_ar_trajectories(df):
             ax_fp = ax.twinx()
 
             # Plot FP Count on right y-axis
-            line_fp, = ax_fp.plot(
+            (line_fp,) = ax_fp.plot(
                 cycles_plot,
                 fp_history[cls_name],
                 marker="d",
@@ -455,8 +455,16 @@ def plot_ap_ar_trajectories(df):
             ax.set_xlim(0.6, 5.4)
             ax.set_ylim(0.0, 1.12)
 
-            ax_fp.set_ylabel("Number of False Positives", fontsize=11, fontweight="medium", color=COLOR_FP, labelpad=8)
-            ax_fp.tick_params(axis="y", colors=COLOR_FP, labelsize=9, width=1.2, length=4)
+            ax_fp.set_ylabel(
+                "Number of False Positives",
+                fontsize=11,
+                fontweight="medium",
+                color=COLOR_FP,
+                labelpad=8,
+            )
+            ax_fp.tick_params(
+                axis="y", colors=COLOR_FP, labelsize=9, width=1.2, length=4
+            )
             ax_fp.spines["right"].set_color(COLOR_FP)
             ax_fp.spines["right"].set_linewidth(1.2)
 
