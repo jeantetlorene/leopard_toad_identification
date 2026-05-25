@@ -177,6 +177,8 @@ def calculate_detection_metrics(results, iou_threshold=0.5):
             best_recall = float(recall[best_idx])
             best_precision = float(precision[best_idx])
             best_thresh = float(confs[best_idx])
+            if best_thresh > 0.5:
+                best_thresh = best_thresh - 0.1
 
         class_optimal[int(c)] = {
             "best_recall": best_recall,
