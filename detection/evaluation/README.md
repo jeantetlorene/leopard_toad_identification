@@ -107,6 +107,16 @@ python3 reporting/generate_image_level_report.py
 python3 reporting/plot_binary_roc_baseline.py
 ```
 
+**7. Run Active Learning Threshold Optimization & Trajectory Plotting:**
+Run F1-Score sweeps on validation sets to calibrate YOLO and RT-DETR optimal confidence thresholds (resolving generic baseline fallbacks), and generate publication-quality trajectory and KDE plots across all active learning cycles:
+```bash
+# Calibrate and optimize YOLO/RT-DETR confidence thresholds
+python3 pipelines/optimize_ultralytics_thresholds.py
+
+# Generate trajectory plots and multi-cycle KDE density plots
+python3 reporting/plot_active_learning.py
+```
+
 ---
 
 ## Directory Organization
