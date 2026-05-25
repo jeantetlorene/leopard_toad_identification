@@ -1,0 +1,16 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/5z-100 (117).JPG,5z-100 (117).JPG,Observed/Seen,2,Western_Leopard_Toad,0.9692,2405.6,2002.2,3070.1,2826.1
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/5z-100 (770).JPG,5z-100 (770).JPG,Observed/Seen,2,Western_Leopard_Toad,0.9644,3320.6,2062.8,4045.1,2606.1
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0820.JPG,DSCF0820.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9678,1511.4,2149.0,2286.6,2452.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/5z-100 (118).JPG,5z-100 (118).JPG,Observed/Seen,2,Western_Leopard_Toad,0.9697,2400.7,2007.8,3069.8,2823.6
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0813.JPG,DSCF0813.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9590,1600.3,2054.9,2305.7,2450.7
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0830.JPG,DSCF0830.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9624,2718.3,1952.5,3590.7,2446.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0828.JPG,DSCF0828.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9663,2719.7,1951.4,3602.8,2447.9
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0814.JPG,DSCF0814.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9604,1595.5,2054.0,2310.5,2451.7
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0814.JPG,DSCF0814.JPG,Observed/Seen,0,Other_Amphibian,0.2128,3286.1,1.2,3486.4,224.9
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0831.JPG,DSCF0831.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9409,2720.2,1945.7,3588.8,2446.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0818.JPG,DSCF0818.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9688,1514.5,2148.8,2288.0,2453.0
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0819.JPG,DSCF0819.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9688,1515.9,2149.0,2291.1,2452.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0829.JPG,DSCF0829.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9644,2720.0,1952.5,3593.5,2446.8
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/DSCF0821.JPG,DSCF0821.JPG,Observed/Seen,2,Western_Leopard_Toad,0.9678,1515.1,2148.2,2291.9,2453.6
+/srv/shared_leopard_toad/2023/Cameras - AI Data/Observed/Seen/5z-100 (389).JPG,5z-100 (389).JPG,Observed/Seen,2,Western_Leopard_Toad,0.9702,3696.2,2065.7,4262.8,2650.4

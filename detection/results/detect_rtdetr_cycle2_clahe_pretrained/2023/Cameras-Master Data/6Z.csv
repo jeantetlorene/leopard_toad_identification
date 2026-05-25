@@ -1,0 +1,22 @@
+image_path,image_name,subfolder,class_id,class_name,confidence,xmin,ymin,xmax,ymax
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/102MEDIA/DSCF0544.JPG,DSCF0544.JPG,6Z/102MEDIA,2,Western_Leopard_Toad,0.2549,4370.2,-11.6,4611.8,58.3
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/102MEDIA/DSCF0532.JPG,DSCF0532.JPG,6Z/102MEDIA,2,Western_Leopard_Toad,0.2837,4382.1,-10.0,4608.9,53.4
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/102MEDIA/DSCF0087.JPG,DSCF0087.JPG,6Z/102MEDIA,2,Western_Leopard_Toad,0.4656,2831.1,965.2,3567.9,1383.8
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/102MEDIA/DSCF0879.JPG,DSCF0879.JPG,6Z/102MEDIA,0,Other_Amphibian,0.3279,4322.4,1940.9,4398.6,2040.8
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0458.JPG,DSCF0458.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.2810,4372.9,-20.5,4609.1,57.0
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0822.JPG,DSCF0822.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.7925,3175.6,2244.7,3385.4,2448.2
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0837.JPG,DSCF0837.JPG,6Z/101MEDIA,0,Other_Amphibian,0.2433,3190.9,1916.5,3451.1,2424.6
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0050.JPG,DSCF0050.JPG,6Z/101MEDIA,0,Other_Amphibian,0.5249,4491.5,1955.2,4594.0,2041.7
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0840.JPG,DSCF0840.JPG,6Z/101MEDIA,0,Other_Amphibian,0.2047,3193.5,1894.2,3453.0,2411.5
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0698.JPG,DSCF0698.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.3696,1950.5,-1.1,2527.0,96.2
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0770.JPG,DSCF0770.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.3491,2086.9,7.3,2795.6,1099.5
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/101MEDIA/DSCF0771.JPG,DSCF0771.JPG,6Z/101MEDIA,2,Western_Leopard_Toad,0.4548,2095.9,6.6,2795.6,1100.1
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0001.JPG,DSCF0001.JPG,6Z/100MEDIA,1,Small_Mammal,0.3296,2196.4,1196.2,3044.6,1628.6
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0074.JPG,DSCF0074.JPG,6Z/100MEDIA,0,Other_Amphibian,0.2023,-4.2,1261.2,110.7,1416.9
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0113.JPG,DSCF0113.JPG,6Z/100MEDIA,0,Other_Amphibian,0.2295,-4.9,1259.4,112.6,1428.8
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0176.JPG,DSCF0176.JPG,6Z/100MEDIA,0,Other_Amphibian,0.2031,8.2,1266.5,129.6,1411.5
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0179.JPG,DSCF0179.JPG,6Z/100MEDIA,0,Other_Amphibian,0.3425,-7.5,1261.6,93.6,1429.1
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0056.JPG,DSCF0056.JPG,6Z/100MEDIA,0,Other_Amphibian,0.2761,-12.3,1260.2,103.9,1433.1
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0129.JPG,DSCF0129.JPG,6Z/100MEDIA,0,Other_Amphibian,0.2023,-6.8,1259.3,82.5,1423.8
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0092.JPG,DSCF0092.JPG,6Z/100MEDIA,0,Other_Amphibian,0.2358,5.1,1268.2,127.0,1389.6
+/srv/shared_leopard_toad/2023/Cameras-Master Data/6Z/100MEDIA/DSCF0226.JPG,DSCF0226.JPG,6Z/100MEDIA,0,Other_Amphibian,0.3081,-3.0,1259.1,101.5,1408.9
