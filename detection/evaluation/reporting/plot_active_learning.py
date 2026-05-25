@@ -18,6 +18,18 @@ CLASSES = ["Western_Leopard_Toad", "Small_Mammal", "Other_Amphibian"]
 BUDGET_MAP = {0: 130, 1: 230, 2: 330, 3: 430, 4: 530}
 
 
+def box_iou(box1, box2):
+    b1_x1, b1_y1 = box1[0] - box1[2] / 2, box1[1] - box1[3] / 2
+    b1_x2, b1_y2 = box1[0] + box1[2] / 2, box1[1] + box1[3] / 2
+    b2_x1, b2_y1 = box2[0] - box2[2] / 2, box2[1] - box2[3] / 2
+    b2_x2, b2_y2 = box2[0] + box2[2] / 2, box2[1] + box2[3] / 2
+    inter_x1, inter_y1 = max(b1_x1, b2_x1), max(b1_y1, b2_y1)
+    inter_x2, inter_y2 = min(b1_x2, b2_x2), min(b1_y2, b2_y2)
+    inter_area = max(0, inter_x2 - inter_x1) * max(0, inter_y2 - inter_y1)
+    union_area = (box1[2] * box1[3]) + (box2[2] * box2[3]) - inter_area
+    return inter_area / union_area if union_area > 0 else 0
+
+
 def load_data():
     if not os.path.exists(UNIFIED_CSV):
         print("Error: Unified CSV not found.")
@@ -100,17 +112,6 @@ def plot_confidence_distributions(df):
     MODELS = ["yolo", "faster_rcnn", "rtdetr"]
     PROCESSINGS = ["clahe", "plain"]
     VARIANTS = ["pretrained", "scratch"]
-
-    def box_iou(box1, box2):
-        b1_x1, b1_y1 = box1[0] - box1[2] / 2, box1[1] - box1[3] / 2
-        b1_x2, b1_y2 = box1[0] + box1[2] / 2, box1[1] + box1[3] / 2
-        b2_x1, b2_y1 = box2[0] - box2[2] / 2, box2[1] - box2[3] / 2
-        b2_x2, b2_y2 = box2[0] + box2[2] / 2, box2[1] + box2[3] / 2
-        inter_x1, inter_y1 = max(b1_x1, b2_x1), max(b1_y1, b2_y1)
-        inter_x2, inter_y2 = min(b1_x2, b2_x2), min(b1_y2, b2_y2)
-        inter_area = max(0, inter_x2 - inter_x1) * max(0, inter_y2 - inter_y1)
-        union_area = (box1[2] * box1[3]) + (box2[2] * box2[3]) - inter_area
-        return inter_area / union_area if union_area > 0 else 0
 
     CLASS_MAP = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
 
@@ -229,22 +230,31 @@ def plot_confidence_distributions(df):
                         plt.close()
 
 
-def plot_ap_ar_trajectories():
+def plot_ap_ar_trajectories(df):
     MODELS = ["yolo", "faster_rcnn", "rtdetr"]
     PROCESS = "clahe"
     VARIANT = "pretrained"
     CYCLES = [0, 1, 2, 3, 4]
     CLASS_IDS = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
 
-    # Use a premium color palette for publication-quality aesthetic
-    COLOR_AP = "#1f77b4"  # Elegant blue for Average Precision
-    COLOR_AR = "#ff7f0e"  # Elegant orange for Absolute Recall
+    COLOR_AP = "#1f77b4"
+    COLOR_AR = "#ff7f0e"
+    COLOR_FP = "#6f42c1"
 
     for m_type in MODELS:
         ap_history = {c: [] for c in CLASS_IDS.values()}
         ar_history = {c: [] for c in CLASS_IDS.values()}
+        fp_history = {c: [] for c in CLASS_IDS.values()}
 
         for cycle in CYCLES:
+            # Query the optimal validation thresholds from unified CSV df
+            row = df[
+                (df["model"] == m_type)
+                & (df["processing"] == PROCESS)
+                & (df["variant"] == VARIANT)
+                & (df["cycle"] == cycle)
+            ]
+
             root_key = f"{m_type}_{PROCESS}"
             raw_json_path = os.path.join(
                 RESULTS_DIR, root_key, f"cycle_{cycle}_{VARIANT}_test_raw.json"
@@ -257,6 +267,7 @@ def plot_ap_ar_trajectories():
                 det_metrics = calculate_detection_metrics(raw_results)
 
                 for cls_id, cls_name in CLASS_IDS.items():
+                    # AP and AR
                     ap = det_metrics["class_aps"].get(cls_id, 0.0)
                     curves = det_metrics["class_curves"].get(cls_id, {})
                     mrec = curves.get("recall", [])
@@ -264,10 +275,46 @@ def plot_ap_ar_trajectories():
 
                     ap_history[cls_name].append(ap)
                     ar_history[cls_name].append(ar)
+
+                    # False Positives count at validation optimal threshold
+                    opt_thresh = 0.25  # robust default
+                    if not row.empty:
+                        val_opt = row[f"{cls_name}_optimal_threshold"].values[0]
+                        if pd.notna(val_opt):
+                            opt_thresh = val_opt
+
+                    fp_count = 0
+                    for res in raw_results:
+                        preds = [p for p in res["predictions"] if p["cls"] == cls_id]
+                        gts = [g for g in res["gt_boxes"] if g["cls"] == cls_id]
+
+                        preds.sort(key=lambda x: x["conf"], reverse=True)
+                        gt_matched = [False] * len(gts)
+
+                        for p in preds:
+                            best_iou = -1
+                            best_gt_idx = -1
+                            for i, gt in enumerate(gts):
+                                if not gt_matched[i]:
+                                    iou = box_iou(p["bbox"], gt["bbox"])
+                                    if iou > best_iou:
+                                        best_iou = iou
+                                        best_gt_idx = i
+
+                            is_tp = False
+                            if best_iou >= 0.5 and best_gt_idx >= 0:
+                                is_tp = True
+                                gt_matched[best_gt_idx] = True
+
+                            if not is_tp:
+                                if p["conf"] >= opt_thresh:
+                                    fp_count += 1
+                    fp_history[cls_name].append(fp_count)
             else:
                 for cls_name in CLASS_IDS.values():
                     ap_history[cls_name].append(0.0)
                     ar_history[cls_name].append(0.0)
+                    fp_history[cls_name].append(0)
 
         # Plot for each class: Clean, simple, no grid or title
         for cls_name in CLASS_IDS.values():
@@ -275,8 +322,8 @@ def plot_ap_ar_trajectories():
 
             cycles_plot = [c + 1 for c in CYCLES]
 
-            # Clean, premium line styles: wider lines, crisp markers with white borders
-            ax.plot(
+            # 1. Plot AP and AR on the primary y-axis (Metric Value, scale 0 to 1.12)
+            line_ap, = ax.plot(
                 cycles_plot,
                 ap_history[cls_name],
                 marker="o",
@@ -287,7 +334,7 @@ def plot_ap_ar_trajectories():
                 color=COLOR_AP,
                 label="AP$_{50}$",
             )
-            ax.plot(
+            line_ar, = ax.plot(
                 cycles_plot,
                 ar_history[cls_name],
                 marker="s",
@@ -297,6 +344,23 @@ def plot_ap_ar_trajectories():
                 linewidth=2.5,
                 color=COLOR_AR,
                 label="AR$_{50}$",
+            )
+
+            # 2. Add second scale to the right for FP count / number of images
+            ax_fp = ax.twinx()
+
+            # Plot FP Count on right y-axis
+            line_fp, = ax_fp.plot(
+                cycles_plot,
+                fp_history[cls_name],
+                marker="d",
+                markersize=7,
+                markeredgecolor="white",
+                markeredgewidth=1.5,
+                linewidth=2.0,
+                linestyle="-",
+                color=COLOR_FP,
+                label="False Positives",
             )
 
             # Max AP annotation calculation
@@ -322,7 +386,7 @@ def plot_ap_ar_trajectories():
                 # label="Max Value",
             )
 
-            # Draw red circle around max AR value (without duplicate label)
+            # Draw red circle around max AR value
             ax.plot(
                 max_ar_x,
                 max_ar,
@@ -352,7 +416,6 @@ def plot_ap_ar_trajectories():
                     offset_ar = 0.03
                     va_ar = "bottom"
             else:
-                # If they are not in the same cycle, adjust text positions to not cross limits
                 offset_ap = -0.05 if max_ap > 0.95 else 0.03
                 va_ap = "top" if max_ap > 0.95 else "bottom"
 
@@ -392,22 +455,39 @@ def plot_ap_ar_trajectories():
             ax.set_xlim(0.6, 5.4)
             ax.set_ylim(0.0, 1.12)
 
-            # Despine: Remove top and right borders for an ultra-clean academic look
+            ax_fp.set_ylabel("Number of False Positives", fontsize=11, fontweight="medium", color=COLOR_FP, labelpad=8)
+            ax_fp.tick_params(axis="y", colors=COLOR_FP, labelsize=9, width=1.2, length=4)
+            ax_fp.spines["right"].set_color(COLOR_FP)
+            ax_fp.spines["right"].set_linewidth(1.2)
+
+            max_fp_val = max(fp_history[cls_name])
+            ax_fp.set_ylim(0, max(10, max_fp_val * 1.15))
+
+            # Despine: Remove top and right borders for main axis, and top/left/bottom borders for FP axis
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
             ax.spines["left"].set_linewidth(1.2)
             ax.spines["bottom"].set_linewidth(1.2)
 
-            # Tick styling
+            ax_fp.spines["top"].set_visible(False)
+            ax_fp.spines["left"].set_visible(False)
+            ax_fp.spines["bottom"].set_visible(False)
+            ax_fp.spines["right"].set_visible(True)
+
+            # Tick styling for main axis
             ax.tick_params(axis="both", which="major", labelsize=9, width=1.2, length=4)
 
-            # Elegant legend with no frame border
-            ax.legend(loc="lower right", frameon=False, fontsize=10)
+            # Unified elegant legend with no frame border
+            lines = [line_ap, line_ar, line_fp]
+            labels = [l.get_label() for l in lines]
+            ax.legend(lines, labels, loc="lower right", frameon=False, fontsize=10)
 
             # Ensure no grid
             ax.grid(False)
 
+            # Save with margins to avoid clipping the y-axis labels
             plt.tight_layout()
+            fig.subplots_adjust(left=0.12, right=0.88)
 
             plt.savefig(
                 os.path.join(PLOTS_DIR, f"al_ap_ar_trajectory_{m_type}_{cls_name}.png"),
@@ -425,5 +505,5 @@ if __name__ == "__main__":
     if df is not None:
         plot_trajectories(df)
         plot_confidence_distributions(df)
-        plot_ap_ar_trajectories()
+        plot_ap_ar_trajectories(df)
         print("Active learning plots generated successfully in results/plots/")
