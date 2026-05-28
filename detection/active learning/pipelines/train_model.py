@@ -75,7 +75,7 @@ def resolve_base_weights(model_type, mode):
                 "pretraining",
                 "runs",
                 "detect",
-                "yolo_finetuning",
+                "yolo_model",
                 "weights",
                 "best.pt",
             )

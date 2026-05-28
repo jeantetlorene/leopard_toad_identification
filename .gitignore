@@ -3,7 +3,7 @@
 .DS_Store
 .vscode
 dataset/detect_2/*
-dataset/detect_1/*
+dataset/yolo_ready_dataset/*
 dataset/dataset/*
 dataset/dataset1/*
 dataset/dataset2/*
