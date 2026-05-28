@@ -68,3 +68,43 @@ BUDGET_ALLOCATION_OTHER_FAUNA = 0.30  # 30% Other Amphibians & Mammals
 
 # Default total human annotation budget (n_clusters)
 DEFAULT_CURATION_BUDGET = 100
+
+# --- Model-Specific Training Configurations ---
+YOLO_TRAIN_CONFIG = {
+    "pretrained": {
+        "phase1": {"epochs": 100, "patience": 25, "batch_size": 32, "freeze": 15},
+        "phase2": {"epochs": 30, "patience": 15, "batch_size": 32, "freeze": 0},
+    },
+    "scratch": {"epochs": 60, "patience": 50, "batch_size": 32, "freeze": 0},
+}
+
+RTDETR_TRAIN_CONFIG = {
+    "pretrained": {
+        "phase1": {"epochs": 100, "patience": 25, "batch_size": 32, "freeze": 15},
+        "phase2": {"epochs": 30, "patience": 15, "batch_size": 32, "freeze": 0},
+    },
+    "scratch": {"epochs": 300, "patience": 50, "batch_size": 32, "freeze": 0},
+}
+
+FASTER_RCNN_TRAIN_CONFIG = {
+    "pretrained": {
+        "phase1": {
+            "epochs": 100,
+            "patience": 25,
+            "batch_size": 16,
+            "freeze_backbone": True,
+        },
+        "phase2": {
+            "epochs": 30,
+            "patience": 15,
+            "batch_size": 16,
+            "freeze_backbone": False,
+        },
+    },
+    "scratch": {
+        "epochs": 100,
+        "patience": 20,
+        "batch_size": 16,
+        "freeze_backbone": False,
+    },
+}

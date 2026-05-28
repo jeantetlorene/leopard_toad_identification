@@ -24,7 +24,12 @@ if ACTIVE_LEARNING_DIR not in sys.path:
     sys.path.append(ACTIVE_LEARNING_DIR)
 
 # Centralized imports
-from central_config import DEFAULT_DEVICE
+from central_config import (
+    DEFAULT_DEVICE,
+    YOLO_TRAIN_CONFIG,
+    RTDETR_TRAIN_CONFIG,
+    FASTER_RCNN_TRAIN_CONFIG,
+)
 
 
 def parse_args():
@@ -131,18 +136,18 @@ def train_ultralytics(
     freeze,
     epochs,
     patience,
+    batch_size,
 ):
     """Generic training routine for Ultralytics models (YOLO & RT-DETR)."""
     model = model_class(weights)
     device_val = "0" if torch.cuda.is_available() else "cpu"
 
-    # RT-DETR from-scratch standard train epochs is 300, YOLO scratch is 300.
     results = model.train(
         data=dataset_yaml,
         epochs=epochs,
         patience=patience,
         imgsz=640,
-        batch=32,
+        batch=batch_size,
         project=project_dir,
         name=run_name,
         freeze=freeze,
@@ -307,6 +312,7 @@ def train_faster_rcnn(
     freeze_backbone,
     epochs,
     patience,
+    batch_size,
     apply_clahe,
 ):
     """Training routine for Faster R-CNN using torch native classes."""
@@ -331,7 +337,7 @@ def train_faster_rcnn(
         ActiveLearningFasterRCNNDataset(
             dataset_dir, "train", img_size=640, augment=True, apply_clahe=apply_clahe
         ),
-        batch_size=16,
+        batch_size=batch_size,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -339,7 +345,7 @@ def train_faster_rcnn(
         ActiveLearningFasterRCNNDataset(
             dataset_dir, "val", img_size=640, augment=False, apply_clahe=apply_clahe
         ),
-        batch_size=16,
+        batch_size=batch_size,
         shuffle=False,
         collate_fn=collate_fn,
     )
@@ -437,6 +443,16 @@ def train_faster_rcnn(
 
 def main():
     args = parse_args()
+
+    # Resolve the model-specific training config dictionary
+    if args.model_type == "yolo":
+        train_config = YOLO_TRAIN_CONFIG
+    elif args.model_type == "rtdetr":
+        train_config = RTDETR_TRAIN_CONFIG
+    elif args.model_type == "faster_rcnn":
+        train_config = FASTER_RCNN_TRAIN_CONFIG
+    else:
+        raise ValueError(f"Unknown model type: {args.model_type}")
 
     # 1. Resolve folders and paths
     clahe_suffix = "clahe" if args.clahe else "plain"
@@ -548,6 +564,9 @@ names:
             )
             return
 
+        p1_cfg = train_config["pretrained"]["phase1"]
+        p2_cfg = train_config["pretrained"]["phase2"]
+
         print("\n--- PHASE 1: Fine-tune Head Only (Backbone Frozen) ---")
         if args.model_type in ["yolo", "rtdetr"]:
             from ultralytics import YOLO, RTDETR
@@ -561,9 +580,10 @@ names:
                 run_name=f"cycle_{args.cycle}_pretrained_phase1",
                 project_dir=project_dir,
                 dataset_yaml=dataset_yaml,
-                freeze=15,
-                epochs=100,
-                patience=25,
+                freeze=p1_cfg["freeze"],
+                epochs=p1_cfg["epochs"],
+                patience=p1_cfg["patience"],
+                batch_size=p1_cfg["batch_size"],
             )
 
             print("\n--- PHASE 2: Adapt Entire Network (Backbone Unfrozen) ---")
@@ -574,9 +594,10 @@ names:
                 run_name=f"cycle_{args.cycle}_pretrained_phase2",
                 project_dir=project_dir,
                 dataset_yaml=dataset_yaml,
-                freeze=0,
-                epochs=30,
-                patience=15,
+                freeze=p2_cfg["freeze"],
+                epochs=p2_cfg["epochs"],
+                patience=p2_cfg["patience"],
+                batch_size=p2_cfg["batch_size"],
             )
         else:  # faster_rcnn
             p1_weights = train_faster_rcnn(
@@ -584,9 +605,10 @@ names:
                 run_name=f"cycle_{args.cycle}_pretrained_phase1",
                 project_dir=project_dir,
                 dataset_dir=dataset_dir,
-                freeze_backbone=True,
-                epochs=100,
-                patience=25,
+                freeze_backbone=p1_cfg["freeze_backbone"],
+                epochs=p1_cfg["epochs"],
+                patience=p1_cfg["patience"],
+                batch_size=p1_cfg["batch_size"],
                 apply_clahe=args.clahe,
             )
 
@@ -596,9 +618,10 @@ names:
                 run_name=f"cycle_{args.cycle}_pretrained_phase2",
                 project_dir=project_dir,
                 dataset_dir=dataset_dir,
-                freeze_backbone=False,
-                epochs=30,
-                patience=15,
+                freeze_backbone=p2_cfg["freeze_backbone"],
+                epochs=p2_cfg["epochs"],
+                patience=p2_cfg["patience"],
+                batch_size=p2_cfg["batch_size"],
                 apply_clahe=args.clahe,
             )
     else:  # scratch mode
@@ -610,6 +633,8 @@ names:
                 f"Trained model for Cycle {args.cycle} (Scratch) already exists at: {expected_scratch_model}. Skipping training."
             )
             return
+
+        scratch_cfg = train_config["scratch"]
 
         print("\n--- FROM-SCRATCH MODEL TRAINING ---")
         if args.model_type in ["yolo", "rtdetr"]:
@@ -624,11 +649,10 @@ names:
                 run_name=f"cycle_{args.cycle}_scratch_scratch",
                 project_dir=project_dir,
                 dataset_yaml=dataset_yaml,
-                freeze=0,
-                epochs=300
-                if args.model_type == "rtdetr"
-                else 60,  # 300 for RT-DETR scratch convergence, 60 for YOLO scratch
-                patience=50,
+                freeze=scratch_cfg.get("freeze", 0),
+                epochs=scratch_cfg["epochs"],
+                patience=scratch_cfg["patience"],
+                batch_size=scratch_cfg["batch_size"],
             )
         else:  # faster_rcnn
             train_faster_rcnn(
@@ -636,9 +660,10 @@ names:
                 run_name=f"cycle_{args.cycle}_scratch_scratch",
                 project_dir=project_dir,
                 dataset_dir=dataset_dir,
-                freeze_backbone=False,
-                epochs=100,
-                patience=20,
+                freeze_backbone=scratch_cfg["freeze_backbone"],
+                epochs=scratch_cfg["epochs"],
+                patience=scratch_cfg["patience"],
+                batch_size=scratch_cfg["batch_size"],
                 apply_clahe=args.clahe,
             )
 
