@@ -10,8 +10,11 @@ The project is divided into two primary modules: **Detection** and **Identificat
 This module handles the automatic localization of leopard toads in raw camera trap images using various object detection architectures (YOLOv8, Faster R-CNN, and RT-DETR). 
 
 Key files and features:
-- **`batch_inference.py`**: Automates detection on large datasets. Implements CLAHE (Contrast Limited Adaptive Histogram Equalization) preprocessing in parallel using `ThreadPoolExecutor`, performs batch inference, and outputs bounding box coordinates and confidence scores to CSV files. Setup to support multiple model types (YOLO, Faster R-CNN).
+- **`active learning/pipelines/run_inference_pipeline.py`**: A fully modular, configurable batch inference pipeline to run deep learning models (e.g. RT-DETR) on multi-year year folder structures. Features CLAHE contrast enhancement, batch prediction, and an integrated post-processing switch (`--filter_static`) to automatically remove background triggers.
+- **`active learning/pipelines/filter_static_false_positives.py`**: Standalone post-processing script to eliminate stationary camera trap false positives (triggers on leaves, rocks, ripples, etc.) by clustering bounding boxes spatially within camera sequences and suppressing those that trigger more than `--occurrence_threshold` times.
+- **`batch_inference.py`**: Automates detection on large datasets using YOLO or Faster R-CNN models.
 - **`threshold_sweeping.py`**: Contains the threshold-sweeping evaluation pipeline. Generates PR curves, recall-threshold trade-off analyses, and confidence distributions to determine optimal model thresholds that maximize recall (targeting 95–98%) while minimizing manual review overhead. 
+- **`active learning/pipelines/active_curation.py`**: Redesigned active learning curation script. Loads domain-pretrained ResNet50 weights, clusters crops using K-Means++ independently across balanced categories (40% WLT, 30% spatial hard negatives, 30% other fauna), and outputs human curation priority lists targeting the highest-uncertainty instances.
 - **`visualize_gradio.py` & `gradio_app.py`**: Interactive Gradio interfaces used for visually auditing model predictions, with options to quickly jump to specific image indices and review outputs in real time.
 
 ### 2. Identification (`/identification`)
@@ -32,3 +35,30 @@ Key files and features:
 ## Getting Started
 Ensure you have the required dependencies listed in your virtual environment (`.venv`).
 Most scripts are designed to be run as standalone modules or via interactive Jupyter notebooks depending on if you are doing inference, training, or manual review.
+
+### Running the Inference & Filtering Pipeline
+You can run the batch inference pipeline with automated static background trigger filtering using the following commands:
+
+```bash
+# Run batch inference and automatically clean stationary background false positives
+.venv/bin/python "detection/active learning/pipelines/run_inference_pipeline.py" \
+  --model_path "detection/active learning/rtdetr_clahe/runs/cycle_2_pretrained_phase2/weights/best.pt" \
+  --output_dir "detection/results/detect_rtdetr_cycle2_clahe_pretrained" \
+  --img_size 640 \
+  --batch_size 128 \
+  --filter_static \
+  --iou_threshold 0.7 \
+  --occurrence_threshold 15
+
+# Run the static bounding box filter independently on an existing prediction CSV
+.venv/bin/python "detection/active learning/pipelines/filter_static_false_positives.py" \
+  --input_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/all_unlabeled_predictions.csv" \
+  --iou_threshold 0.7 \
+  --occurrence_threshold 15
+
+# Run the active curation priority selector pipeline using domain feature extraction and category splits
+.venv/bin/python "detection/active learning/pipelines/active_curation.py" \
+  --consensus_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/all_unlabeled_predictions.csv" \
+  --output_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/curation_priority.csv" \
+  --n_clusters 100
+```
