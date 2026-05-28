@@ -29,10 +29,125 @@ from central_config import (
     YOLO_TRAIN_CONFIG,
     RTDETR_TRAIN_CONFIG,
     FASTER_RCNN_TRAIN_CONFIG,
+    TARGET_CLASSES,
+    CLASS_MAPPING,
 )
 
 
+def load_original_classes(dataset_dir):
+    """Loads the original classes from the dataset's classes.txt file."""
+    paths_to_try = [
+        os.path.join(dataset_dir, "train", "classes.txt"),
+        os.path.join(dataset_dir, "classes.txt"),
+        os.path.join(dataset_dir, "val", "classes.txt"),
+    ]
+    for path in paths_to_try:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                classes = [line.strip() for line in f if line.strip()]
+            return classes
+
+    # Fallback to central config CLASSES if classes.txt is not found
+    from central_config import CLASSES
+
+    return [name for name in CLASSES.values()]
+
+
+def resolve_target_classes(original_classes, target_classes=None, class_mapping=None):
+    """
+    Resolves the final target classes and a mapping from original class IDs to target class IDs.
+    """
+    if target_classes is None:
+        resolved_classes = list(original_classes)
+        id_mapping = {i: i for i in range(len(original_classes))}
+        return resolved_classes, id_mapping
+
+    resolved_classes = list(target_classes)
+    id_mapping = {}
+
+    for orig_idx, orig_name in enumerate(original_classes):
+        if class_mapping is not None and orig_name in class_mapping:
+            target_name = class_mapping[orig_name]
+        else:
+            if orig_name in target_classes:
+                target_name = orig_name
+            else:
+                target_name = None  # Background
+
+        if target_name is not None and target_name in resolved_classes:
+            target_idx = resolved_classes.index(target_name)
+            id_mapping[orig_idx] = target_idx
+
+    return resolved_classes, id_mapping
+
+
+def map_split(dataset_dir, dataset_dir_mapped, split, id_mapping, resolved_classes):
+    """Creates a mapped dataset split with symlinked images and remapped labels."""
+    custom_img_dir = os.path.join(dataset_dir, split, "images")
+    custom_lbl_dir = os.path.join(dataset_dir, split, "labels")
+    yolo_img_dir = os.path.join(dataset_dir, "images", split)
+    yolo_lbl_dir = os.path.join(dataset_dir, "labels", split)
+
+    if os.path.exists(custom_img_dir):
+        src_img_dir = custom_img_dir
+        src_lbl_dir = custom_lbl_dir
+    elif os.path.exists(yolo_img_dir):
+        src_img_dir = yolo_img_dir
+        src_lbl_dir = yolo_lbl_dir
+    else:
+        return False  # Split doesn't exist
+
+    dest_img_dir = os.path.join(dataset_dir_mapped, split, "images")
+    dest_lbl_dir = os.path.join(dataset_dir_mapped, split, "labels")
+    os.makedirs(dest_img_dir, exist_ok=True)
+    os.makedirs(dest_lbl_dir, exist_ok=True)
+
+    image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+    img_files = [
+        f
+        for f in os.listdir(src_img_dir)
+        if os.path.splitext(f)[1].lower() in image_extensions
+    ]
+
+    for img_file in img_files:
+        # 1. Symlink image
+        src_img_path = os.path.abspath(os.path.join(src_img_dir, img_file))
+        dest_img_path = os.path.abspath(os.path.join(dest_img_dir, img_file))
+        if os.path.exists(dest_img_path):
+            os.remove(dest_img_path)
+        os.symlink(src_img_path, dest_img_path)
+
+        # 2. Map and write label
+        base_name = os.path.splitext(img_file)[0]
+        src_lbl_path = os.path.join(src_lbl_dir, base_name + ".txt")
+        dest_lbl_path = os.path.join(dest_lbl_dir, base_name + ".txt")
+
+        mapped_lines = []
+        if os.path.exists(src_lbl_path):
+            with open(src_lbl_path, "r") as f_in:
+                for line in f_in:
+                    parts = line.strip().split()
+                    if len(parts) == 5:
+                        orig_cls_id = int(parts[0])
+                        if orig_cls_id in id_mapping:
+                            target_cls_id = id_mapping[orig_cls_id]
+                            mapped_lines.append(
+                                f"{target_cls_id} {parts[1]} {parts[2]} {parts[3]} {parts[4]}\n"
+                            )
+
+        with open(dest_lbl_path, "w") as f_out:
+            f_out.writelines(mapped_lines)
+
+    # Write classes.txt inside the split folder
+    with open(os.path.join(dataset_dir_mapped, split, "classes.txt"), "w") as f_cls:
+        for name in resolved_classes:
+            f_cls.write(name + "\n")
+
+    return True
+
+
 def parse_args():
+
     parser = argparse.ArgumentParser(
         description="Unified Active Learning Model Training Suite."
     )
@@ -314,6 +429,7 @@ def train_faster_rcnn(
     patience,
     batch_size,
     apply_clahe,
+    num_classes=3,
 ):
     """Training routine for Faster R-CNN using torch native classes."""
     from torch.utils.data import DataLoader
@@ -322,7 +438,7 @@ def train_faster_rcnn(
 
     # Intercept trainer configs or define custom run routine
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = get_model(num_classes=3, freeze_backbone=freeze_backbone)
+    model = get_model(num_classes=num_classes, freeze_backbone=freeze_backbone)
 
     if weights and weights != "scratch" and os.path.exists(weights):
         print(f"Loading weights state dict from {weights}")
@@ -517,6 +633,34 @@ def main():
             args.mode,
             f"cycle_{args.cycle}",
         )
+
+    # Resolve target classes dynamically and map dataset annotations
+    print("\n--- RESOLVING DYNAMIC TARGET CLASSES ---")
+    original_classes = load_original_classes(dataset_dir)
+    resolved_classes, id_mapping = resolve_target_classes(
+        original_classes, TARGET_CLASSES, CLASS_MAPPING
+    )
+    print(f"Original dataset classes: {original_classes}")
+    print(f"Resolved target classes:   {resolved_classes}")
+    print(f"Class mapping indices:     {id_mapping}")
+
+    # Build lightweight mapped dataset with symlinked images and mapped labels
+    dataset_dir_mapped = os.path.join(dataset_dir, "mapped")
+    if os.path.exists(dataset_dir_mapped):
+        import shutil
+
+        shutil.rmtree(dataset_dir_mapped)
+    os.makedirs(dataset_dir_mapped, exist_ok=True)
+
+    splits_mapped = 0
+    for split in ["train", "val", "test"]:
+        if map_split(
+            dataset_dir, dataset_dir_mapped, split, id_mapping, resolved_classes
+        ):
+            splits_mapped += 1
+
+    print(f"Successfully mapped {splits_mapped} splits to: {dataset_dir_mapped}")
+
     cycle_parent = os.path.join(model_dir, "cycles", args.mode)
     if args.experiment_name:
         cycle_parent = os.path.join(cycle_parent, args.experiment_name)
@@ -527,16 +671,17 @@ def main():
         cycle_dir, f"dataset_{args.mode}_cycle_{args.cycle}.yaml"
     )
 
-    # Create dataset yaml file dynamically
-    yaml_content = f"""path: {dataset_dir}
+    # Create dataset yaml file dynamically using the resolved target classes
+    names_content = "\n".join(
+        [f"  {i}: {name}" for i, name in enumerate(resolved_classes)]
+    )
+    yaml_content = f"""path: {dataset_dir_mapped}
 train: train/images
 val: val/images
 test: test/images
 
 names:
-  0: Other_Amphibian
-  1: Small_Mammal
-  2: Western_Leopard_Toad
+{names_content}
 """
     with open(dataset_yaml, "w") as f:
         f.write(yaml_content)
@@ -604,12 +749,13 @@ names:
                 weights=base_weights,
                 run_name=f"cycle_{args.cycle}_pretrained_phase1",
                 project_dir=project_dir,
-                dataset_dir=dataset_dir,
+                dataset_dir=dataset_dir_mapped,
                 freeze_backbone=p1_cfg["freeze_backbone"],
                 epochs=p1_cfg["epochs"],
                 patience=p1_cfg["patience"],
                 batch_size=p1_cfg["batch_size"],
                 apply_clahe=args.clahe,
+                num_classes=len(resolved_classes),
             )
 
             print("\n--- PHASE 2: Adapt Entire Network (Backbone Unfrozen) ---")
@@ -617,12 +763,13 @@ names:
                 weights=p1_weights,
                 run_name=f"cycle_{args.cycle}_pretrained_phase2",
                 project_dir=project_dir,
-                dataset_dir=dataset_dir,
+                dataset_dir=dataset_dir_mapped,
                 freeze_backbone=p2_cfg["freeze_backbone"],
                 epochs=p2_cfg["epochs"],
                 patience=p2_cfg["patience"],
                 batch_size=p2_cfg["batch_size"],
                 apply_clahe=args.clahe,
+                num_classes=len(resolved_classes),
             )
     else:  # scratch mode
         expected_scratch_model = os.path.join(
@@ -659,12 +806,13 @@ names:
                 weights=base_weights,
                 run_name=f"cycle_{args.cycle}_scratch_scratch",
                 project_dir=project_dir,
-                dataset_dir=dataset_dir,
+                dataset_dir=dataset_dir_mapped,
                 freeze_backbone=scratch_cfg["freeze_backbone"],
                 epochs=scratch_cfg["epochs"],
                 patience=scratch_cfg["patience"],
                 batch_size=scratch_cfg["batch_size"],
                 apply_clahe=args.clahe,
+                num_classes=len(resolved_classes),
             )
 
     print("\n=======================================================")

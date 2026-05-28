@@ -31,12 +31,35 @@ DEFAULT_IOU_THRESHOLD = 0.7
 DEFAULT_OCCURRENCE_THRESHOLD = 15
 
 # --- Class Definitions & Optimal Confidence Thresholds ---
-CLASSES = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
+# The user can customize these to select which classes to train on. Set to None to default.
+TARGET_CLASSES = ["Other_Amphibian", "Small_Mammal", "Western_Leopard_Toad"]
+CLASS_MAPPING = None
+
+# Resolve global CLASSES dictionary based on target classes
+if TARGET_CLASSES is not None:
+    CLASSES = {i: name for i, name in enumerate(TARGET_CLASSES)}
+else:
+    CLASSES = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
 
 # Optimal validation analytical thresholds based on F1-Score maximization
-DETECTION_THRESHOLDS = {0: 0.2, 1: 0.2, 2: 0.7}
+ORIGINAL_DETECTION_THRESHOLDS = {
+    "Other_Amphibian": 0.2,
+    "Small_Mammal": 0.2,
+    "Western_Leopard_Toad": 0.7,
+}
+
+# Resolve DETECTION_THRESHOLDS dynamically for target classes
+DETECTION_THRESHOLDS = {}
+for i, name in CLASSES.items():
+    if name in ORIGINAL_DETECTION_THRESHOLDS:
+        DETECTION_THRESHOLDS[i] = ORIGINAL_DETECTION_THRESHOLDS[name]
+    else:
+        DETECTION_THRESHOLDS[i] = 0.25  # Generic default threshold
 
 # --- Active Learning Curation Settings ---
+# Primary target class for active curation focus (e.g. "Western_Leopard_Toad" or any other main class)
+CURATION_TARGET_CLASS = "Western_Leopard_Toad"
+
 # Primary domain-pretrained ResNet50 model weights from Faster R-CNN pretraining
 DEFAULT_PRETRAINED_RESNET_WEIGHTS = os.path.join(
     DETECTION_DIR,
@@ -62,9 +85,13 @@ FALLBACK_PRETRAINED_RESNET_WEIGHTS = os.path.join(
 DEFAULT_CURATION_CONF_THRESHOLD = 0.85
 
 # Proportional budget split for active learning curation (must sum to 1.0)
-BUDGET_ALLOCATION_WLT = 0.40  # 40% Western Leopard Toads
-BUDGET_ALLOCATION_HARD_NEGS = 0.30  # 30% Stationary False Positives / Hard Negatives
-BUDGET_ALLOCATION_OTHER_FAUNA = 0.30  # 30% Other Amphibians & Mammals
+BUDGET_ALLOCATION_TARGET = 0.40  # Proportion for the primary curation target class
+BUDGET_ALLOCATION_HARD_NEGS = (
+    0.30  # Proportion for stationary false positives / hard negatives
+)
+BUDGET_ALLOCATION_OTHER_CLASSES = (
+    0.30  # Proportion for all other active support classes
+)
 
 # Default total human annotation budget (n_clusters)
 DEFAULT_CURATION_BUDGET = 100

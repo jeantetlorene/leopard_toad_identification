@@ -191,7 +191,9 @@ def process_folder(
 
                         for box in result.boxes:
                             cls_id = int(box.cls[0])
-                            class_name = CLASSES.get(cls_id, model.names[cls_id])
+                            class_name = model.names.get(
+                                cls_id, CLASSES.get(cls_id, f"class_{cls_id}")
+                            )
                             conf = float(box.conf[0])
 
                             # Apply class-specific optimal validation threshold
@@ -300,12 +302,22 @@ def main():
     print(f"  Auto-Filter:   {args.filter_static}")
     print("=========================================")
 
-    # Load RT-DETR Model
+    # Load Model (RT-DETR or YOLO) dynamically based on path
     if not os.path.exists(args.model_path):
         print(f"Error: Model file {args.model_path} does not exist.")
         return
 
-    model = RTDETR(args.model_path)
+    model_name = os.path.basename(args.model_path).lower()
+    if "rtdetr" in model_name or "rtdetr" in args.model_path.lower():
+        from ultralytics import RTDETR
+
+        print(f"Loading RT-DETR model from {args.model_path}")
+        model = RTDETR(args.model_path)
+    else:
+        from ultralytics import YOLO
+
+        print(f"Loading YOLO model from {args.model_path}")
+        model = YOLO(args.model_path)
 
     # Input year directories to run inference on
     years = {

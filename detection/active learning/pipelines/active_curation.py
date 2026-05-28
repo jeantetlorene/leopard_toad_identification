@@ -28,10 +28,12 @@ from config import (
     DEFAULT_PRETRAINED_RESNET_WEIGHTS,
     FALLBACK_PRETRAINED_RESNET_WEIGHTS,
     DEFAULT_CURATION_CONF_THRESHOLD,
-    BUDGET_ALLOCATION_WLT,
+    BUDGET_ALLOCATION_TARGET,
     BUDGET_ALLOCATION_HARD_NEGS,
-    BUDGET_ALLOCATION_OTHER_FAUNA,
+    BUDGET_ALLOCATION_OTHER_CLASSES,
     DEFAULT_CURATION_BUDGET,
+    CURATION_TARGET_CLASS,
+    DETECTION_THRESHOLDS,
 )
 
 
@@ -319,41 +321,98 @@ def main():
 
     # 3. Categorize candidates to resolve the class imbalance and high-confidence background triggers
     #   - Category A (Hard Negatives): Stationary boxes triggered >= occurrence_threshold times (regardless of conf)
-    #   - Category B (WLT Candidates): Positives predicted as WLT, not static, conf < 0.7 (requiring manual curation)
-    #   - Category C (Other Fauna): Predicted as Other Fauna, not static, conf < args.conf_threshold
+    #   - Category B (Target Positives): Positives predicted as CURATION_TARGET_CLASS, not static, conf < target_threshold
+    #   - Category C (Other Classes): Predicted as other support classes, not static, conf < args.conf_threshold
+
+    # Ensure active classes exist in the configuration
+    has_target = CURATION_TARGET_CLASS in CLASSES.values()
+    has_other = any(name != CURATION_TARGET_CLASS for name in CLASSES.values())
 
     hard_negs_df = df[df["is_static_trigger"] == True].copy()
 
-    wlt_mask = (df["class_name"] == "Western_Leopard_Toad") & (
+    target_mask = (df["class_name"] == CURATION_TARGET_CLASS) & (
         df["is_static_trigger"] == False
     )
-    wlt_df = df[
-        wlt_mask & (df["confidence"] < 0.70) & (df["confidence"] >= 0.25)
+    # Determine the target threshold upper limit dynamically based on class thresholds
+    target_upper_limit = 0.70
+    for idx, name in CLASSES.items():
+        if name == CURATION_TARGET_CLASS:
+            target_upper_limit = DETECTION_THRESHOLDS.get(idx, 0.70)
+            break
+
+    target_df = df[
+        target_mask
+        & (df["confidence"] < target_upper_limit)
+        & (df["confidence"] >= 0.25)
     ].copy()
 
-    other_mask = (df["class_name"] != "Western_Leopard_Toad") & (
+    other_mask = (df["class_name"] != CURATION_TARGET_CLASS) & (
         df["is_static_trigger"] == False
     )
     other_df = df[other_mask & (df["confidence"] < args.conf_threshold)].copy()
 
+    # 4. Proportionally Split Human Curation Budget (n_clusters)
+    alloc_target = BUDGET_ALLOCATION_TARGET if has_target else 0.0
+    alloc_hard_negs = BUDGET_ALLOCATION_HARD_NEGS
+    alloc_other = BUDGET_ALLOCATION_OTHER_CLASSES if has_other else 0.0
+
+    total_alloc = alloc_target + alloc_hard_negs + alloc_other
+    if total_alloc > 0:
+        alloc_target /= total_alloc
+        alloc_hard_negs /= total_alloc
+        alloc_other /= total_alloc
+    else:
+        alloc_hard_negs = 1.0
+
+    target_budget = int(args.n_clusters * alloc_target) if has_target else 0
+    hard_negs_budget = int(args.n_clusters * alloc_hard_negs)
+    other_budget = (
+        args.n_clusters - target_budget - hard_negs_budget if has_other else 0
+    )
+
     print(f"\nCandidates breakdown:")
     print(f"  - Hard Negatives (Static triggers):    {len(hard_negs_df)}")
-    print(f"  - WLT Candidates (Target positive):   {len(wlt_df)}")
-    print(f"  - Other Fauna (Classifier support):    {len(other_df)}")
+    print(f"  - Target Positive ({CURATION_TARGET_CLASS}):   {len(target_df)}")
+    print(f"  - Other Support Classes:               {len(other_df)}")
 
-    # 4. Proportionally Split Human Curation Budget (n_clusters)
-    wlt_budget = int(args.n_clusters * BUDGET_ALLOCATION_WLT)
-    hard_negs_budget = int(args.n_clusters * BUDGET_ALLOCATION_HARD_NEGS)
-    other_budget = args.n_clusters - wlt_budget - hard_negs_budget
+    # Smart Budget Redistribution to ensure curation budget is fully utilized
+    n_target = len(target_df)
+    n_hard_negs = len(hard_negs_df)
+    n_other = len(other_df)
 
-    print(f"\nCuration budget allocations:")
-    print(f"  - WLT budget:    {wlt_budget} samples ({BUDGET_ALLOCATION_WLT:.0%})")
-    print(
-        f"  - Hard Negatives: {hard_negs_budget} samples ({BUDGET_ALLOCATION_HARD_NEGS:.0%})"
+    target_selected_count = min(target_budget, n_target)
+    hard_negs_selected_count = min(hard_negs_budget, n_hard_negs)
+    other_selected_count = min(other_budget, n_other)
+
+    remaining_budget = args.n_clusters - (
+        target_selected_count + hard_negs_selected_count + other_selected_count
     )
+
+    if remaining_budget > 0:
+        # Try to allocate remaining budget to Target Positives, then Other support classes, then Hard Negatives
+        if n_target > target_selected_count:
+            add = min(remaining_budget, n_target - target_selected_count)
+            target_selected_count += add
+            remaining_budget -= add
+        if remaining_budget > 0 and n_other > other_selected_count:
+            add = min(remaining_budget, n_other - other_selected_count)
+            other_selected_count += add
+            remaining_budget -= add
+        if remaining_budget > 0 and n_hard_negs > hard_negs_selected_count:
+            add = min(remaining_budget, n_hard_negs - hard_negs_selected_count)
+            hard_negs_selected_count += add
+            remaining_budget -= add
+
+    target_budget = target_selected_count
+    hard_negs_budget = hard_negs_selected_count
+    other_budget = other_selected_count
+
+    print(f"\nCuration budget allocations (after dynamic redistribution):")
     print(
-        f"  - Other Fauna:    {other_budget} samples ({BUDGET_ALLOCATION_OTHER_FAUNA:.0%})"
+        f"  - Target Positive ({CURATION_TARGET_CLASS}) budget: {target_budget} samples"
     )
+    print(f"  - Hard Negatives budget: {hard_negs_budget} samples")
+    print(f"  - Other Support Classes budget: {other_budget} samples")
 
     # 5. Load Domain-Pretrained ResNet50 Feature Extractor
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -398,17 +457,17 @@ def main():
     )
 
     # 6. Apply diversity K-Means++ clustering independently inside each sub-pool
-    wlt_curated = perform_diversity_sampling(
-        wlt_df,
-        wlt_budget,
+    target_curated = perform_diversity_sampling(
+        target_df,
+        target_budget,
         feature_extractor,
         transform,
         args.batch_size,
         device,
-        "WLT Detections",
+        f"Target Positives ({CURATION_TARGET_CLASS})",
     )
-    if not wlt_curated.empty:
-        wlt_curated["curation_reason"] = "Target positive (WLT)"
+    if not target_curated.empty:
+        target_curated["curation_reason"] = f"Target positive ({CURATION_TARGET_CLASS})"
 
     hard_negs_curated = perform_diversity_sampling(
         hard_negs_df,
@@ -429,14 +488,14 @@ def main():
         transform,
         args.batch_size,
         device,
-        "Other Fauna",
+        "Other Support Classes",
     )
     if not other_curated.empty:
-        other_curated["curation_reason"] = "Fauna/Classifier support"
+        other_curated["curation_reason"] = "Other active support class"
 
     # 7. Merge sub-pools and save outputs
     all_curated = pd.concat(
-        [wlt_curated, hard_negs_curated, other_curated], ignore_index=True
+        [target_curated, hard_negs_curated, other_curated], ignore_index=True
     )
 
     if all_curated.empty:

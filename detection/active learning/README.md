@@ -37,7 +37,49 @@ If you want to run new data or start a new active learning loop without replacin
 
 ---
 
+## Dynamic & Task-Agnostic Class Configurations
+
+The active learning pipeline is completely generic and customizable. It reads the dataset's taxonomies from the original `classes.txt` files inside the cycle's folders dynamically, and supports arbitrary target mappings.
+
+In `detection/active learning/central_config.py`, you can customize:
+1. **`TARGET_CLASSES`**: List of class names to output from the trained models. If set to `None`, the model is trained on all categories from the dataset's `classes.txt`.
+2. **`CLASS_MAPPING`**: A dictionary that maps dataset class names to model target class names. Any category not included in this mapping (or mapped to `None`) is ignored and treated as **background** (suppressed in annotations).
+3. **`CURATION_TARGET_CLASS`**: The name of the primary class of interest for category-biased curation sampling.
+4. **Generalized Budget Allocation**:
+   - `BUDGET_ALLOCATION_TARGET`: Budget ratio for the target class of interest.
+   - `BUDGET_ALLOCATION_HARD_NEGS`: Budget ratio for stationary background/hard negative clustering.
+   - `BUDGET_ALLOCATION_OTHER_CLASSES`: Budget ratio for other active support classes predicted by the model.
+
+### Configuration Examples:
+* **Scenario 1: Train ONLY on WLT (others as background)**
+  ```python
+  TARGET_CLASSES = ["Western_Leopard_Toad"]
+  CLASS_MAPPING = {"Western_Leopard_Toad": "Western_Leopard_Toad"}
+  CURATION_TARGET_CLASS = "Western_Leopard_Toad"
+  ```
+* **Scenario 2: Merge non-target categories into "Other"**
+  ```python
+  TARGET_CLASSES = ["Other", "Western_Leopard_Toad"]
+  CLASS_MAPPING = {
+      "Other_Amphibian": "Other",
+      "Small_Mammal": "Other",
+      "Western_Leopard_Toad": "Western_Leopard_Toad"
+  }
+  CURATION_TARGET_CLASS = "Western_Leopard_Toad"
+  ```
+* **Scenario 3: Standard Training (default)**
+  ```python
+  TARGET_CLASSES = ["Other_Amphibian", "Small_Mammal", "Western_Leopard_Toad"]
+  CLASS_MAPPING = None
+  CURATION_TARGET_CLASS = "Western_Leopard_Toad"
+  ```
+
+During training, a lightweight `mapped` subfolder is created under the active learning data split, mapping label classes instantly using symlinks to save disk space.
+
+---
+
 ## How to Run the Active Learning Loop Step-by-Step
+
 
 The active learning loop consists of a 5-phase cycle. Follow these instructions to run the loop.
 
