@@ -6,7 +6,7 @@ import csv
 import argparse
 from pathlib import Path
 import torch
-from ultralytics import RTDETR
+from ultralytics import RTDETR, YOLO
 from tqdm import tqdm
 import concurrent.futures
 import pandas as pd
@@ -309,13 +309,9 @@ def main():
 
     model_name = os.path.basename(args.model_path).lower()
     if "rtdetr" in model_name or "rtdetr" in args.model_path.lower():
-        from ultralytics import RTDETR
-
         print(f"Loading RT-DETR model from {args.model_path}")
         model = RTDETR(args.model_path)
     else:
-        from ultralytics import YOLO
-
         print(f"Loading YOLO model from {args.model_path}")
         model = YOLO(args.model_path)
 

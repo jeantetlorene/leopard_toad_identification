@@ -33,7 +33,10 @@ def count_images_by_dataset(file_path):
     return ohio_count, california_count, other_count, total_images
 
 
-output_file = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/output.json"
+# Resolve dynamic path
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+PRETRAINING_DIR = os.path.dirname(DATA_DIR)
+output_file = os.path.join(PRETRAINING_DIR, "output.json")
 
 if os.path.exists(output_file):
     ohio, california, other, total = count_images_by_dataset(output_file)

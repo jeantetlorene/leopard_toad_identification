@@ -358,11 +358,18 @@ class EarlyStopping:
 # --- 5. Main Script ---
 def main():
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    dataset_path = "/home/Joshua/Downloads/leopard_toad_identification/dataset/dataset"
+
+    # Resolve dynamic directories
+    PIPELINES_DIR = os.path.dirname(os.path.abspath(__file__))
+    PRETRAINING_DIR = os.path.dirname(PIPELINES_DIR)
+    DETECTION_DIR = os.path.dirname(PRETRAINING_DIR)
+    PROJECT_ROOT = os.path.dirname(DETECTION_DIR)
+
+    dataset_path = os.path.join(PROJECT_ROOT, "dataset", "dataset")
     class_names = ["Frog", "Mouse", "Snail"]
 
     # YOLO style run directory organization
-    project_dir = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn"
+    project_dir = os.path.join(PRETRAINING_DIR, "runs", "faster_rcnn")
     run_name = "train_resnet50_1"
     run_dir = os.path.join(project_dir, run_name)
     weights_dir = os.path.join(run_dir, "weights")

@@ -243,11 +243,20 @@ def plot_results(pr_data, cm_y_true, cm_y_pred, class_names, save_dir):
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset_path = "/home/Joshua/Downloads/leopard_toad_identification/dataset/dataset"
+
+    # Resolve dynamic directories
+    PIPELINES_DIR = os.path.dirname(os.path.abspath(__file__))
+    PRETRAINING_DIR = os.path.dirname(PIPELINES_DIR)
+    DETECTION_DIR = os.path.dirname(PRETRAINING_DIR)
+    PROJECT_ROOT = os.path.dirname(DETECTION_DIR)
+
+    dataset_path = os.path.join(PROJECT_ROOT, "dataset", "dataset")
     class_names = ["Frog", "Mouse", "Snail"]
 
-    weights_path = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn/train_resnet50/weights/best.pt"
-    save_dir = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/runs/faster_rcnn/train_resnet50"
+    weights_path = os.path.join(
+        PRETRAINING_DIR, "runs", "faster_rcnn", "train_resnet50", "weights", "best.pt"
+    )
+    save_dir = os.path.join(PRETRAINING_DIR, "runs", "faster_rcnn", "train_resnet50")
 
     print("Loading test and validation datasets...")
     test_loader = DataLoader(

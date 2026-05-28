@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
-import os
-import sys
 import argparse
 import json
+import os
+import sys
+import shutil
+import cv2
 import torch
-import glob
-import numpy as np
-from PIL import Image
-from torch.utils.data import Dataset
+from ultralytics import YOLO, RTDETR
+from ultralytics.data.dataset import YOLODataset
 
 # Define path resolutions
 PIPELINES_DIR = os.path.dirname(os.path.abspath(__file__))
 ACTIVE_LEARNING_DIR = os.path.dirname(PIPELINES_DIR)
 DETECTION_DIR = os.path.dirname(ACTIVE_LEARNING_DIR)
-
-# Dynamically add detection/pretraining to sys.path for Faster R-CNN dataset loaders
-PRETRAINING_DIR = os.path.join(DETECTION_DIR, "pretraining")
-if PRETRAINING_DIR not in sys.path:
-    sys.path.append(PRETRAINING_DIR)
 
 # Dynamically add ACTIVE_LEARNING_DIR to sys.path for importing central config
 if ACTIVE_LEARNING_DIR not in sys.path:
@@ -32,122 +27,11 @@ from central_config import (
     TARGET_CLASSES,
     CLASS_MAPPING,
 )
-
-
-def load_original_classes(dataset_dir):
-    """Loads the original classes from the dataset's classes.txt file."""
-    paths_to_try = [
-        os.path.join(dataset_dir, "train", "classes.txt"),
-        os.path.join(dataset_dir, "classes.txt"),
-        os.path.join(dataset_dir, "val", "classes.txt"),
-    ]
-    for path in paths_to_try:
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                classes = [line.strip() for line in f if line.strip()]
-            return classes
-
-    # Fallback to central config CLASSES if classes.txt is not found
-    from central_config import CLASSES
-
-    return [name for name in CLASSES.values()]
-
-
-def resolve_target_classes(original_classes, target_classes=None, class_mapping=None):
-    """
-    Resolves the final target classes and a mapping from original class IDs to target class IDs.
-    """
-    if target_classes is None:
-        resolved_classes = list(original_classes)
-        id_mapping = {i: i for i in range(len(original_classes))}
-        return resolved_classes, id_mapping
-
-    resolved_classes = list(target_classes)
-    id_mapping = {}
-
-    for orig_idx, orig_name in enumerate(original_classes):
-        if class_mapping is not None and orig_name in class_mapping:
-            target_name = class_mapping[orig_name]
-        else:
-            if orig_name in target_classes:
-                target_name = orig_name
-            else:
-                target_name = None  # Background
-
-        if target_name is not None and target_name in resolved_classes:
-            target_idx = resolved_classes.index(target_name)
-            id_mapping[orig_idx] = target_idx
-
-    return resolved_classes, id_mapping
-
-
-def map_split(dataset_dir, dataset_dir_mapped, split, id_mapping, resolved_classes):
-    """Creates a mapped dataset split with symlinked images and remapped labels."""
-    custom_img_dir = os.path.join(dataset_dir, split, "images")
-    custom_lbl_dir = os.path.join(dataset_dir, split, "labels")
-    yolo_img_dir = os.path.join(dataset_dir, "images", split)
-    yolo_lbl_dir = os.path.join(dataset_dir, "labels", split)
-
-    if os.path.exists(custom_img_dir):
-        src_img_dir = custom_img_dir
-        src_lbl_dir = custom_lbl_dir
-    elif os.path.exists(yolo_img_dir):
-        src_img_dir = yolo_img_dir
-        src_lbl_dir = yolo_lbl_dir
-    else:
-        return False  # Split doesn't exist
-
-    dest_img_dir = os.path.join(dataset_dir_mapped, split, "images")
-    dest_lbl_dir = os.path.join(dataset_dir_mapped, split, "labels")
-    os.makedirs(dest_img_dir, exist_ok=True)
-    os.makedirs(dest_lbl_dir, exist_ok=True)
-
-    image_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
-    img_files = [
-        f
-        for f in os.listdir(src_img_dir)
-        if os.path.splitext(f)[1].lower() in image_extensions
-    ]
-
-    for img_file in img_files:
-        # 1. Symlink image
-        src_img_path = os.path.abspath(os.path.join(src_img_dir, img_file))
-        dest_img_path = os.path.abspath(os.path.join(dest_img_dir, img_file))
-        if os.path.exists(dest_img_path):
-            os.remove(dest_img_path)
-        os.symlink(src_img_path, dest_img_path)
-
-        # 2. Map and write label
-        base_name = os.path.splitext(img_file)[0]
-        src_lbl_path = os.path.join(src_lbl_dir, base_name + ".txt")
-        dest_lbl_path = os.path.join(dest_lbl_dir, base_name + ".txt")
-
-        mapped_lines = []
-        if os.path.exists(src_lbl_path):
-            with open(src_lbl_path, "r") as f_in:
-                for line in f_in:
-                    parts = line.strip().split()
-                    if len(parts) == 5:
-                        orig_cls_id = int(parts[0])
-                        if orig_cls_id in id_mapping:
-                            target_cls_id = id_mapping[orig_cls_id]
-                            mapped_lines.append(
-                                f"{target_cls_id} {parts[1]} {parts[2]} {parts[3]} {parts[4]}\n"
-                            )
-
-        with open(dest_lbl_path, "w") as f_out:
-            f_out.writelines(mapped_lines)
-
-    # Write classes.txt inside the split folder
-    with open(os.path.join(dataset_dir_mapped, split, "classes.txt"), "w") as f_cls:
-        for name in resolved_classes:
-            f_cls.write(name + "\n")
-
-    return True
+from dataset_utils import load_original_classes, resolve_target_classes, map_split
+from faster_rcnn_utils import train_faster_rcnn
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser(
         description="Unified Active Learning Model Training Suite."
     )
@@ -216,7 +100,6 @@ def resolve_base_weights(model_type, mode):
                 "best.pt",
             )
             if not os.path.exists(w_path):
-                # Fallback to alternative pretrained path
                 w_path = os.path.join(
                     DETECTION_DIR,
                     "pretraining",
@@ -226,15 +109,15 @@ def resolve_base_weights(model_type, mode):
                     "weights",
                     "best.pt",
                 )
-    else:  # scratch
+    else:  # scratch mode
         if model_type == "yolo":
             w_path = os.path.join(ACTIVE_LEARNING_DIR, "yolo", "yolo26n.pt")
             if not os.path.exists(w_path):
-                w_path = "yolo26n.pt"  # Fallback to auto-download from ultralytics
+                w_path = "yolo26n.pt"
         elif model_type == "rtdetr":
             w_path = os.path.join(ACTIVE_LEARNING_DIR, "rtdetr", "rtdetr-l.pt")
             if not os.path.exists(w_path):
-                w_path = "rtdetr-l.pt"  # Fallback to auto-download from ultralytics
+                w_path = "rtdetr-l.pt"
         else:
             w_path = "scratch"
 
@@ -272,291 +155,6 @@ def train_ultralytics(
     return os.path.join(project_dir, run_name, "weights", "best.pt")
 
 
-class ActiveLearningFasterRCNNDataset(Dataset):
-    def __init__(
-        self, dataset_dir, split="train", img_size=640, augment=False, apply_clahe=False
-    ):
-        self.dataset_dir = dataset_dir
-        self.split = split
-        self.img_size = img_size
-        self.augment = augment
-        self.apply_clahe = apply_clahe
-
-        custom_img_dir = os.path.join(dataset_dir, split, "images")
-        custom_lbl_dir = os.path.join(dataset_dir, split, "labels")
-        yolo_img_dir = os.path.join(dataset_dir, "images", split)
-        yolo_lbl_dir = os.path.join(dataset_dir, "labels", split)
-
-        if os.path.exists(custom_img_dir):
-            self.img_dir = custom_img_dir
-            self.lbl_dir = custom_lbl_dir
-        else:
-            self.img_dir = yolo_img_dir
-            self.lbl_dir = yolo_lbl_dir
-
-        self.img_files = sorted(glob.glob(os.path.join(self.img_dir, "*.*")))
-        self.img_files = [
-            f
-            for f in self.img_files
-            if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"))
-        ]
-
-    def __len__(self):
-        return len(self.img_files)
-
-    def __getitem__(self, idx):
-        img_path = self.img_files[idx]
-        try:
-            img = Image.open(img_path).convert("RGB")
-
-            if self.apply_clahe:
-                import cv2
-
-                img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-                lab = cv2.cvtColor(img_cv, cv2.COLOR_BGR2LAB)
-                l_channel, a, b = cv2.split(lab)
-                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-                cl = clahe.apply(l_channel)
-                limg = cv2.merge((cl, a, b))
-                img_clahe_cv = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
-                img = Image.fromarray(cv2.cvtColor(img_clahe_cv, cv2.COLOR_BGR2RGB))
-        except Exception as e:
-            print(f"Warning: Skipping corrupted image {img_path}: {e}")
-            img = Image.new("RGB", (self.img_size, self.img_size), (0, 0, 0))
-
-        base_name = os.path.splitext(os.path.basename(img_path))[0]
-        lbl_path = os.path.join(self.lbl_dir, base_name + ".txt")
-
-        boxes = []
-        labels = []
-
-        if os.path.exists(lbl_path):
-            with open(lbl_path, "r") as f:
-                for line in f:
-                    parts = line.strip().split()
-                    if len(parts) == 5:
-                        cls_id = int(parts[0])
-                        xc, yc, w, h = map(float, parts[1:])
-                        xmin = (xc - w / 2) * self.img_size
-                        ymin = (yc - h / 2) * self.img_size
-                        xmax = (xc + w / 2) * self.img_size
-                        ymax = (yc + h / 2) * self.img_size
-
-                        xmin = max(0.0, xmin)
-                        ymin = max(0.0, ymin)
-                        xmax = min(float(self.img_size), xmax)
-                        ymax = min(float(self.img_size), ymax)
-
-                        if xmax > xmin and ymax > ymin:
-                            boxes.append([xmin, ymin, xmax, ymax])
-                            labels.append(cls_id + 1)
-
-        if self.augment:
-            if np.random.random() > 0.5:
-                img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                if len(boxes) > 0:
-                    new_boxes = []
-                    for b in boxes:
-                        new_boxes.append(
-                            [self.img_size - b[2], b[1], self.img_size - b[0], b[3]]
-                        )
-                    boxes = new_boxes
-
-            import PIL.ImageEnhance as ImageEnhance
-
-            if np.random.random() > 0.5:
-                enhancer = ImageEnhance.Brightness(img)
-                img = enhancer.enhance(np.random.uniform(0.8, 1.2))
-
-            if np.random.random() > 0.5:
-                angle = np.random.uniform(-5, 5)
-                img = img.rotate(angle, resample=Image.BILINEAR)
-
-        img = img.resize((self.img_size, self.img_size), Image.BILINEAR)
-        img_np = np.array(img).astype(np.float32) / 255.0
-        img_tensor = torch.from_numpy(img_np).permute(2, 0, 1)
-
-        if not boxes:
-            boxes = torch.zeros((0, 4), dtype=torch.float32)
-            labels = torch.zeros((0,), dtype=torch.int64)
-        else:
-            final_boxes = []
-            final_labels = []
-            for i, b in enumerate(boxes):
-                x1 = max(0.0, min(b[0], float(self.img_size)))
-                y1 = max(0.0, min(b[1], float(self.img_size)))
-                x2 = max(0.0, min(b[2], float(self.img_size)))
-                y2 = max(0.0, min(b[3], float(self.img_size)))
-                if (x2 > x1 + 1) and (y2 > y1 + 1):
-                    final_boxes.append([x1, y1, x2, y2])
-                    final_labels.append(labels[i])
-
-            if not final_boxes:
-                boxes = torch.zeros((0, 4), dtype=torch.float32)
-                labels = torch.zeros((0,), dtype=torch.int64)
-            else:
-                boxes = torch.as_tensor(final_boxes, dtype=torch.float32)
-                labels = torch.as_tensor(final_labels, dtype=torch.int64)
-
-        target = {"boxes": boxes, "labels": labels, "image_id": torch.tensor([idx])}
-        return img_tensor, target
-
-
-def get_model(num_classes=3, freeze_backbone=False):
-    from torchvision.models.detection import (
-        fasterrcnn_resnet50_fpn_v2,
-        FasterRCNN_ResNet50_FPN_V2_Weights,
-    )
-    from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-
-    weights = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
-    model = fasterrcnn_resnet50_fpn_v2(weights=weights)
-    if freeze_backbone:
-        for param in model.backbone.parameters():
-            param.requires_grad = False
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes + 1)
-    return model
-
-
-def train_faster_rcnn(
-    weights,
-    run_name,
-    project_dir,
-    dataset_dir,
-    freeze_backbone,
-    epochs,
-    patience,
-    batch_size,
-    apply_clahe,
-    num_classes=3,
-):
-    """Training routine for Faster R-CNN using torch native classes."""
-    from torch.utils.data import DataLoader
-    import pandas as pd
-    from train_faster_rcnn import collate_fn, EarlyStopping
-
-    # Intercept trainer configs or define custom run routine
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = get_model(num_classes=num_classes, freeze_backbone=freeze_backbone)
-
-    if weights and weights != "scratch" and os.path.exists(weights):
-        print(f"Loading weights state dict from {weights}")
-        model.load_state_dict(torch.load(weights, map_location=device))
-
-    model = model.to(device)
-    run_dir = os.path.join(project_dir, run_name)
-    weights_dir = os.path.join(run_dir, "weights")
-    os.makedirs(weights_dir, exist_ok=True)
-
-    train_loader = DataLoader(
-        ActiveLearningFasterRCNNDataset(
-            dataset_dir, "train", img_size=640, augment=True, apply_clahe=apply_clahe
-        ),
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=collate_fn,
-    )
-    val_loader = DataLoader(
-        ActiveLearningFasterRCNNDataset(
-            dataset_dir, "val", img_size=640, augment=False, apply_clahe=apply_clahe
-        ),
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=collate_fn,
-    )
-
-    optimizer = torch.optim.Adam(
-        [p for p in model.parameters() if p.requires_grad], lr=0.0001
-    )
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-6
-    )
-    early_stopping = EarlyStopping(patience=patience)
-    best_loss = float("inf")
-    history = []
-
-    print(f"Starting Faster R-CNN Training: {run_name} for {epochs} epochs")
-    for epoch in range(epochs):
-        model.train()
-        train_loss = 0
-        train_comps = {
-            "loss_classifier": 0,
-            "loss_box_reg": 0,
-            "loss_objectness": 0,
-            "loss_rpn_box_reg": 0,
-        }
-
-        for images, targets in train_loader:
-            images = [img.to(device) for img in images]
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-            loss_dict = model(images, targets)
-            losses = sum(loss for loss in loss_dict.values())
-
-            optimizer.zero_grad()
-            losses.backward()
-            optimizer.step()
-            train_loss += losses.item()
-            for k in train_comps.keys():
-                if k in loss_dict:
-                    train_comps[k] += loss_dict[k].item()
-
-        with torch.no_grad():
-            val_loss = 0
-            val_comps = {
-                "loss_classifier": 0,
-                "loss_box_reg": 0,
-                "loss_objectness": 0,
-                "loss_rpn_box_reg": 0,
-            }
-            for images, targets in val_loader:
-                images = [img.to(device) for img in images]
-                targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-                loss_dict = model(images, targets)
-                val_loss += sum(loss for loss in loss_dict.values()).item()
-                for k in val_comps.keys():
-                    if k in loss_dict:
-                        val_comps[k] += loss_dict[k].item()
-
-        avg_train = train_loss / max(1, len(train_loader))
-        avg_val = val_loss / max(1, len(val_loader))
-        current_lr = optimizer.param_groups[0]["lr"]
-
-        print(
-            f"Epoch {epoch + 1}/{epochs}: Train Loss: {avg_train:.4f}, Val Loss: {avg_val:.4f}, LR: {current_lr:.6f}"
-        )
-
-        history.append(
-            {
-                "epoch": epoch + 1,
-                "train_loss": avg_train,
-                "val_loss": avg_val,
-                "train_classifier_loss": train_comps["loss_classifier"]
-                / max(1, len(train_loader)),
-                "val_classifier_loss": val_comps["loss_classifier"]
-                / max(1, len(val_loader)),
-                "learning_rate": current_lr,
-            }
-        )
-
-        pd.DataFrame(history).to_csv(os.path.join(run_dir, "results.csv"), index=False)
-
-        if avg_val < best_loss:
-            best_loss = avg_val
-            torch.save(model.state_dict(), os.path.join(weights_dir, "best.pt"))
-
-        scheduler.step(avg_val)
-        early_stopping(avg_val)
-        if early_stopping.early_stop:
-            print(f"Early stopping triggered at epoch {epoch + 1}")
-            break
-
-    best_path = os.path.join(weights_dir, "best.pt")
-    if not os.path.exists(best_path):
-        torch.save(model.state_dict(), best_path)
-    return best_path
-
-
 def main():
     args = parse_args()
 
@@ -570,13 +168,12 @@ def main():
     else:
         raise ValueError(f"Unknown model type: {args.model_type}")
 
-    # 1. Resolve folders and paths
+    # Resolve folders and paths
     clahe_suffix = "clahe" if args.clahe else "plain"
     model_folder = (
         f"{args.model_type}_{clahe_suffix}" if args.clahe else args.model_type
     )
 
-    # Change working dir to active learning specific model folder to let YOLO/RT-DETR save caches properly
     model_dir = os.path.join(ACTIVE_LEARNING_DIR, model_folder)
     os.makedirs(model_dir, exist_ok=True)
     os.chdir(model_dir)
@@ -587,9 +184,6 @@ def main():
 
     # Dynamically apply CLAHE on-the-fly to YOLODataset loaded images for Ultralytics models
     if args.clahe and args.model_type in ["yolo", "rtdetr"]:
-        import cv2
-        from ultralytics.data.dataset import YOLODataset
-
         original_load_image = YOLODataset.load_image
 
         def patched_load_image(self, i, *args, **kwargs):
@@ -598,8 +192,7 @@ def main():
             l_channel, a, b = cv2.split(lab)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
             cl = clahe.apply(l_channel)
-            limg = cv2.merge((cl, a, b))
-            im_clahe = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+            im_clahe = cv2.cvtColor(cv2.merge((cl, a, b)), cv2.COLOR_LAB2BGR)
             return im_clahe, (h, w), (h0, w0)
 
         YOLODataset.load_image = patched_load_image
@@ -647,8 +240,6 @@ def main():
     # Build lightweight mapped dataset with symlinked images and mapped labels
     dataset_dir_mapped = os.path.join(dataset_dir, "mapped")
     if os.path.exists(dataset_dir_mapped):
-        import shutil
-
         shutil.rmtree(dataset_dir_mapped)
     os.makedirs(dataset_dir_mapped, exist_ok=True)
 
@@ -714,8 +305,6 @@ names:
 
         print("\n--- PHASE 1: Fine-tune Head Only (Backbone Frozen) ---")
         if args.model_type in ["yolo", "rtdetr"]:
-            from ultralytics import YOLO, RTDETR
-
             model_class = YOLO if args.model_type == "yolo" else RTDETR
 
             p1_weights = train_ultralytics(
@@ -785,8 +374,6 @@ names:
 
         print("\n--- FROM-SCRATCH MODEL TRAINING ---")
         if args.model_type in ["yolo", "rtdetr"]:
-            from ultralytics import YOLO, RTDETR
-
             model_class = YOLO if args.model_type == "yolo" else RTDETR
 
             train_ultralytics(

@@ -3,7 +3,10 @@ import json
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-JSON_PATH = "/home/Joshua/Downloads/leopard_toad_identification/detection/pretraining/output.json"
+# Resolve JSON path dynamically
+UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
+PRETRAINING_DIR = os.path.dirname(UTILS_DIR)
+JSON_PATH = os.path.join(PRETRAINING_DIR, "output.json")
 
 # Load the JSON data
 with open(JSON_PATH, "r") as f:
