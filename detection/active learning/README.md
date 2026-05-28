@@ -80,48 +80,55 @@ During training, a lightweight `mapped` subfolder is created under the active le
 
 ## How to Run the Active Learning Loop Step-by-Step
 
-
-The active learning loop consists of a 5-phase cycle. Follow these instructions to run the loop.
+The active learning orchestrator has been designed to be **highly parallelizable, robust, and smart**. It supports running multiple models, training modes, and pre-processing configurations in a single command, performs pre-flight sanity checks before starting, and skips steps that are already completed.
 
 ### Step 1: Initialize Cycle 0
-Ensure that the cycle folder contains only the initial seed dataset (`dataset.yaml` and standard images).
+Ensure that the cycle folder contains only the initial seed dataset (`train/` and `val/` splits containing `images/` and `labels/`).
 * **For Default Experiments**: Place them in `detection/active learning/data/<model>/<mode>/cycle_0/`.
 * **For Custom Experiments**: Place them in `detection/active learning/data/<model>/<mode>/<experiment_name>/cycle_0/`.
 
-To start/reset a fresh loop at Cycle 0, run with the `--reset` flag:
+To start/reset a fresh loop for multiple configurations back to Cycle 0, run with the `--reset` flag:
 ```bash
 .venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
-  --model_type rtdetr \
-  --clahe \
+  --model_type yolo rtdetr faster_rcnn \
   --mode pretrained \
-  --experiment_name exp2 \
+  --clahe \
+  --experiment_name detect_2 \
   --reset
 ```
 
-### Step 2: Run the Loop Orchestrator
-To launch the automated pipeline cycle:
+### Step 2: Run the Loop Orchestrator (Multi-Model & Caching Support)
+You can launch individual runs or schedule **multiple model architectures, modes, and pre-processing techniques simultaneously**:
 ```bash
 .venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
-  --model_type [yolo/rtdetr/faster_rcnn] \
-  --mode [pretrained/scratch] \
-  --experiment_name exp2 \
-  --budget 100 \
-  --iou_threshold 0.7 \
-  --occurrence_threshold 15
+  --model_type yolo rtdetr faster_rcnn \
+  --mode pretrained scratch \
+  --clahe \
+  --plain \
+  --experiment_name detect_2 \
+  --budget 100
 ```
 
-#### What happens during execution:
-* **Phase 1 (Model Training)**: Triggered automatically. The orchestrator calls the unified `pipelines/train_model.py` module to train the target model. If `--mode pretrained` is used, it does Phased Unfreezing (Phase 1 head only, Phase 2 entire model) with automatic CLAHE LAB-space monkey-patching. If `--mode scratch` is used, it trains from scratch.
-* **Phase 2 (Automated Batch Inference)**: The newly trained model is run on the massive unlabeled years' pools using `pipelines/run_inference_pipeline.py`.
-* **Phase 3 (Active Curation)**: Overlapping camera trap detections are spatially clustered to suppress recurring background triggers. Detections are categorized and clustered using K-Means++ to select diverse representatives.
-* **Phase 4 (Oracle Export)**: Generates a prioritized oracle candidate CSV listing the image paths to annotate:
-  `detection/active learning/<model_folder>/cycles/<mode>/<experiment_name>/cycle_{X}/al_query_candidates_<mode>_cycle_{X}.csv`
-* **Phase 5 (Loop State Update)**: Automatically increments the cycle count inside the model's state JSON and pauses.
+#### Key Orchestrator Features:
+1. **Pre-flight Sanity Checks**: 
+   Before running any computation, the script validates **all planned configurations** to verify:
+   - Cycle dataset directories exist and contain valid training subdirectories.
+   - Initial domain-pretrained model weights are present on disk if `--mode pretrained` is requested.
+   If any configuration fails checks, it halts immediately with clear directions to prevent wasting hours of training.
+
+2. **Fine-grained Skipping (Step Caching)**:
+   If a run fails halfway through a configuration (e.g. out of memory, power loss) or if you want to rerun a batch, the script **automatically detects and skips already-completed phases**:
+   - **Phase 1 Skip**: Skips model training if `best.pt` is already found.
+   - **Phase 2 Skip**: Skips time-consuming unlabeled inference if the output predictions CSV is found.
+   - **Phase 3 Skip**: Skips active curation if the diversity-prioritized CSV exists.
+   - **Phase 4 Skip**: Skips candidate export if the final `al_query_candidates_<mode>_cycle_{X}.csv` exists.
+   - **Full Cycle Skip**: Skips the entire loop iteration for that configuration if the final CSV is already exported.
+   *Note: Use the `--force` flag to override caching and force re-execution of all phases.*
 
 ### Step 3: Human Annotation & Cycle Progression
 When the orchestrator pauses:
-1. Review and annotate the prioritized candidate images listed in the cycle CSV in **Label Studio**.
+1. Review and annotate the prioritized candidate images listed in each configuration's cycle CSV in **Label Studio**.
 2. Combine all previous training images with these newly annotated images.
-3. Save the new combined training dataset in the next cycle folder:
+3. Save the new combined training dataset in the next cycle folder for each model configuration:
    `detection/active learning/data/<model>/<mode>/[experiment_name]/cycle_{X + 1}/`
 4. Re-run the active learning orchestrator command! The script will automatically load the updated state JSON, detect Cycle `X+1`, and begin the next cycle.
