@@ -132,7 +132,7 @@ def main():
         "--experiment_name",
         type=str,
         default=None,
-        help="Optional custom experiment/run name to separate training runs, datasets, and candidates."
+        help="Optional custom experiment/run name to separate training runs, datasets, and candidates.",
     )
 
     args = parser.parse_args()
@@ -308,7 +308,9 @@ def main():
     curation_df = pd.read_csv(curation_priority_csv)
     representatives = curation_df[curation_df["is_representative"] == True]
 
-    cycle_parent = os.path.join(DETECTION_DIR, "active learning", model_folder, "cycles", args.mode)
+    cycle_parent = os.path.join(
+        DETECTION_DIR, "active learning", model_folder, "cycles", args.mode
+    )
     if args.experiment_name:
         cycle_parent = os.path.join(cycle_parent, args.experiment_name)
     cycle_dir = os.path.join(cycle_parent, f"cycle_{cycle}")
@@ -334,7 +336,11 @@ def main():
     print("  1. Review and annotate these prioritized images in Label Studio.")
     print("  2. Combine all previous training images with these new annotated images.")
     print(f"  3. Save the new combined training dataset in the next cycle folder:")
-    data_subpath = f"{args.model_type}/{args.mode}/{args.experiment_name}/cycle_{cycle + 1}/" if args.experiment_name else f"{args.model_type}/{args.mode}/cycle_{cycle + 1}/"
+    data_subpath = (
+        f"{args.model_type}/{args.mode}/{args.experiment_name}/cycle_{cycle + 1}/"
+        if args.experiment_name
+        else f"{args.model_type}/{args.mode}/cycle_{cycle + 1}/"
+    )
     print(f"     detection/active learning/data/{data_subpath}")
     print("  4. Rerun this unified loop script to start the next cycle!")
     print("=======================================================\n")

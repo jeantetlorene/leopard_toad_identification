@@ -57,7 +57,7 @@ def parse_args():
         "--experiment_name",
         type=str,
         default=None,
-        help="Optional custom experiment/run name to separate training runs, datasets, and candidates."
+        help="Optional custom experiment/run name to separate training runs, datasets, and candidates.",
     )
     return parser.parse_args()
 
@@ -486,11 +486,20 @@ def main():
 
     if args.experiment_name:
         dataset_dir = os.path.join(
-            ACTIVE_LEARNING_DIR, "data", args.model_type, args.mode, args.experiment_name, f"cycle_{args.cycle}"
+            ACTIVE_LEARNING_DIR,
+            "data",
+            args.model_type,
+            args.mode,
+            args.experiment_name,
+            f"cycle_{args.cycle}",
         )
     else:
         dataset_dir = os.path.join(
-            ACTIVE_LEARNING_DIR, "data", args.model_type, args.mode, f"cycle_{args.cycle}"
+            ACTIVE_LEARNING_DIR,
+            "data",
+            args.model_type,
+            args.mode,
+            f"cycle_{args.cycle}",
         )
     cycle_parent = os.path.join(model_dir, "cycles", args.mode)
     if args.experiment_name:
