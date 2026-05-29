@@ -34,6 +34,7 @@ DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 IMG_SIZE = 640
 DEFAULT_BATCH_SIZE = 512
 FASTER_RCNN_SUB_BATCH_SIZE = 128
+MIN_CONF_THRESHOLD = 0.01
 CONF_THRESHOLDS = [round(x, 2) for x in torch.linspace(0.01, 0.95, 30).tolist()]
 
 # Dataset Mappings

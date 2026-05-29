@@ -54,8 +54,15 @@ def main():
     parser.add_argument(
         "--cameras",
         nargs="+",
-        default=["4R", "5Z"],
-        help="Target cameras to preprocess (e.g. 4R 5Z)",
+        default=None,
+        help="Target cameras to preprocess (e.g. 4R 5Z). If provided, overrides --split.",
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        choices=["test", "val", "both"],
+        default="both",
+        help="Target dataset split cameras to preprocess: 'test' (5Z), 'val' (4R), or 'both' (4R and 5Z).",
     )
     parser.add_argument(
         "--limit",
@@ -82,12 +89,26 @@ def main():
 
     args = parser.parse_args()
 
+    # Determine cameras to process based on split / cameras options
+    if args.cameras:
+        target_cameras = args.cameras
+    else:
+        if args.split == "test":
+            target_cameras = [DATASETS["test"]["camera"]]
+        elif args.split == "val":
+            target_cameras = [DATASETS["val"]["camera"]]
+        else:  # both
+            target_cameras = [DATASETS["val"]["camera"], DATASETS["test"]["camera"]]
+
     print("=================================================================")
     print("      OFFLINE CLAHE PREPROCESSING PIPELINE FOR CAMERA SETS      ")
     print("=================================================================")
     print(f"Source Root Path: {SRC_ROOT}")
     print(f"Target CLAHE Path: {CLAHE_PREPROCESSED_DIR}")
-    print(f"Target Cameras: {args.cameras}")
+    print(
+        f"Selected Split: {args.split if not args.cameras else 'N/A (overridden by --cameras)'}"
+    )
+    print(f"Target Cameras: {target_cameras}")
     print(f"Overwrite Existing: {args.overwrite}")
     print(f"Dry Run: {args.dry_run}")
     print("=================================================================\n")
@@ -98,8 +119,9 @@ def main():
     # 1. Discover all images to process
     jobs = []
     total_images_found = 0
+    already_done_count = 0
 
-    for camera in args.cameras:
+    for camera in target_cameras:
         print(f"Crawling images for camera {camera}...")
         camera_images = get_camera_images(camera, root_path=SRC_ROOT)
         print(f"Found {len(camera_images)} images for camera {camera}.")
@@ -117,9 +139,16 @@ def main():
             rel_path = os.path.relpath(norm_src, SRC_ROOT)
             dst_path = os.path.join(CLAHE_PREPROCESSED_DIR, rel_path)
 
+            if not args.overwrite and os.path.exists(dst_path):
+                already_done_count += 1
+                continue
+
             jobs.append((norm_src, dst_path, args.overwrite))
 
-    print(f"\nTotal images to preprocess: {total_images_found}")
+    print(f"\nTotal images discovered: {total_images_found}")
+    if already_done_count > 0:
+        print(f"Already preprocessed (skipping): {already_done_count}")
+    print(f"Remaining images to process: {len(jobs)}")
 
     if args.dry_run:
         print("Dry run completed. No files were written.")
@@ -134,7 +163,7 @@ def main():
     print(f"Launching pool with {num_workers} parallel workers...")
 
     success_count = 0
-    skipped_count = 0
+    skipped_count = already_done_count
     failed_count = 0
     failures = []
 

@@ -1,6 +1,7 @@
 from ultralytics import YOLO, RTDETR
 from .base import BaseModel
 import torch
+from eval_utils.config import MIN_CONF_THRESHOLD
 
 
 class UltralyticsWrapper(BaseModel):
@@ -19,7 +20,7 @@ class UltralyticsWrapper(BaseModel):
         results = self.model(
             images,
             imgsz=self.imgsz,
-            conf=0.001,
+            conf=MIN_CONF_THRESHOLD,
             device=self.device,
             verbose=False,
             stream=True,

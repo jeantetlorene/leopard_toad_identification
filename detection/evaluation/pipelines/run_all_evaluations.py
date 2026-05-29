@@ -19,12 +19,13 @@ def run_all(
     target_variants=None,
     full_sequence=False,
     overwrite=False,
+    target_datasets=None,
 ):
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     model_types = ["yolo", "rtdetr", "faster_rcnn"]
     processing_types = ["plain", "clahe"]
-    datasets = ["test", "val"]
+    datasets = target_datasets if target_datasets else ["test", "val"]
 
     expected_lengths = {}
     for ds_name in datasets:
@@ -208,6 +209,12 @@ if __name__ == "__main__":
         help="Run over the entire full camera sequence instead of just ground-truth pool.",
     )
     parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=None,
+        help="Datasets to evaluate (e.g., test val)",
+    )
+    parser.add_argument(
         "--overwrite",
         action="store_true",
         help="Overwrite existing JSON files instead of appending/resuming.",
@@ -222,4 +229,5 @@ if __name__ == "__main__":
         target_variants=args.variants,
         full_sequence=args.full_sequence,
         overwrite=args.overwrite,
+        target_datasets=args.datasets,
     )
