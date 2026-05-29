@@ -173,7 +173,7 @@ def main():
     print(f"Filtering complete:")
     print(f"  Original predictions:      {original_count}")
     print(
-        f"  Suppressed static boxes:   {removed_count} ({removed_count / original_count:.1% if original_count > 0 else 0})"
+        f"  Suppressed static boxes:   {removed_count} ({removed_count / original_count if original_count > 0 else 0:.1%})"
     )
     print(f"  Cleaned predictions saved: {len(filtered_df)}")
     print(f"  Destination file:          {output_path}")
