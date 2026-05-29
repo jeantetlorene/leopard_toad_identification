@@ -6,6 +6,14 @@ ACTIVE_LEARNING_DIR = os.path.dirname(os.path.abspath(__file__))
 DETECTION_DIR = os.path.dirname(ACTIVE_LEARNING_DIR)
 PROJECT_ROOT = os.path.dirname(DETECTION_DIR)
 
+# Path for preprocessed CLAHE images
+CLAHE_PREPROCESSED_DIR = os.environ.get(
+    "CLAHE_PREPROCESSED_DIR",
+    os.path.normpath(
+        os.path.join(PROJECT_ROOT, "dataset", "shared_leopard_toad_clahe")
+    ),
+)
+
 # --- Default Pipeline File Paths ---
 DEFAULT_MODEL_PATH = os.path.join(
     DETECTION_DIR,

@@ -13,6 +13,7 @@ from eval_utils.config import (
     DATASETS,
     DEFAULT_BATCH_SIZE,
     FASTER_RCNN_SUB_BATCH_SIZE,
+    CLAHE_PREPROCESSED_DIR,
 )
 from eval_utils.data_utils import (
     apply_clahe,
@@ -33,12 +34,29 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.paths[idx]
-        im = cv2.imread(path)
-        if im is None:
-            return None, path
         if self.use_clahe:
+            # Check if preprocessed version exists in the target directory
+            # Map '/srv/shared_leopard_toad' -> CLAHE_PREPROCESSED_DIR
+            norm_path = os.path.normpath(path)
+            clahe_path = norm_path.replace(
+                "/srv/shared_leopard_toad", CLAHE_PREPROCESSED_DIR
+            )
+            if os.path.exists(clahe_path):
+                im = cv2.imread(clahe_path)
+                if im is not None:
+                    return im, path
+
+            # Fallback to original path and apply CLAHE on the fly
+            im = cv2.imread(path)
+            if im is None:
+                return None, path
             im = apply_clahe(im)
-        return im, path
+            return im, path
+        else:
+            im = cv2.imread(path)
+            if im is None:
+                return None, path
+            return im, path
 
 
 def custom_collate(batch):

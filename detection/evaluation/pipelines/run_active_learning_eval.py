@@ -13,7 +13,13 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from eval_utils.config import MODEL_ROOTS, DEVICE, CLASSES, DEFAULT_BATCH_SIZE
+from eval_utils.config import (
+    MODEL_ROOTS,
+    DEVICE,
+    CLASSES,
+    DEFAULT_BATCH_SIZE,
+    CLAHE_PREPROCESSED_DIR,
+)
 from eval_utils.data_utils import apply_clahe
 from eval_utils.metrics import calculate_detection_metrics, calculate_map50_95
 from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
@@ -63,21 +69,35 @@ def prepare_clahe_set(split, overwrite=False):
     for img_name in tqdm(os.listdir(images_dir)):
         if img_name.lower().endswith((".jpg", ".jpeg")):
             img_path = os.path.join(images_dir, img_name)
-            img = cv2.imread(img_path)
-            if img is not None:
-                img_clahe = apply_clahe(img)
-                cv2.imwrite(os.path.join(clahe_images_dir, img_name), img_clahe)
 
-                # Track original path if available
-                orig_path = "Unknown"
-                if not mapping_df.empty:
-                    match = mapping_df[mapping_df["unique_name"] == img_name]
-                    if not match.empty:
-                        orig_path = match["original_path"].values[0]
+            # Track original path if available
+            orig_path = "Unknown"
+            if not mapping_df.empty:
+                match = mapping_df[mapping_df["unique_name"] == img_name]
+                if not match.empty:
+                    orig_path = match["original_path"].values[0]
 
-                manifest_data.append(
-                    {"unique_name": img_name, "original_path": orig_path}
+            # Try to copy preprocessed CLAHE image directly from disk
+            copied_preprocessed = False
+            if orig_path != "Unknown":
+                norm_orig = os.path.normpath(orig_path)
+                clahe_src_path = norm_orig.replace(
+                    "/srv/shared_leopard_toad", CLAHE_PREPROCESSED_DIR
                 )
+                if os.path.exists(clahe_src_path):
+                    shutil.copy2(
+                        clahe_src_path, os.path.join(clahe_images_dir, img_name)
+                    )
+                    copied_preprocessed = True
+
+            # Fallback if no preprocessed image found
+            if not copied_preprocessed:
+                img = cv2.imread(img_path)
+                if img is not None:
+                    img_clahe = apply_clahe(img)
+                    cv2.imwrite(os.path.join(clahe_images_dir, img_name), img_clahe)
+
+            manifest_data.append({"unique_name": img_name, "original_path": orig_path})
 
     # Save manifest
     pd.DataFrame(manifest_data).to_csv(manifest_path, index=False)

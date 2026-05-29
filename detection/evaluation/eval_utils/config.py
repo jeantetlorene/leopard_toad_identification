@@ -10,6 +10,15 @@ RESULTS_DIR = os.path.join(EVAL_DIR, "results")
 FILES_DIR = os.path.join(RESULTS_DIR, "files")
 PLOTS_DIR = os.path.join(RESULTS_DIR, "plots")
 
+# Path for preprocessed CLAHE images
+CLAHE_PREPROCESSED_DIR = os.environ.get(
+    "CLAHE_PREPROCESSED_DIR",
+    os.path.normpath(
+        os.path.join(BASE_DIR, "..", "dataset", "shared_leopard_toad_clahe")
+    ),
+)
+
+
 # Model Roots
 MODEL_ROOTS = {
     "yolo": os.path.join(BASE_DIR, "active learning", "yolo"),

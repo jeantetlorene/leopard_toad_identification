@@ -26,6 +26,7 @@ from config import (
     DEFAULT_DEVICE,
     DEFAULT_IOU_THRESHOLD,
     DEFAULT_OCCURRENCE_THRESHOLD,
+    CLAHE_PREPROCESSED_DIR,
 )
 
 # Import static filter utility from sibling module
@@ -53,12 +54,26 @@ def _process_image(args_tuple):
     """
     img_path, apply_clahe_flag = args_tuple
     try:
-        img_bgr = cv2.imread(str(img_path))
-        if img_bgr is None:
-            return None, img_path
         if apply_clahe_flag:
+            # Map '/srv/shared_leopard_toad' -> CLAHE_PREPROCESSED_DIR in workspace
+            norm_path = os.path.normpath(str(img_path))
+            clahe_path = norm_path.replace(
+                "/srv/shared_leopard_toad", CLAHE_PREPROCESSED_DIR
+            )
+            if os.path.exists(clahe_path):
+                img_clahe = cv2.imread(clahe_path)
+                if img_clahe is not None:
+                    return img_clahe, img_path
+
+            # Fallback: read original and apply CLAHE on the fly
+            img_bgr = cv2.imread(str(img_path))
+            if img_bgr is None:
+                return None, img_path
             input_img = apply_clahe(img_bgr)
         else:
+            img_bgr = cv2.imread(str(img_path))
+            if img_bgr is None:
+                return None, img_path
             input_img = img_bgr
         return input_img, img_path
     except Exception:
