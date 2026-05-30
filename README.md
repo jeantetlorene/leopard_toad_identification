@@ -10,7 +10,8 @@ The project is divided into two primary modules: **Detection** and **Identificat
 This module handles the automatic localization of leopard toads in raw camera trap images using various object detection architectures (YOLOv8, Faster R-CNN, and RT-DETR). 
 
 Key files and features:
-- **`active learning/pipelines/run_inference_pipeline.py`**: A fully modular, configurable batch inference pipeline to run deep learning models (supporting both RT-DETR and YOLO) on multi-year year folder structures. Features CLAHE contrast enhancement, batch prediction, dynamic model loading, and automatic prediction class alignment via the model's loaded metadata. Includes an integrated post-processing switch (`--filter_static`) to automatically remove background triggers.
+- **`active learning/pipelines/run_inference_pipeline.py`**: A fully modular, configurable batch inference pipeline to run deep learning models (supporting both RT-DETR and YOLO) on multi-year year folder structures. Features CLAHE contrast enhancement, batch prediction, dynamic model loading, and automatic prediction class alignment via the model's loaded metadata. Includes an integrated post-processing switch (`--filter_static`) to automatically remove background triggers. Supports folder-level continuation to resume interrupted runs.
+- **`active learning/pipelines/run_active_learning_loop.py`**: Unified active learning loop orchestrator. Coordinates training models, running inference on unlabeled pools, filtering static background triggers, and selecting curation candidates. Integrates cycle and phase state tracking to automatically resume incomplete iterations.
 - **`active learning/pipelines/filter_static_false_positives.py`**: Standalone post-processing script to eliminate stationary camera trap false positives (triggers on leaves, rocks, ripples, etc.) by clustering bounding boxes spatially within camera sequences and suppressing those that trigger more than `--occurrence_threshold` times.
 - **`batch_inference.py`**: Automates detection on large datasets using YOLO or Faster R-CNN models.
 - **`threshold_sweeping.py`**: Contains the threshold-sweeping evaluation pipeline. Generates PR curves, recall-threshold trade-off analyses, and confidence distributions to determine optimal model thresholds that maximize recall (targeting 95–98%) while minimizing manual review overhead. 
@@ -40,7 +41,7 @@ Most scripts are designed to be run as standalone modules or via interactive Jup
 You can run the batch inference pipeline with automated static background trigger filtering using the following commands:
 
 ```bash
-# Run batch inference and automatically clean stationary background false positives
+# Run batch inference and automatically clean stationary background false positives (resumes folder-by-folder by default)
 .venv/bin/python "detection/active learning/pipelines/run_inference_pipeline.py" \
   --model_path "detection/active learning/rtdetr_clahe/runs/cycle_2_pretrained_phase2/weights/best.pt" \
   --output_dir "detection/results/detect_rtdetr_cycle2_clahe_pretrained" \
@@ -50,15 +51,48 @@ You can run the batch inference pipeline with automated static background trigge
   --iou_threshold 0.7 \
   --occurrence_threshold 15
 
+# Force rerun from scratch, overwriting existing intermediate files:
+.venv/bin/python "detection/active learning/pipelines/run_inference_pipeline.py" \
+  --model_path "detection/active learning/rtdetr_clahe/runs/cycle_2_pretrained_phase2/weights/best.pt" \
+  --output_dir "detection/results/detect_rtdetr_cycle2_clahe_pretrained" \
+  --force
+
 # Run the static bounding box filter independently on an existing prediction CSV
 .venv/bin/python "detection/active learning/pipelines/filter_static_false_positives.py" \
   --input_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/all_unlabeled_predictions.csv" \
   --iou_threshold 0.7 \
   --occurrence_threshold 15
 
-# Run the active curation priority selector pipeline using domain feature extraction and category splits
+# Run the active curation priority selector pipeline using domain feature extraction and category splits (supports --batch_size to optimize GPU throughput)
 .venv/bin/python "detection/active learning/pipelines/active_curation.py" \
   --consensus_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/all_unlabeled_predictions.csv" \
   --output_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/curation_priority.csv" \
-  --n_clusters 100
+  --n_clusters 100 \
+  --batch_size 256
+```
+
+### Running the Active Learning Loop Orchestrator
+The `run_active_learning_loop.py` script ties all components together (Training, Inference, Filtering, Curation, and Query Export) and is **fully resumeable**. It features a configurable `--batch_size` (default: `256`) that is automatically passed down to both the batch inference and active curation pipelines to maximize GPU acceleration:
+
+```bash
+# Run the active learning loop (will automatically resume incomplete cycles/phases)
+.venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
+  --model_type yolo rtdetr \
+  --clahe \
+  --mode pretrained \
+  --batch_size 256
+
+# High-performance run leveraging high-VRAM workstation GPUs (e.g. RTX A6000) to maximize parallel throughput:
+.venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
+  --model_type yolo \
+  --clahe \
+  --mode pretrained \
+  --batch_size 1024
+
+# Force rerun all phases, skipping state-based caching:
+.venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
+  --model_type yolo \
+  --clahe \
+  --mode pretrained \
+  --force
 ```

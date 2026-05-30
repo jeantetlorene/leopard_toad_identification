@@ -124,6 +124,12 @@ def main():
         help=f"Triggers count threshold for identifying static trigger boxes (default: {DEFAULT_OCCURRENCE_THRESHOLD}).",
     )
     parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=256,
+        help="Batch size for parallel feature extraction and inference.",
+    )
+    parser.add_argument(
         "--reset",
         action="store_true",
         help="Reset active learning loop cycle tracker back to Cycle 0 for the resolved configurations.",
@@ -428,10 +434,6 @@ def main():
                     print(
                         f"\n[Skip] Phase 2: Batch inference & static filtering already completed. Found predictions at: {filtered_predictions_csv}"
                     )
-                elif not args.force and os.path.exists(unified_predictions_csv):
-                    print(
-                        f"\n[Skip] Phase 2: Batch inference already completed (static filter bypassed). Found predictions at: {unified_predictions_csv}"
-                    )
                 else:
                     print(
                         f"\n--- [Phase 2: Batch Inference] Running predictions on unlabeled pool ---"
@@ -451,6 +453,8 @@ def main():
                         str(args.iou_threshold),
                         "--occurrence_threshold",
                         str(args.occurrence_threshold),
+                        "--batch_size",
+                        str(args.batch_size),
                     ]
                     if prep_val == "clahe":
                         infer_cmd.append("--apply_clahe")
@@ -458,6 +462,9 @@ def main():
                         infer_cmd.append("--no_clahe")
 
                     infer_cmd.append("--filter_static")
+
+                    if args.force:
+                        infer_cmd.append("--force")
 
                     run_command(
                         infer_cmd,
@@ -490,6 +497,8 @@ def main():
                         str(args.iou_threshold),
                         "--occurrence_threshold",
                         str(args.occurrence_threshold),
+                        "--batch_size",
+                        str(args.batch_size),
                     ]
                     run_command(
                         curate_cmd,

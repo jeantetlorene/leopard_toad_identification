@@ -89,6 +89,7 @@ def process_folder(
     device,
     all_writer,
     apply_clahe_flag=True,
+    force=False,
 ):
     """
     Runs batch inference on a target folder's image files.
@@ -136,6 +137,41 @@ def process_folder(
             continue
 
         csv_path = output_path / csv_name
+
+        # Check if predictions already exist to allow resume/continue
+        if not force and csv_path.exists():
+            print(
+                f"  [Skip] Detections already exist for folder '{target_dir.name}' at {csv_name}. Loading existing detections..."
+            )
+            try:
+                with open(csv_path, mode="r", newline="") as f_in:
+                    reader = csv.reader(f_in)
+                    next(reader, None)  # Skip header
+                    for row in reader:
+                        if len(row) >= 10:
+                            all_writer.writerow(row)
+                            try:
+                                typed_row = [
+                                    row[0],
+                                    row[1],
+                                    row[2],
+                                    int(row[3]),
+                                    row[4],
+                                    float(row[5]),
+                                    float(row[6]),
+                                    float(row[7]),
+                                    float(row[8]),
+                                    float(row[9]),
+                                ]
+                                folder_detections.append(typed_row)
+                            except ValueError:
+                                folder_detections.append(row)
+                continue
+            except Exception as e:
+                print(
+                    f"Warning: Failed to load existing CSV at {csv_path} (Error: {e}). Re-running inference."
+                )
+
         print(
             f"Found {len(images)} unlabeled images in '{target_dir.name}'. Saving predictions to {csv_name}..."
         )
@@ -287,6 +323,11 @@ def main():
         help="Automatically apply spatial static bounding box filter after inference is done.",
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force execution of batch inference on all folders, overwriting existing CSVs.",
+    )
+    parser.add_argument(
         "--iou_threshold",
         type=float,
         default=DEFAULT_IOU_THRESHOLD,
@@ -383,6 +424,7 @@ def main():
                     device=device,
                     all_writer=all_writer,
                     apply_clahe_flag=args.apply_clahe,
+                    force=args.force,
                 )
                 grand_total_boxes += len(detections)
 
@@ -413,7 +455,7 @@ def main():
         print(f"Auto-Filtering complete:")
         print(f"  Original predictions:      {original_count}")
         print(
-            f"  Suppressed static boxes:   {removed_count} ({removed_count / original_count:.1% if original_count > 0 else 0})"
+            f"  Suppressed static boxes:   {removed_count} ({removed_count / original_count if original_count > 0 else 0:.1%})"
         )
         print(f"  Remaining predictions:     {len(filtered_df)}")
         print(f"  Cleaned unified CSV saved: {filtered_csv_path}")

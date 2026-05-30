@@ -36,7 +36,7 @@ DEFAULT_DEVICE = "0" if torch.cuda.is_available() else "cpu"
 
 # --- Bounding Box Spatial Filtering Settings ---
 DEFAULT_IOU_THRESHOLD = 0.7
-DEFAULT_OCCURRENCE_THRESHOLD = 15
+DEFAULT_OCCURRENCE_THRESHOLD = 25
 
 # --- Class Definitions & Optimal Confidence Thresholds ---
 # The user can customize these to select which classes to train on. Set to None to default.

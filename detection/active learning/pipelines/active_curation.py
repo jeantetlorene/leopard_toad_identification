@@ -213,7 +213,7 @@ def perform_diversity_sampling(
 
     dataset = CropDataset(curation_df, transform=transform)
     dataloader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=4
+        dataset, batch_size=batch_size, shuffle=False, num_workers=8
     )
 
     embeddings, idxs = extract_features(feature_extractor, dataloader, device)
@@ -291,7 +291,7 @@ def main():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
+        default=256,
         help="Batch size for parallel feature extraction.",
     )
 
