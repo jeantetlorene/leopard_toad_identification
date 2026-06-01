@@ -301,6 +301,15 @@ def main():
     print(f"Loading predictions from {args.consensus_csv}...")
     df = pd.read_csv(args.consensus_csv)
 
+    if df.empty:
+        print("No predictions found in the input CSV. Exiting gracefully.")
+        df["is_representative"] = []
+        df["curation_reason"] = []
+        os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
+        df.to_csv(args.output_csv, index=False)
+        print(f"Empty Curation Priority File saved:  {args.output_csv}")
+        return
+
     # 1. Compute uncertainty using entropy (uncertain classification) and bbox_variance (uncertain localization)
     # Ensure they exist in the input DataFrame. If missing, fall back gracefully
     if "entropy" not in df.columns:

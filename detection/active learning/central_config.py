@@ -9,9 +9,7 @@ PROJECT_ROOT = os.path.dirname(DETECTION_DIR)
 # Path for preprocessed CLAHE images
 CLAHE_PREPROCESSED_DIR = os.environ.get(
     "CLAHE_PREPROCESSED_DIR",
-    os.path.normpath(
-        os.path.join(PROJECT_ROOT, "dataset", "shared_leopard_toad_clahe")
-    ),
+    "/media/lorene/Project-drive/shared_leopard_toad_2/shared_leopard_toad_clahe",
 )
 
 # --- Default Pipeline File Paths ---
@@ -51,9 +49,9 @@ else:
 
 # Optimal validation analytical thresholds based on F1-Score maximization
 ORIGINAL_DETECTION_THRESHOLDS = {
-    "Other_Amphibian": 0.2,
-    "Small_Mammal": 0.2,
-    "Western_Leopard_Toad": 0.7,
+    "Other_Amphibian": 0.1,
+    "Small_Mammal": 0.1,
+    "Western_Leopard_Toad": 0.1,
 }
 
 # Resolve DETECTION_THRESHOLDS dynamically for target classes
