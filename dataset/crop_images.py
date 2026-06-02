@@ -1,9 +1,11 @@
 """
-Crop images from a dataset based on YOLO labels.
+Crop images from a dataset based on YOLO labels or a predictions CSV file.
 """
 
 import cv2
 import os
+import argparse
+import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 
@@ -59,9 +61,6 @@ def generate_reid_dataset():
 
         # Check if label exists
         if not os.path.exists(label_path):
-            # Try checking if Label Studio messed with the filename (common issue)
-            # If your labels have different names, we might need the "fuzzy matcher" again.
-            # For now, assuming standard export structure.
             continue
 
         # Read Image
@@ -92,7 +91,6 @@ def generate_reid_dataset():
                 continue
 
             # Save Crop
-            # Naming convention: originalName_cropIndex.jpg
             save_name = f"{os.path.splitext(img_filename)[0]}_crop{i}.jpg"
             save_path = os.path.join(OUTPUT_DIR, save_name)
 
@@ -104,5 +102,88 @@ def generate_reid_dataset():
     print(f"Saved to: {OUTPUT_DIR}")
 
 
+def crop_from_csv(csv_path, output_dir):
+    """
+    Crop images from a predictions CSV based on xmin, ymin, xmax, ymax.
+    """
+    print(f"Reading predictions from: {csv_path}")
+    df = pd.read_csv(csv_path)
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    print(f"Found {len(df)} predictions. Starting cropping...")
+    
+    crops_created = 0
+    
+    # We will track crop indices per image name to name crops uniquely (e.g., originalName_crop0.jpg)
+    image_crop_counts = {}
+    
+    for _, row in tqdm(df.iterrows(), total=len(df)):
+        img_path = row['image_path']
+        img_name = row['image_name']
+        
+        # Check if image path exists
+        if not os.path.exists(img_path):
+            print(f"\nWarning: Image path not found: {img_path}. Skipping.")
+            continue
+            
+        # Get coordinates (convert to int)
+        xmin = int(round(float(row['xmin'])))
+        ymin = int(round(float(row['ymin'])))
+        xmax = int(round(float(row['xmax'])))
+        ymax = int(round(float(row['ymax'])))
+        
+        # Read Image
+        img = cv2.imread(img_path)
+        if img is None:
+            print(f"\nWarning: Failed to read image: {img_path}. Skipping.")
+            continue
+            
+        img_h, img_w = img.shape[:2]
+        
+        # Clamp coordinates to image boundaries
+        x1 = max(0, min(img_w, xmin))
+        y1 = max(0, min(img_h, ymin))
+        x2 = max(0, min(img_w, xmax))
+        y2 = max(0, min(img_h, ymax))
+        
+        # Crop
+        crop = img[y1:y2, x1:x2]
+        
+        if crop.size == 0:
+            continue
+            
+        # Track crop index
+        crop_idx = image_crop_counts.get(img_name, 0)
+        image_crop_counts[img_name] = crop_idx + 1
+        
+        # Save Crop
+        base_name = os.path.splitext(img_name)[0]
+        save_name = f"{base_name}_crop{crop_idx}.jpg"
+        save_path = os.path.join(output_dir, save_name)
+        
+        cv2.imwrite(save_path, crop)
+        crops_created += 1
+        
+    print("\nProcessing Complete!")
+    print(f"Total Toads Cropped: {crops_created}")
+    print(f"Saved to: {output_dir}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Crop images from a dataset based on YOLO labels or CSV predictions.")
+    parser.add_argument("--csv", type=str, help="Path to predictions CSV file to crop from.")
+    parser.add_argument("--output-dir", type=str, help="Path to output directory for crops when using CSV mode.")
+    
+    args = parser.parse_args()
+    
+    if args.csv:
+        if not args.output_dir:
+            parser.error("--output-dir is required when using --csv mode.")
+        crop_from_csv(args.csv, args.output_dir)
+    else:
+        generate_reid_dataset()
+
+
 if __name__ == "__main__":
-    generate_reid_dataset()
+    main()

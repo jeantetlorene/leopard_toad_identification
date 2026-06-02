@@ -29,7 +29,5 @@ detection/results/detect_rtdetr/*
 
 detection/active learning/data/*
 detection/evaluation/data/*
-identification/toads_by_id_crop/*
-identification/toads_by_id/*
-identification/all_leopard_toad_chips/*
+identification/data/*
 dataset/shared_leopard_toad_clahe/*
