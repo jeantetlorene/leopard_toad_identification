@@ -37,29 +37,38 @@ class FasterRCNNWrapper(BaseModel):
 
     def predict_batch(self, images, **kwargs):
         sub_batch_size = kwargs.get("sub_batch_size", 8)
-        # Convert BGR images to RGB tensors
-        inputs = []
-        for img in images:
-            img_rgb = img[:, :, ::-1]  # BGR to RGB
-            img_norm = img_rgb.astype(np.float32) / 255.0
-            img_tensor = torch.from_numpy(img_norm).permute(2, 0, 1)  # C, H, W
-            inputs.append(img_tensor.to(self.device))
+        # Cap sub_batch_size to a safe value for Faster R-CNN to prevent OOM
+        sub_batch_size = min(sub_batch_size, 32)
 
         batch_preds = []
+        device_type = "cuda" if "cuda" in str(self.device) else "cpu"
+        autocast_enabled = "cuda" in str(self.device)
 
         # Split into sub-batches to avoid OOM
-        for i in range(0, len(inputs), sub_batch_size):
-            sub_inputs = inputs[i : i + sub_batch_size]
-            with torch.no_grad():
-                outputs = self.model(sub_inputs)
+        for i in range(0, len(images), sub_batch_size):
+            sub_images = images[i : i + sub_batch_size]
+            sub_inputs = []
+            for img in sub_images:
+                # uint8 zero-copy tensor conversion on CPU
+                img_tensor = torch.from_numpy(img)
+                # Move uint8 tensor to GPU (4x less host-to-device bandwidth)
+                img_gpu = img_tensor.to(self.device, non_blocking=True)
+                # Float conversion, scaling, permute HWC -> CHW, BGR -> RGB flip on GPU
+                img_gpu = img_gpu.float() / 255.0
+                img_gpu = img_gpu.permute(2, 0, 1).flip(0).contiguous()
+                sub_inputs.append(img_gpu)
 
-            for out in outputs:
+            with torch.no_grad():
+                with torch.amp.autocast(device_type=device_type, enabled=autocast_enabled):
+                    outputs = self.model(sub_inputs)
+
+            for k, out in enumerate(outputs):
                 preds = []
                 boxes = out["boxes"].cpu().numpy()
                 scores = out["scores"].cpu().numpy()
                 labels = out["labels"].cpu().numpy()
 
-                img_h, img_w = images[0].shape[:2]
+                img_h, img_w = sub_images[k].shape[:2]
 
                 for j in range(len(scores)):
                     x1, y1, x2, y2 = boxes[j]
@@ -84,6 +93,10 @@ class FasterRCNNWrapper(BaseModel):
 
             # Free memory
             del sub_inputs
+            del outputs
+
+        # Clean cache once after the entire batch is processed
+        if "cuda" in str(self.device):
             torch.cuda.empty_cache()
 
         return batch_preds

@@ -14,6 +14,7 @@ from eval_utils.config import (
     DEFAULT_BATCH_SIZE,
     FASTER_RCNN_SUB_BATCH_SIZE,
     CLAHE_PREPROCESSED_DIR,
+    IMG_SIZE,
 )
 from eval_utils.data_utils import (
     apply_clahe,
@@ -25,12 +26,27 @@ from eval_utils.data_utils import (
 
 
 class ImageDataset(Dataset):
-    def __init__(self, paths, use_clahe=False):
+    def __init__(self, paths, use_clahe=False, target_size=IMG_SIZE):
         self.paths = paths
         self.use_clahe = use_clahe
+        self.target_size = target_size
 
     def __len__(self):
         return len(self.paths)
+
+    def _resize(self, im):
+        if im is None:
+            return None
+        h, w = im.shape[:2]
+        if max(h, w) <= self.target_size:
+            return im
+        if w > h:
+            new_w = self.target_size
+            new_h = int(h * self.target_size / w)
+        else:
+            new_h = self.target_size
+            new_w = int(w * self.target_size / h)
+        return cv2.resize(im, (new_w, new_h))
 
     def __getitem__(self, idx):
         path = self.paths[idx]
@@ -44,24 +60,24 @@ class ImageDataset(Dataset):
             if os.path.exists(clahe_path):
                 im = cv2.imread(clahe_path)
                 if im is not None:
-                    return im, path
+                    return self._resize(im), path
 
             # Fallback to original path and apply CLAHE on the fly
             im = cv2.imread(path)
             if im is None:
                 return None, path
             im = apply_clahe(im)
-            return im, path
+            return self._resize(im), path
         else:
             im = cv2.imread(path)
             if im is None:
                 return None, path
-            return im, path
+            return self._resize(im), path
 
 
 def custom_collate(batch):
-    imgs = [item[0] for item in batch if item[0] is not None]
-    paths = [item[1] for item in batch if item[0] is not None]
+    imgs = [item[0] for item in batch]
+    paths = [item[1] for item in batch]
     return imgs, paths
 
 
@@ -133,15 +149,41 @@ def generate_predictions(
         persistent_workers=True if num_workers > 0 else False,
     )
 
-    for i, (imgs, valid_paths) in enumerate(tqdm(dataloader)):
-        if not imgs:
+    for i, (imgs, paths) in enumerate(tqdm(dataloader)):
+        # Filter out None images (which failed to load)
+        valid_indices = [idx for idx, img in enumerate(imgs) if img is not None]
+        
+        if not valid_indices:
+            # If no images in the batch loaded successfully, save empty predictions for all
+            for path in paths:
+                is_positive, gt_boxes, _ = get_clean_ground_truth(path)
+                results.append(
+                    {
+                        "path": path,
+                        "is_positive": is_positive,
+                        "gt_boxes": gt_boxes,
+                        "predictions": [],
+                    }
+                )
             continue
 
+        valid_imgs = [imgs[idx] for idx in valid_indices]
+        valid_paths = [paths[idx] for idx in valid_indices]
+
         batch_preds = model_wrapper.predict_batch(
-            imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
+            valid_imgs, sub_batch_size=FASTER_RCNN_SUB_BATCH_SIZE
         )
 
-        for path, preds in zip(valid_paths, batch_preds):
+        # Map predictions to valid paths
+        pred_map = dict(zip(valid_paths, batch_preds))
+
+        for path, img in zip(paths, imgs):
+            if img is not None:
+                preds = pred_map[path]
+            else:
+                print(f"Warning: Image at {path} could not be read. Saving empty predictions.")
+                preds = []
+
             is_positive, gt_boxes, _ = get_clean_ground_truth(path)
             results.append(
                 {
