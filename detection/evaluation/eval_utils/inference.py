@@ -152,7 +152,7 @@ def generate_predictions(
     for i, (imgs, paths) in enumerate(tqdm(dataloader)):
         # Filter out None images (which failed to load)
         valid_indices = [idx for idx, img in enumerate(imgs) if img is not None]
-        
+
         if not valid_indices:
             # If no images in the batch loaded successfully, save empty predictions for all
             for path in paths:
@@ -181,7 +181,9 @@ def generate_predictions(
             if img is not None:
                 preds = pred_map[path]
             else:
-                print(f"Warning: Image at {path} could not be read. Saving empty predictions.")
+                print(
+                    f"Warning: Image at {path} could not be read. Saving empty predictions."
+                )
                 preds = []
 
             is_positive, gt_boxes, _ = get_clean_ground_truth(path)

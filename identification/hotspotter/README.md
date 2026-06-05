@@ -57,13 +57,13 @@ identification/hotspotter/
 ├── __init__.py                # Package entry point
 ├── config.py                  # Centralized system configurations & parameters
 ├── matcher.py                 # Core SIFT, FLANN, and RANSAC matcher class
-├── run_cross_tunnel_hotspotter.py # Main CLI script to perform cross-tunnel same-year matching
+├── run_cross_tunnel_hotspotter.py # Main CLI script to perform cross-tunnel same-year matching with configurable preprocessing
 └── batch_hotspotter.py        # Legacy utility for NxN combinations matching
 ```
 
 * **`config.py`**: Centralizes paths, SIFT edge thresholds, bilateral filters, unsharp masking constants, and FLANN/RANSAC configurations.
-* **`matcher.py`**: Contains the `BatchHotSpotter` class, responsible for `get_features(image_path)` (applying the full preprocessing chain) and `match_features(kp1, des1, kp2, des2)` (performing FLANN matching, Lowe's ratio test, and homography evaluation).
-* **`run_cross_tunnel_hotspotter.py`**: Classifies crop cameras into `Z` or `R` categories, parses matching year blocks, runs cross-tunnel matching, and saves high-confidence pairs to `cross_tunnel_matches.csv`.
+* **`matcher.py`**: Contains the `BatchHotSpotter` class, responsible for `get_features(image_path)` (applying the selected preprocessing mode) and `match_features()`.
+* **`run_cross_tunnel_hotspotter.py`**: Classifies crop cameras into `Z` or `R` categories, parses matching year blocks, runs cross-tunnel matching using a configurable preprocessing mode, and saves results dynamically.
 
 ---
 
@@ -76,25 +76,31 @@ python dataset/crop_images.py --csv detection/results/detect_rtdetr_cycle2_clahe
 ```
 
 ### 2. Running Cross-Tunnel Re-Identification
-To run the re-identification matching engine over all crop cohorts:
+To run the re-identification matching engine over all crop cohorts, you can select which preprocessing mode to use:
+* `none`: Basic resizing and conversion to grayscale.
+* `original`: Standard contrast enhancement (CLAHE) + bilateral filtering + unsharp masking.
+* `improved`: Global standard scaling + contrast enhancement (CLAHE) + NLMeans denoising + noise-adaptive unsharp masking.
+
 ```bash
 # Navigate to the hotspotter folder
 cd identification/hotspotter
 
-# Run the cross-tunnel matching pipeline
-python run_cross_tunnel_hotspotter.py
+# Run with desired preprocessing mode (default: original)
+python run_cross_tunnel_hotspotter.py --prep-mode improved
 ```
 
-Results containing matched Z/R crop pairs, confidence scores, and original image paths will be saved directly to [cross_tunnel_matches.csv](file:///home/Joshua/Downloads/leopard_toad_identification/identification/cross_tunnel_matches.csv).
+Results containing matched Z/R crop pairs, confidence scores, and original image paths will be saved directly to:
+[cross_tunnel_matches_filtered_\<prep_mode\>.csv](file:///home/Joshua/Downloads/leopard_toad_identification/identification/cross_tunnel_matches_filtered_improved.csv) (e.g. `cross_tunnel_matches_filtered_improved.csv`).
 
 ### 3. Generating Premium Visualizations (PDF Report)
-To compile a high-quality PDF report showing visual matches with green inlier keypoint connection vectors against a sleek, presentation-ready dark layout:
+To compile a high-quality PDF report showing visual matches with green inlier keypoint connection vectors:
 ```bash
-# From the hotspotter folder
-python visualize_matches.py
+# Compile report for specified number of matches and preprocessing mode (default: 3, original)
+python visualize_matches.py -n 70 --prep-mode improved
 ```
 
-The resulting multi-page PDF document will be compiled and saved directly as `identification/top_3_cross_tunnel_matches.pdf`.
+The resulting multi-page PDF document will be compiled and saved dynamically to:
+`identification/top_<num_matches>_cross_tunnel_matches_<prep_mode>.pdf` (e.g. `top_70_cross_tunnel_matches_improved.pdf`).
 
 ---
 

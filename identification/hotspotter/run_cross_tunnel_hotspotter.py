@@ -7,6 +7,7 @@ import re
 import csv
 import pandas as pd
 from tqdm import tqdm
+import argparse
 
 from matcher import BatchHotSpotter
 import config
@@ -49,7 +50,23 @@ def extract_year(path):
 
 
 def main():
-    print("Loading predictions and building trackable name mappings...")
+    parser = argparse.ArgumentParser(
+        description="Run cross-tunnel toad re-identification matching."
+    )
+    parser.add_argument(
+        "-p",
+        "--prep-mode",
+        type=str,
+        choices=["none", "original", "improved"],
+        default="original",
+        help="Preprocessing pipeline to use (default: 'original')",
+    )
+    args = parser.parse_args()
+    prep_mode = args.prep_mode
+
+    print(
+        f"Loading predictions and building trackable name mappings... [Prep Mode: {prep_mode}]"
+    )
     df_wlt = pd.read_csv(config.PREDICTIONS_CSV)
     trackable_to_path = {}
     for _, row in df_wlt.iterrows():
@@ -110,7 +127,7 @@ def main():
         )
 
     # Initialize Hotspotter matcher
-    hotspotter = BatchHotSpotter()
+    hotspotter = BatchHotSpotter(prep_mode=prep_mode)
 
     # Extract SIFT features grouped by year
     print("\nExtracting SIFT features for Z crops...")
@@ -174,8 +191,10 @@ def main():
     )
 
     # Save results to a CSV file
-    print(f"Saving matches to: {config.CROSS_TUNNEL_MATCHES_CSV}")
-    with open(config.CROSS_TUNNEL_MATCHES_CSV, "w", newline="") as f:
+    base, ext = os.path.splitext(config.CROSS_TUNNEL_MATCHES_CSV)
+    csv_path = f"{base}_{prep_mode}{ext}"
+    print(f"Saving matches to: {csv_path}")
+    with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=[

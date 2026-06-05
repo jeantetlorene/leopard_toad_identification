@@ -12,7 +12,8 @@ class BatchHotSpotter:
     SIFT and RANSAC-based keypoint matcher for re-identifying individuals.
     """
 
-    def __init__(self):
+    def __init__(self, prep_mode="original"):
+        self.prep_mode = prep_mode
         # 1. Initialize SIFT Detector
         # self.sift = cv2.SIFT_create()
 
@@ -44,22 +45,15 @@ class BatchHotSpotter:
             img, pad, w - h - pad, 0, 0, cv2.BORDER_CONSTANT, value=0
         )
 
-    def get_features(self, image_path):
+    def preprocess_image_by_mode(self, image, prep_mode=None):
         """
-        Loads an image, applies a robust computer vision preprocessing pipeline,
-        and extracts SIFT keypoints and descriptors from the enhanced image.
-
-        The Preprocessing Pipeline consists of:
-        1. Aspect-Ratio-Preserving Padding to Square
-        2. Grayscale Conversion
-        3. Bicubic Upscaling to TARGET_SIZE (e.g. 500x500)
-        4. CLAHE Contrast Enhancement
-        5. Bilateral Filtering (removes grain noise, preserves edges)
-        6. Unsharp Masking (sharpens transition borders)
+        Applies image preprocessing based on the selected mode:
+        - 'none': only pads to square, converts to grayscale, and resizes to target size.
+        - 'original': original pipeline (pad, grayscale, resize, CLAHE, bilateral, unsharp mask).
+        - 'improved': proposed pipeline (pad, grayscale, Z-score scaling, resize, CLAHE, NLMeans, adaptive unsharp mask).
         """
-        image = cv2.imread(image_path)
-        if image is None:
-            return None, None
+        if prep_mode is None:
+            prep_mode = self.prep_mode
 
         # 1. Aspect-Ratio-Preserving Padding
         padded = self.pad_to_square(image)
@@ -69,6 +63,22 @@ class BatchHotSpotter:
             gray = cv2.cvtColor(padded, cv2.COLOR_BGR2GRAY)
         else:
             gray = padded
+
+        # For 'none' mode, we do no image enhancement, just resize to standard target size
+        if prep_mode == "none":
+            resized = cv2.resize(
+                gray,
+                (config.TARGET_SIZE, config.TARGET_SIZE),
+                interpolation=cv2.INTER_CUBIC,
+            )
+            return resized
+
+        if prep_mode == "improved":
+            # Global standard normalization before resizing/CLAHE
+            gray_norm = (gray - gray.mean()) / (gray.std() + 1e-5)
+            gray = cv2.normalize(gray_norm, None, 0, 255, cv2.NORM_MINMAX).astype(
+                np.uint8
+            )
 
         # 3. Bicubic Upscaling to standard square dimensions
         resized = cv2.resize(
@@ -84,27 +94,67 @@ class BatchHotSpotter:
         )
         equalized = clahe.apply(resized)
 
-        # 5. Bilateral Filtering to remove grain noise while preserving sharp boundaries
-        filtered = cv2.bilateralFilter(
-            equalized,
-            d=config.BILATERAL_D,
-            sigmaColor=config.BILATERAL_SIGMA_COLOR,
-            sigmaSpace=config.BILATERAL_SIGMA_SPACE,
-        )
+        # 5. Denoising/Filtering
+        if prep_mode == "original":
+            filtered = cv2.bilateralFilter(
+                equalized,
+                d=config.BILATERAL_D,
+                sigmaColor=config.BILATERAL_SIGMA_COLOR,
+                sigmaSpace=config.BILATERAL_SIGMA_SPACE,
+            )
+        else:  # 'improved'
+            filtered = cv2.fastNlMeansDenoising(
+                equalized,
+                None,
+                h=8,
+                templateWindowSize=7,
+                searchWindowSize=21,
+            )
 
-        # 6. Unsharp Masking (high-frequency detail amplification)
-        blurred = cv2.GaussianBlur(
-            filtered,
-            config.SHARPEN_KERNEL,
-            config.SHARPEN_SIGMA,
-        )
-        preprocessed = cv2.addWeighted(
-            filtered,
-            config.SHARPEN_WEIGHT1,
-            blurred,
-            config.SHARPEN_WEIGHT2,
-            0,
-        )
+        # 6. Unsharp Masking
+        if prep_mode == "original":
+            blurred = cv2.GaussianBlur(
+                filtered,
+                config.SHARPEN_KERNEL,
+                config.SHARPEN_SIGMA,
+            )
+            preprocessed = cv2.addWeighted(
+                filtered,
+                config.SHARPEN_WEIGHT1,
+                blurred,
+                config.SHARPEN_WEIGHT2,
+                0,
+            )
+        else:  # 'improved'
+            noise_var = cv2.Laplacian(filtered, cv2.CV_64F).var()
+            if noise_var < 500:
+                blurred = cv2.GaussianBlur(
+                    filtered,
+                    config.SHARPEN_KERNEL,
+                    config.SHARPEN_SIGMA,
+                )
+                preprocessed = cv2.addWeighted(
+                    filtered,
+                    config.SHARPEN_WEIGHT1,
+                    blurred,
+                    config.SHARPEN_WEIGHT2,
+                    0,
+                )
+            else:
+                preprocessed = filtered
+
+        return preprocessed
+
+    def get_features(self, image_path, prep_mode=None):
+        """
+        Loads an image, applies a robust computer vision preprocessing pipeline,
+        and extracts SIFT keypoints and descriptors from the enhanced image.
+        """
+        image = cv2.imread(image_path)
+        if image is None:
+            return None, None
+
+        preprocessed = self.preprocess_image_by_mode(image, prep_mode)
 
         # Detect and Compute SIFT Keypoints & Descriptors
         keypoints, descriptors = self.sift.detectAndCompute(preprocessed, None)

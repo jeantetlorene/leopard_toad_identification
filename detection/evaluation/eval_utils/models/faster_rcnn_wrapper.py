@@ -59,7 +59,9 @@ class FasterRCNNWrapper(BaseModel):
                 sub_inputs.append(img_gpu)
 
             with torch.no_grad():
-                with torch.amp.autocast(device_type=device_type, enabled=autocast_enabled):
+                with torch.amp.autocast(
+                    device_type=device_type, enabled=autocast_enabled
+                ):
                     outputs = self.model(sub_inputs)
 
             for k, out in enumerate(outputs):

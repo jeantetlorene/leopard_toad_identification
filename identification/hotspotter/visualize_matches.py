@@ -8,6 +8,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import sys
+import argparse
+import re
 
 # Ensure hotspotter folder is in the system path for configuration imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -15,28 +17,92 @@ import config
 from matcher import BatchHotSpotter
 
 
+def extract_camera(path_or_filename):
+    match = re.search(r"\b\d+[ZR]\b", path_or_filename, re.IGNORECASE)
+    if match:
+        return match.group(0).upper()
+    match = re.search(r"\d+[ZR]", path_or_filename, re.IGNORECASE)
+    if match:
+        return match.group(0).upper()
+    return "Unknown"
+
+
+def extract_year(path_or_filename):
+    # Try matching at the start of filename (e.g. 2024__18...)
+    match = re.search(r"^(2023|2024|2025|2026)", path_or_filename)
+    if match:
+        return match.group(0)
+    # Try matching directory separator (e.g. /2024/ or \2024\)
+    match = re.search(r"[/\\](2023|2024|2025|2026)[/\\]", path_or_filename)
+    if match:
+        return match.group(1)
+    # Fallback to general search anywhere
+    match = re.search(r"(2023|2024|2025|2026)", path_or_filename)
+    if match:
+        return match.group(0)
+    return "Unknown"
+
+
 def main():
+    parser = argparse.ArgumentParser(
+        description="Visualize cross-tunnel toad matches and export reports to a PDF."
+    )
+    parser.add_argument(
+        "-n",
+        "--num-matches",
+        type=int,
+        default=None,
+        help="Number of top matches to visualize (default: all matches found)",
+    )
+    parser.add_argument(
+        "-p",
+        "--prep-mode",
+        type=str,
+        choices=["none", "original", "improved"],
+        default="original",
+        help="Preprocessing pipeline to use (default: 'original')",
+    )
+    args = parser.parse_args()
+
+    num_matches = args.num_matches
+    prep_mode = args.prep_mode
+
     # 1. Load matches from the generated CSV
-    if not os.path.exists(config.CROSS_TUNNEL_MATCHES_CSV):
+    base, ext = os.path.splitext(config.CROSS_TUNNEL_MATCHES_CSV)
+    csv_path = f"{base}_{prep_mode}{ext}"
+    if not os.path.exists(csv_path):
         print(
-            f"Error: {config.CROSS_TUNNEL_MATCHES_CSV} not found.\n"
-            f"Please run 'python run_cross_tunnel_hotspotter.py' first to generate matches."
+            f"Error: {csv_path} not found.\n"
+            f"Please run 'python run_cross_tunnel_hotspotter.py --prep-mode {prep_mode}' first to generate matches."
         )
         return
 
-    df = pd.read_csv(config.CROSS_TUNNEL_MATCHES_CSV)
+    df = pd.read_csv(csv_path)
     if len(df) == 0:
         print("No matches found in the CSV to visualize.")
         return
 
-    # Take the top 3 matches based on RANSAC inlier scores
-    top_matches = df.head(3)
+    if num_matches is None:
+        num_to_visualize = len(df)
+    else:
+        if num_matches <= 0:
+            print("Error: The number of matches to visualize must be at least 1.")
+            return
+        num_to_visualize = min(num_matches, len(df))
+
+    # Take the top matches based on RANSAC inlier scores
+    top_matches = df.head(num_to_visualize)
 
     # Initialize the re-identification matcher
-    hotspotter = BatchHotSpotter()
-    pdf_path = os.path.join(config.IDENTIFICATION_DIR, "top_3_cross_tunnel_matches.pdf")
+    hotspotter = BatchHotSpotter(prep_mode=prep_mode)
+    pdf_path = os.path.join(
+        config.IDENTIFICATION_DIR,
+        f"top_{num_to_visualize}_cross_tunnel_matches_{prep_mode}.pdf",
+    )
 
-    print(f"Generating report containing top 3 toad matches...")
+    print(
+        f"Generating report containing top {num_to_visualize} toad matches [Prep Mode: {prep_mode}]..."
+    )
 
     # Create multi-page PDF using PdfPages backend
     with PdfPages(pdf_path) as pdf:
@@ -70,75 +136,9 @@ def main():
             kp2, des2 = hotspotter.get_features(path_r)
             _, inliers = hotspotter.match_features(kp1, des1, kp2, des2)
 
-            # Manually reconstruct the preprocessed visual stages for side-by-side mapping
-            padded_z = hotspotter.pad_to_square(img_z)
-            gray_z = (
-                cv2.cvtColor(padded_z, cv2.COLOR_BGR2GRAY)
-                if len(padded_z.shape) == 3
-                else padded_z
-            )
-            resized_z = cv2.resize(
-                gray_z,
-                (config.TARGET_SIZE, config.TARGET_SIZE),
-                interpolation=cv2.INTER_CUBIC,
-            )
-
-            padded_r = hotspotter.pad_to_square(img_r)
-            gray_r = (
-                cv2.cvtColor(padded_r, cv2.COLOR_BGR2GRAY)
-                if len(padded_r.shape) == 3
-                else padded_r
-            )
-            resized_r = cv2.resize(
-                gray_r,
-                (config.TARGET_SIZE, config.TARGET_SIZE),
-                interpolation=cv2.INTER_CUBIC,
-            )
-
-            # CLAHE contrast enhancement
-            clahe = cv2.createCLAHE(
-                clipLimit=config.CLAHE_CLIP_LIMIT,
-                tileGridSize=config.CLAHE_TILE_GRID_SIZE,
-            )
-            eq_z = clahe.apply(resized_z)
-            eq_r = clahe.apply(resized_r)
-
-            # Bilateral filter denoising
-            filt_z = cv2.bilateralFilter(
-                eq_z,
-                d=config.BILATERAL_D,
-                sigmaColor=config.BILATERAL_SIGMA_COLOR,
-                sigmaSpace=config.BILATERAL_SIGMA_SPACE,
-            )
-            filt_r = cv2.bilateralFilter(
-                eq_r,
-                d=config.BILATERAL_D,
-                sigmaColor=config.BILATERAL_SIGMA_COLOR,
-                sigmaSpace=config.BILATERAL_SIGMA_SPACE,
-            )
-
-            # Unsharp masking detail amplification
-            blur_z = cv2.GaussianBlur(
-                filt_z, config.SHARPEN_KERNEL, config.SHARPEN_SIGMA
-            )
-            prep_z = cv2.addWeighted(
-                filt_z,
-                config.SHARPEN_WEIGHT1,
-                blur_z,
-                config.SHARPEN_WEIGHT2,
-                0,
-            )
-
-            blur_r = cv2.GaussianBlur(
-                filt_r, config.SHARPEN_KERNEL, config.SHARPEN_SIGMA
-            )
-            prep_r = cv2.addWeighted(
-                filt_r,
-                config.SHARPEN_WEIGHT1,
-                blur_r,
-                config.SHARPEN_WEIGHT2,
-                0,
-            )
+            # Preprocess the visual stages for side-by-side mapping
+            prep_z = hotspotter.preprocess_image_by_mode(img_z)
+            prep_r = hotspotter.preprocess_image_by_mode(img_r)
 
             # Convert preprocessed outputs to color spaces to permit vivid matching lines
             color_prep_z = cv2.cvtColor(prep_z, cv2.COLOR_GRAY2BGR)
@@ -166,22 +166,67 @@ def main():
             ax.imshow(cv2.cvtColor(match_img, cv2.COLOR_BGR2RGB))
             ax.axis("off")
 
-            # # Clean styled header labels for white background
-            # title_text = (
-            #     f"Leopard Toad Cross-Tunnel Match #{idx + 1}\n"
-            #     f"Cohort Year: {year}  |  RANSAC Verification Inliers: {score}"
-            # )
-            # fig.suptitle(
-            #     title_text,
-            #     color="black",
-            #     fontsize=18,
-            #     fontweight="bold",
-            #     y=0.95,
-            #     family="sans-serif",
-            # )
+            # Parse crop details
+            camera_z = extract_camera(crop_z_name)
+            camera_r = extract_camera(crop_r_name)
+
+            year_z = extract_year(crop_z_name)
+            year_r = extract_year(crop_r_name)
+
+            id_z = os.path.splitext(crop_z_name)[0]
+            id_r = os.path.splitext(crop_r_name)[0]
+
+            full_path_z = row["original_path_Z"]
+            full_path_r = row["original_path_R"]
+
+            text_z = (
+                f"ID: {id_z}\n"
+                f"Camera: {camera_z}  |  Year: {year_z}\n"
+                f"File: {full_path_z}"
+            )
+            text_r = (
+                f"ID: {id_r}\n"
+                f"Camera: {camera_r}  |  Year: {year_r}\n"
+                f"File: {full_path_r}"
+            )
+
+            # Add text under left image (axes coordinates)
+            ax.text(
+                0.02,
+                -0.08,
+                text_z,
+                transform=ax.transAxes,
+                fontsize=9,
+                fontfamily="monospace",
+                verticalalignment="top",
+                color="black",
+            )
+
+            # Add text under right image (axes coordinates)
+            ax.text(
+                0.52,
+                -0.08,
+                text_r,
+                transform=ax.transAxes,
+                fontsize=9,
+                fontfamily="monospace",
+                verticalalignment="top",
+                color="black",
+            )
+
+            # Clean styled header labels for white background
+            title_text = f"Leopard Toad Cross-Tunnel Match #{idx + 1} (SIFT Inliers Score: {score})"
+            fig.suptitle(
+                title_text,
+                color="black",
+                fontsize=16,
+                fontweight="bold",
+                y=0.96,
+                family="sans-serif",
+            )
 
             # Adjust spacing and save to PDF page
-            plt.subplots_adjust(top=0.88, bottom=0.06, left=0.04, right=0.96)
+            plt.subplots_adjust(top=0.90, bottom=0.20, left=0.04, right=0.96)
             pdf.savefig(fig, facecolor=fig.get_facecolor(), edgecolor="none", dpi=300)
             plt.close(fig)
 
