@@ -19,6 +19,8 @@ from eval_utils.config import (
     CLASSES,
     DEFAULT_BATCH_SIZE,
     CLAHE_PREPROCESSED_DIR,
+    DATA_DIR,
+    FILES_DIR,
 )
 from eval_utils.data_utils import apply_clahe
 from eval_utils.metrics import calculate_detection_metrics, calculate_map50_95
@@ -26,10 +28,7 @@ from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from ultralytics import YOLO, RTDETR
 from eval_utils.inference import generate_predictions
 
-DATA_DIR = (
-    "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/data"
-)
-RESULTS_DIR_FILES = "/home/Joshua/Downloads/leopard_toad_identification/detection/evaluation/results/files"
+RESULTS_DIR_FILES = FILES_DIR
 
 
 def prepare_clahe_set(split, overwrite=False):

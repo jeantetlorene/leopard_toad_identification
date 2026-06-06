@@ -46,8 +46,15 @@ The evaluation pipeline is highly optimized to **decouple heavy inference from m
 - **[`plot_binary_roc_baseline.py`](reporting/plot_binary_roc_baseline.py)**: Specialized script to plot bounded (0 to 1) ROC curves for the baseline architectures (YOLO, Faster R-CNN, RT-DETR) directly from raw predictions.
 - **[`plot_wlt_image_level_trajectory.py`](reporting/plot_wlt_image_level_trajectory.py)**: Specialized trajectory plotting script for active learning WLT binary image-level metrics (ROC-AUC, Optimal F1-score, False Positives).
 - **[`run_all_evaluations.py`](pipelines/run_all_evaluations.py)**: Master orchestration script for bulk evaluation. Adds support for `--datasets` filtering.
+- **[`filter_all_predictions.py`](pipelines/filter_all_predictions.py)**: Helper utility to pre-generate filtered prediction cache files (`_filtered.json`) for all models to speed up reporting.
 
 ### Usage
+
+**0. Pre-generate Filtered Cache Files (Recommended):**
+This pre-filters raw prediction JSON files using the spatial bounding box filter and saves them as cached `_filtered.json` files, preventing redundant filtering computation during subsequent evaluations, plotting, and reporting.
+```bash
+python3 pipelines/filter_all_predictions.py
+```
 
 **1. Run Bulk Evaluation (Detection-Level & Subsets):**
 This executes evaluation on both `test` and `val` datasets for all available model iterations dynamically discovered from the runs directory. 
@@ -112,16 +119,16 @@ python3 reporting/plot_binary_roc_baseline.py
 **6b. Evaluate WLT-Specific Image-Level Filtering:**
 Calculate threshold sweep metrics focusing strictly on the Western Leopard Toad (WLT) class, generate the detailed multi-cycle report, plot cycle-specific ROC curves, and visualize trajectory trends:
 ```bash
-# Optional: Run predictions only on the test split (camera 5Z) to save time
+# Optional: Run predictions only on the test split
 python3 pipelines/run_all_evaluations.py --full_sequence --datasets test --batch_size 256
 
-# Compute WLT-focused sweeps and generate PNG/PDF ROC curves
+# Compute WLT-focused sweeps and generate ROC curves
 python3 pipelines/binary_eval_test_pool_wlt.py
 
 # Compile the final comprehensive results markdown report
 python3 reporting/generate_wlt_image_level_report.py
 
-# Plot active learning image-level performance trajectory curves (PNG & PDF)
+# Plot active learning image-level performance trajectory curves
 python3 reporting/plot_wlt_image_level_trajectory.py
 ```
 

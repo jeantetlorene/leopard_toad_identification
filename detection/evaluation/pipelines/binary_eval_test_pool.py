@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CONF_THRESHOLDS
 from eval_utils.metrics import calculate_image_level_metrics
+from eval_utils.data_utils import load_predictions_from_json
 
 
 def main():
@@ -49,33 +50,12 @@ def main():
             print(
                 f"Processing {model_type} ({processing}) | Variant: {variant} | Cycle: {cycle}"
             )
-            with open(os.path.join(folder_path, filename), "r") as f:
-                results = json.load(f)
+            filepath = os.path.join(folder_path, filename)
+            results = load_predictions_from_json(filepath, is_full_seq=True)
 
-            # Refresh ground truth from clean data
-            from eval_utils.data_utils import get_clean_ground_truth
-
-            refreshed_results = []
-            for res in results:
-                is_positive, gt_boxes, split = get_clean_ground_truth(res["path"])
-                if split is not None:
-                    # Found in clean mapping, update GT
-                    res["is_positive"] = is_positive
-                    res["gt_boxes"] = gt_boxes
-                    refreshed_results.append(res)
-                else:
-                    # Not in clean mapping. In this script we are ALWAYS
-                    # evaluating the full sequence/pool.
-                    # Treat as negative (empty background)
-                    res["is_positive"] = False
-                    res["gt_boxes"] = []
-                    refreshed_results.append(res)
-
-            if not refreshed_results:
+            if not results:
                 print(f"Warning: No images from {filename} found. Skipping.")
                 continue
-
-            results = refreshed_results
 
             binary_gt = np.array([res["is_positive"] for res in results])
             binary_scores = np.array(

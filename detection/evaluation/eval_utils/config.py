@@ -35,6 +35,21 @@ FASTER_RCNN_SUB_BATCH_SIZE = 128
 MIN_CONF_THRESHOLD = 0.01
 CONF_THRESHOLDS = [round(x, 2) for x in torch.linspace(0.01, 0.95, 30).tolist()]
 
+# Bounding Box Spatial Filtering (Post-Processing) Settings
+POST_PROCESS_IOU_THRESHOLD = 0.8
+POST_PROCESS_OCCURRENCE_THRESHOLD = 30
+
+# Prediction Loading / Caching Settings
+USE_FILTERED_PREDICTIONS = True
+FILTERED_FILE_SUFFIX = "_filtered.json"
+
+# Common Models and Processing Pipeline Parameters
+MODELS = ["yolo", "faster_rcnn", "rtdetr"]
+PROCESSINGS = ["clahe", "plain"]
+VARIANTS = ["pretrained", "scratch"]
+CYCLES = [0, 1, 2, 3, 4]
+BUDGET_MAP = {0: 130, 1: 230, 2: 330, 3: 430, 4: 530}
+
 # Dataset Mappings
 MAPPING_PATH = os.path.join(DATA_DIR, "image_mapping.csv")
 

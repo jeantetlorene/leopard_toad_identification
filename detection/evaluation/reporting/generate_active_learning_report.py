@@ -7,20 +7,23 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from eval_utils.config import FILES_DIR, RESULTS_DIR, BASE_DIR
+from eval_utils.config import (
+    FILES_DIR,
+    RESULTS_DIR,
+    BASE_DIR,
+    MODELS,
+    PROCESSINGS,
+    VARIANTS,
+    CYCLES,
+    BUDGET_MAP,
+    CLASSES,
+)
 from eval_utils.metrics import calculate_map50_95, calculate_detection_metrics
-from eval_utils.data_utils import refresh_results
+from eval_utils.data_utils import load_predictions_from_json
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
 
-MODELS = ["yolo", "faster_rcnn", "rtdetr"]
-PROCESSINGS = ["clahe", "plain"]
-VARIANTS = ["pretrained", "scratch"]
-CYCLES = [0, 1, 2, 3, 4]
-
-BUDGET_MAP = {0: 130, 1: 230, 2: 330, 3: 430, 4: 530}
-
-CLASS_MAP = {0: "Other_Amphibian", 1: "Small_Mammal", 2: "Western_Leopard_Toad"}
+CLASS_MAP = CLASSES
 
 
 def count_training_instances(m_type, var, cycle):
@@ -98,10 +101,9 @@ def generate_report():
                         RESULTS_DIR, root_key, f"cycle_{cycle}_{var}_test_raw.json"
                     )
                     if os.path.exists(raw_json_path):
-                        with open(raw_json_path, "r") as f:
-                            raw_results = json.load(f)
-                        # Refresh ground truth from clean data
-                        raw_results = refresh_results(raw_results, is_full_seq=False)
+                        raw_results = load_predictions_from_json(
+                            raw_json_path, is_full_seq=False
+                        )
                         map50_95 = calculate_map50_95(raw_results)
                         det_metrics = calculate_detection_metrics(raw_results)
 

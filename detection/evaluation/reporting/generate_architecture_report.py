@@ -20,7 +20,7 @@ from eval_utils.config import (
 from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
 from eval_utils.metrics import box_iou, calculate_map50_95
-from eval_utils.data_utils import refresh_results
+from eval_utils.data_utils import load_predictions_from_json
 
 CYCLE = 0
 VARIANT = "scratch"
@@ -191,10 +191,7 @@ def generate_report():
         )
         map50_95 = "N/A"
         if os.path.exists(raw_json_path):
-            with open(raw_json_path, "r") as f:
-                raw_results = json.load(f)
-            # Refresh ground truth from clean data
-            raw_results = refresh_results(raw_results, is_full_seq=False)
+            raw_results = load_predictions_from_json(raw_json_path, is_full_seq=False)
 
             # Extract optimal thresholds for this specific model
             threshold_map = {}

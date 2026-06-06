@@ -10,7 +10,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import FILES_DIR, PLOTS_DIR, RESULTS_DIR
-from eval_utils.data_utils import refresh_results
+from eval_utils.data_utils import load_predictions_from_json
 from eval_utils.metrics import calculate_detection_metrics
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
@@ -134,11 +134,9 @@ def plot_confidence_distributions(df):
                     if not os.path.exists(raw_json_path):
                         continue
 
-                    with open(raw_json_path, "r") as f:
-                        results = json.load(f)
-
-                    # Refresh ground truth from clean data
-                    results = refresh_results(results, is_full_seq=False)
+                    results = load_predictions_from_json(
+                        raw_json_path, is_full_seq=False
+                    )
 
                     tp_scores = {c: [] for c in CLASS_MAP.values()}
                     fp_scores = {c: [] for c in CLASS_MAP.values()}
@@ -261,9 +259,9 @@ def plot_ap_ar_trajectories(df):
             )
 
             if os.path.exists(raw_json_path):
-                with open(raw_json_path, "r") as f:
-                    raw_results = json.load(f)
-                raw_results = refresh_results(raw_results, is_full_seq=False)
+                raw_results = load_predictions_from_json(
+                    raw_json_path, is_full_seq=False
+                )
                 det_metrics = calculate_detection_metrics(raw_results)
 
                 for cls_id, cls_name in CLASS_IDS.items():

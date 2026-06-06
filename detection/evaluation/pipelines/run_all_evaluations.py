@@ -252,6 +252,18 @@ def run_all(
                 existing_results=existing_results,
             )
 
+            # Immediately refresh, filter, and save cache to _filtered.json
+            from eval_utils.data_utils import refresh_results
+            from eval_utils.evaluation_suite import apply_spatial_filter
+            from eval_utils.config import FILTERED_FILE_SUFFIX
+
+            filtered_file = raw_file.replace("_raw.json", FILTERED_FILE_SUFFIX)
+            refreshed_results = refresh_results(raw_results, is_full_seq=full_sequence)
+            filtered_results = apply_spatial_filter(refreshed_results)
+            with open(filtered_file, "w") as f:
+                json.dump(filtered_results, f)
+            print(f"Saved filtered predictions cache to {filtered_file}")
+
     print("\n=========================================")
     print(">>> All predictions generated. Running Evaluation Suite...")
     print("=========================================")

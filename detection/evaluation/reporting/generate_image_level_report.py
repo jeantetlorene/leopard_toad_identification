@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CONF_THRESHOLDS
-from eval_utils.data_utils import refresh_results
+from eval_utils.data_utils import load_predictions_from_json
 
 
 def compute_sweep(results, thresholds, is_toad_specific=False, is_megadetector=False):
@@ -126,11 +126,10 @@ def generate_image_level_report():
             print(f"Warning: {raw_filepath} not found. Skipping.")
             continue
 
-        print(f"Loading and refreshing ground truth for {b['display_name']}...")
-        with open(raw_filepath, "r") as f:
-            raw_results = json.load(f)
-
-        loaded_datasets[b["model"]] = refresh_results(raw_results, is_full_seq=True)
+        print(f"Loading predictions for {b['display_name']}...")
+        loaded_datasets[b["model"]] = load_predictions_from_json(
+            raw_filepath, is_full_seq=True
+        )
 
     # Store report results
     tables_data = {"class_agnostic": [], "class_specific": []}

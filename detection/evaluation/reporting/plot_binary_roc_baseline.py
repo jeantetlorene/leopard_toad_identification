@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import RESULTS_DIR, PLOTS_DIR
-from eval_utils.data_utils import refresh_results
+from eval_utils.data_utils import load_predictions_from_json
 
 
 def main():
@@ -40,13 +40,10 @@ def main():
             print(f"File not found: {filepath}")
             continue
 
-        print(f"Loading predictions for {m_type}...")
-        with open(filepath, "r") as f:
-            results = json.load(f)
-
-        # Refresh ground truth from clean data
         is_full_seq = "full_seq" in DATASET
-        loaded_datasets[m_type] = refresh_results(results, is_full_seq=is_full_seq)
+        loaded_datasets[m_type] = load_predictions_from_json(
+            filepath, is_full_seq=is_full_seq
+        )
 
     # Map model_type to exact requested legend strings
     name_map = {

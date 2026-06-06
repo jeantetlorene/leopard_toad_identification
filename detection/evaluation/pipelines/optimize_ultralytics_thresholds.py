@@ -7,7 +7,7 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import FILES_DIR, RESULTS_DIR, CLASSES
-from eval_utils.data_utils import refresh_results
+from eval_utils.data_utils import load_predictions_from_json
 from eval_utils.metrics import calculate_detection_metrics
 
 UNIFIED_CSV = os.path.join(FILES_DIR, "active_learning_unified_evaluation.csv")
@@ -99,9 +99,7 @@ def main():
             continue
 
         # 1. Load validation predictions and run F1 sweep to find optimal threshold
-        with open(val_json_path, "r") as f:
-            val_results = json.load(f)
-        val_results = refresh_results(val_results, is_full_seq=False)
+        val_results = load_predictions_from_json(val_json_path, is_full_seq=False)
         det_metrics_val = calculate_detection_metrics(val_results)
 
         # Determine optimal validation threshold for each class
@@ -134,9 +132,9 @@ def main():
                     RESULTS_DIR, root_key, f"cycle_{cycle}_{var}_{split}_raw.json"
                 )
                 if os.path.exists(split_json_path):
-                    with open(split_json_path, "r") as f:
-                        split_results = json.load(f)
-                    split_results = refresh_results(split_results, is_full_seq=False)
+                    split_results = load_predictions_from_json(
+                        split_json_path, is_full_seq=False
+                    )
 
                     # Update columns for each class
                     for cls_id, cls_name in CLASSES.items():

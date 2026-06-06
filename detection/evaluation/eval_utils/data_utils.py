@@ -5,6 +5,7 @@ from tqdm import tqdm
 import concurrent.futures
 from functools import lru_cache
 from eval_utils.config import DATASETS, MAPPING_PATH
+from eval_utils.spatial_filter import apply_spatial_filter
 
 
 def apply_clahe(im):
@@ -159,3 +160,41 @@ def refresh_results(results, is_full_seq=False):
             res["gt_boxes"] = []
             refreshed.append(res)
     return refreshed
+
+
+def load_predictions_from_json(json_path, is_full_seq=False):
+    """
+    Loads predictions from a JSON file. If USE_FILTERED_PREDICTIONS is True
+    and the corresponding filtered file exists, loads the pre-filtered predictions.
+    Otherwise, loads the raw predictions, refreshes ground truth, and applies
+    spatial filtering on-the-fly.
+    """
+    import json
+    from eval_utils.config import USE_FILTERED_PREDICTIONS, FILTERED_FILE_SUFFIX
+
+    # Determine filtered json path
+    if json_path.endswith("_raw.json"):
+        filtered_path = json_path.replace("_raw.json", FILTERED_FILE_SUFFIX)
+    elif json_path.endswith(FILTERED_FILE_SUFFIX):
+        filtered_path = json_path
+    else:
+        base, ext = os.path.splitext(json_path)
+        filtered_path = f"{base}_filtered{ext}"
+
+    if USE_FILTERED_PREDICTIONS and os.path.exists(filtered_path):
+        with open(filtered_path, "r") as f:
+            return json.load(f)
+
+    # Fallback: load raw predictions, refresh GT, and apply spatial filter on the fly
+    raw_path = json_path
+    if not os.path.exists(raw_path) and json_path.endswith(FILTERED_FILE_SUFFIX):
+        raw_path = json_path.replace(FILTERED_FILE_SUFFIX, "_raw.json")
+
+    with open(raw_path, "r") as f:
+        results = json.load(f)
+
+    results = refresh_results(results, is_full_seq=is_full_seq)
+
+    results = apply_spatial_filter(results)
+
+    return results

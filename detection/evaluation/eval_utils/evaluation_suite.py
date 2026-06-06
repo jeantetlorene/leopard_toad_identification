@@ -13,12 +13,17 @@ from eval_utils.metrics import (
     calculate_detection_metrics,
     calculate_image_level_metrics,
 )
+from eval_utils.spatial_filter import apply_spatial_filter
 from eval_utils.config import (
     RESULTS_DIR,
     FILES_DIR,
     PLOTS_DIR,
     CLASSES,
     CONF_THRESHOLDS,
+    POST_PROCESS_IOU_THRESHOLD,
+    POST_PROCESS_OCCURRENCE_THRESHOLD,
+    USE_FILTERED_PREDICTIONS,
+    FILTERED_FILE_SUFFIX,
 )
 
 
@@ -93,8 +98,82 @@ def generate_roc_plots(plot_data):
             print(f"ROC plot saved to {plot_path}")
 
 
+def save_or_update_csv(new_data, file_path, keys, sort_cols):
+    if not new_data:
+        return
+
+    df_new = pd.DataFrame(new_data)
+
+    if os.path.exists(file_path):
+        try:
+            df_existing = pd.read_csv(file_path)
+        except Exception as e:
+            print(
+                f"Warning: Could not read existing CSV {file_path} due to: {e}. Overwriting."
+            )
+            df_existing = pd.DataFrame()
+    else:
+        df_existing = pd.DataFrame()
+
+    if not df_existing.empty:
+        # Align types of keys to prevent mismatch
+        for col in keys:
+            if col in df_existing.columns and col in df_new.columns:
+                try:
+                    df_existing[col] = df_existing[col].astype(df_new[col].dtype)
+                except Exception:
+                    df_existing[col] = df_existing[col].astype(str)
+                    df_new[col] = df_new[col].astype(str)
+
+        # Identify rows in existing to keep (not matching new keys)
+        df_new_keys = df_new[keys].drop_duplicates()
+        df_merged = df_existing.merge(df_new_keys, on=keys, how="left", indicator=True)
+        df_keep = df_existing[df_merged["_merge"] == "left_only"].copy()
+
+        df_final = pd.concat([df_keep, df_new], ignore_index=True)
+
+        # Align column order with existing CSV
+        cols = list(df_existing.columns)
+        for col in df_new.columns:
+            if col not in cols:
+                cols.append(col)
+        df_final = df_final[cols]
+    else:
+        df_final = df_new
+
+    # Sort final dataframe
+    if not df_final.empty:
+        required_cols = ["model", "processing", "cycle", "variant", "dataset"]
+        if all(col in df_final.columns for col in required_cols):
+            df_final["model_folder"] = (
+                df_final["model"].astype(str) + "_" + df_final["processing"].astype(str)
+            )
+            df_final["is_val"] = (df_final["dataset"] == "val").astype(int)
+            df_final["filename"] = (
+                "cycle_"
+                + df_final["cycle"].astype(str)
+                + "_"
+                + df_final["variant"].astype(str)
+                + "_"
+                + df_final["dataset"].astype(str)
+                + "_raw.json"
+            )
+
+            df_final = df_final.sort_values(
+                by=["model_folder", "cycle", "variant", "is_val", "filename"]
+                + sort_cols
+            )
+            df_final = df_final.drop(columns=["model_folder", "is_val", "filename"])
+
+    df_final.to_csv(file_path, index=False)
+
+
 def run_evaluation_suite(
-    target_models=None, target_processing=None, target_cycles=None, target_variants=None
+    target_models=None,
+    target_processing=None,
+    target_cycles=None,
+    target_variants=None,
+    target_datasets=None,
 ):
     all_metrics = []
     all_binary_sweep = []
@@ -124,45 +203,45 @@ def run_evaluation_suite(
         if target_processing and processing not in target_processing:
             continue
 
-        print(f"\n>>> Evaluating {model_type} ({processing})...")
-
-        for filename in tqdm(filenames, desc=f"Models in {model_folder}"):
+        # Filter files first to ensure accurate progress reporting
+        filtered_filenames = []
+        for filename in filenames:
             cycle, variant, dataset = get_eval_info(filename)
             if target_cycles and cycle not in target_cycles:
                 continue
             if target_variants and variant not in target_variants:
                 continue
+            if target_datasets and dataset not in target_datasets:
+                continue
+            filtered_filenames.append(filename)
 
-            with open(os.path.join(folder_path, filename), "r") as f:
-                results = json.load(f)
+        if not filtered_filenames:
+            continue
 
+        print(f"\n>>> Evaluating {model_type} ({processing})...")
+
+        for filename in tqdm(filtered_filenames, desc=f"Models in {model_folder}"):
             is_full_seq = "full_seq" in dataset
+            filepath = os.path.join(folder_path, filename)
 
-            # Refresh ground truth from clean data
-            from eval_utils.data_utils import get_clean_ground_truth
+            from eval_utils.data_utils import load_predictions_from_json
 
-            refreshed_results = []
-            for res in results:
-                is_positive, gt_boxes, split = get_clean_ground_truth(res["path"])
-                if split is not None:
-                    # Found in clean mapping, update GT
-                    res["is_positive"] = is_positive
-                    res["gt_boxes"] = gt_boxes
-                    refreshed_results.append(res)
-                elif is_full_seq:
-                    # Not in clean mapping but we are in full sequence mode
-                    # Treat as negative (empty background)
-                    res["is_positive"] = False
-                    res["gt_boxes"] = []
-                    refreshed_results.append(res)
+            results = load_predictions_from_json(filepath, is_full_seq=is_full_seq)
 
-            if not refreshed_results:
+            if not results:
                 print(
                     f"      Warning: No images from {filename} found in clean mapping. Skipping."
                 )
                 continue
 
-            results = refreshed_results
+            # Auto-save cache if file doesn't exist yet and USE_FILTERED_PREDICTIONS is enabled
+            filtered_filepath = filepath.replace("_raw.json", FILTERED_FILE_SUFFIX)
+            if USE_FILTERED_PREDICTIONS and not os.path.exists(filtered_filepath):
+                with open(filtered_filepath, "w") as f:
+                    json.dump(results, f)
+                print(
+                    f"      [Cache] Generated and saved filtered prediction cache to {filtered_filepath}"
+                )
 
             if not is_full_seq:
                 # 1. Detection-level Metrics (mAP and BB-level optimal thresholds)
@@ -369,11 +448,17 @@ def run_evaluation_suite(
 
     # Save Summaries
     os.makedirs(FILES_DIR, exist_ok=True)
-    pd.DataFrame(all_metrics).to_csv(
-        os.path.join(FILES_DIR, "unified_model_evaluation.csv"), index=False
+    save_or_update_csv(
+        all_metrics,
+        os.path.join(FILES_DIR, "unified_model_evaluation.csv"),
+        keys=["model", "processing", "cycle", "variant", "dataset"],
+        sort_cols=[],
     )
-    pd.DataFrame(all_binary_sweep).to_csv(
-        os.path.join(FILES_DIR, "binary_threshold_sweep.csv"), index=False
+    save_or_update_csv(
+        all_binary_sweep,
+        os.path.join(FILES_DIR, "binary_threshold_sweep.csv"),
+        keys=["model", "processing", "cycle", "variant", "dataset"],
+        sort_cols=["threshold"],
     )
 
     print(f"\nEvaluation files saved to {FILES_DIR}")
@@ -409,11 +494,33 @@ if __name__ == "__main__":
         default=None,
         help="Target variants (e.g., pretrained scratch)",
     )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=None,
+        help="Target datasets (e.g., test val)",
+    )
+    parser.add_argument(
+        "--full_sequence",
+        action="store_true",
+        help="Evaluate full sequence predictions for the target datasets.",
+    )
     args = parser.parse_args()
+
+    target_datasets = args.datasets
+    if args.full_sequence:
+        if target_datasets:
+            target_datasets = [
+                ds if ds.endswith("_full_seq") else f"{ds}_full_seq"
+                for ds in target_datasets
+            ]
+        else:
+            target_datasets = ["test_full_seq", "val_full_seq"]
 
     run_evaluation_suite(
         target_models=args.models,
         target_processing=args.processing,
         target_cycles=args.cycles,
         target_variants=args.variants,
+        target_datasets=target_datasets,
     )

@@ -26,6 +26,7 @@ detection/results/detect_rtdetr/*
 *.pt
 *.pth
 *raw.json
+*filtered.json
 
 detection/active learning/data/*
 detection/evaluation/data/*

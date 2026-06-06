@@ -33,8 +33,8 @@ DEFAULT_BATCH_SIZE = 128
 DEFAULT_DEVICE = "0" if torch.cuda.is_available() else "cpu"
 
 # --- Bounding Box Spatial Filtering Settings ---
-DEFAULT_IOU_THRESHOLD = 0.7
-DEFAULT_OCCURRENCE_THRESHOLD = 25
+DEFAULT_IOU_THRESHOLD = 0.8
+DEFAULT_OCCURRENCE_THRESHOLD = 30
 
 # --- Class Definitions & Optimal Confidence Thresholds ---
 # The user can customize these to select which classes to train on. Set to None to default.
@@ -63,7 +63,6 @@ for i, name in CLASSES.items():
         DETECTION_THRESHOLDS[i] = 0.25  # Generic default threshold
 
 # --- Active Learning Curation Settings ---
-# Primary target class for active curation focus (e.g. "Western_Leopard_Toad" or any other main class)
 CURATION_TARGET_CLASS = "Western_Leopard_Toad"
 
 # Primary domain-pretrained ResNet50 model weights from Faster R-CNN pretraining
