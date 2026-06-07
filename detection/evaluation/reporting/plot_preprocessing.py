@@ -78,7 +78,7 @@ def plot_pr_curves():
             label = f"{label_name} (mAP: {mAP:.3f}, mAR: {mar:.3f})"
             color = "#1f77b4" if proc == "plain" else "#ff7f0e"
 
-            ax.plot(rec, prec, label=label, color=color, linewidth=1.5)
+            ax.plot(rec, prec, label=label, color=color, linewidth=3)
 
         if not has_data:
             plt.close()
@@ -89,9 +89,10 @@ def plot_pr_curves():
         #     fontsize=16,
         #     fontweight="bold",
         # )
-        ax.set_xlabel("Recall", fontsize=14)
-        ax.set_ylabel("Precision", fontsize=14)
-        ax.legend(fontsize=12, loc="lower left")
+        ax.set_xlabel("Recall", fontsize=18)
+        ax.set_ylabel("Precision", fontsize=18)
+        ax.tick_params(axis="both", which="major", labelsize=14)
+        ax.legend(fontsize=16, loc="lower left")
         ax.grid(False)
         ax.set_ylim([0.0, 1.0])
         ax.set_xlim([0.0, 1.0])
