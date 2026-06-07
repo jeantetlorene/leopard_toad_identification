@@ -75,154 +75,175 @@ def main():
     COLOR_FP = "#d62728"  # Red for False Positives
     COLOR_BBOX = "#2ca02c"  # Green for Bounding Boxes
 
+    METRICS = [
+        {"id": "max_f1", "name": "max_f1"},
+        {"id": "max_f2", "name": "max_f2"},
+        {"id": "min_roc", "name": "min_roc_dist"},
+        {"id": "recall_95", "name": "recall_95_target"},
+    ]
+
     for m_type in MODELS:
         for config in CONFIGS:
             process = config["process"]
             variant = config["variant"]
             conf_name = config["name"]
 
-            fp_history = []
             bbox_history = []
-
-            has_data = True
             for cycle in CYCLES:
-                # Query the sweep data for this cycle, model, process, variant
-                df_cycle = df[
-                    (df["model"] == m_type)
-                    & (df["processing"] == process)
-                    & (df["variant"] == variant)
-                    & (df["cycle"] == cycle)
-                    & (df["dataset"] == "test_full_seq")
-                ]
+                bbox_history.append(count_bounding_boxes(m_type, variant, cycle))
 
-                if df_cycle.empty:
-                    print(
-                        f"Warning: No data for {m_type} {process} {variant} cycle {cycle}. Skipping trajectory plot."
-                    )
-                    has_data = False
-                    break
+            for metric in METRICS:
+                fp_history = []
+                has_data = True
 
-                # The user prioritizes F2-Score/Recall. We find the operating point that maximizes F2-Score
-                if "f2_score" in df_cycle.columns:
-                    best_row = df_cycle.loc[df_cycle["f2_score"].idxmax()]
-                else:
-                    # Fallback to F1-Score if the new sweep hasn't been run yet
-                    best_row = df_cycle.loc[df_cycle["f1_score"].idxmax()]
+                for cycle in CYCLES:
+                    # Query the sweep data for this cycle, model, process, variant
+                    df_cycle = df[
+                        (df["model"] == m_type)
+                        & (df["processing"] == process)
+                        & (df["variant"] == variant)
+                        & (df["cycle"] == cycle)
+                        & (df["dataset"] == "test_full_seq")
+                    ]
 
-                fp_history.append(best_row["fp"])
+                    if df_cycle.empty:
+                        print(
+                            f"Warning: No data for {m_type} {process} {variant} cycle {cycle}. Skipping trajectory plot."
+                        )
+                        has_data = False
+                        break
 
-                # Count the bounding boxes for this cycle
-                num_bboxes = count_bounding_boxes(m_type, variant, cycle)
-                bbox_history.append(num_bboxes)
+                    if metric["id"] == "max_f1":
+                        best_row = df_cycle.loc[df_cycle["f1_score"].idxmax()]
+                    elif metric["id"] == "max_f2":
+                        if "f2_score" in df_cycle.columns:
+                            best_row = df_cycle.loc[df_cycle["f2_score"].idxmax()]
+                        else:
+                            best_row = df_cycle.loc[df_cycle["f1_score"].idxmax()]
+                    elif metric["id"] == "min_roc":
+                        best_row = df_cycle.loc[df_cycle["roc_distance"].idxmin()]
+                    elif metric["id"] == "recall_95":
+                        df_95 = df_cycle[df_cycle["recall"] >= 0.95]
+                        if not df_95.empty:
+                            best_row = df_95.loc[df_95["threshold"].idxmax()]
+                        else:
+                            best_row = df_cycle.loc[df_cycle["recall"].idxmax()]
 
-            if not has_data:
-                continue
+                    fp_history.append(best_row["fp"])
 
-            # PlotTrajectory Dual Axis
-            fig, ax_fp = plt.subplots(figsize=(7, 5))
-            cycles_plot = [c + 1 for c in CYCLES]
+                if not has_data:
+                    continue
 
-            # Primary Axis: False Positives
-            (line_fp,) = ax_fp.plot(
-                cycles_plot,
-                fp_history,
-                marker="o",
-                markersize=8,
-                markeredgecolor="white",
-                markeredgewidth=1.5,
-                linewidth=2.5,
-                color=COLOR_FP,
-                label="False Positives (WLT)",
-            )
+                # PlotTrajectory Dual Axis
+                fig, ax_fp = plt.subplots(figsize=(7, 5))
+                cycles_plot = [c + 1 for c in CYCLES]
 
-            ax_fp.set_xlabel(
-                "Active Learning Cycle", fontsize=11, fontweight="medium", labelpad=8
-            )
-            ax_fp.set_ylabel(
-                "Number of False Positives",
-                fontsize=11,
-                fontweight="medium",
-                color=COLOR_FP,
-                labelpad=8,
-            )
-            ax_fp.tick_params(axis="y", colors=COLOR_FP)
+                # Primary Axis: False Positives
+                (line_fp,) = ax_fp.plot(
+                    cycles_plot,
+                    fp_history,
+                    marker="o",
+                    markersize=8,
+                    markeredgecolor="white",
+                    markeredgewidth=1.5,
+                    linewidth=2.5,
+                    color=COLOR_FP,
+                    label="False Positives",
+                )
 
-            # Set Y limit with some headroom
-            max_fp_val = max(fp_history) if fp_history else 10
-            ax_fp.set_ylim(0, max(10, max_fp_val * 1.15))
+                ax_fp.set_xlabel(
+                    "Active Learning Cycle",
+                    fontsize=11,
+                    fontweight="medium",
+                    labelpad=8,
+                )
+                ax_fp.set_ylabel(
+                    "False Positives",
+                    fontsize=11,
+                    fontweight="medium",
+                    color=COLOR_FP,
+                    labelpad=8,
+                )
+                ax_fp.tick_params(axis="y", colors=COLOR_FP)
 
-            # Secondary Axis: Bounding Box Count
-            ax_bbox = ax_fp.twinx()
-            (line_bbox,) = ax_bbox.plot(
-                cycles_plot,
-                bbox_history,
-                marker="s",
-                markersize=7,
-                markeredgecolor="white",
-                markeredgewidth=1.5,
-                linewidth=2.5,
-                linestyle="-",
-                color=COLOR_BBOX,
-                label="Total Manually Labeled BBoxes",
-            )
+                # Set Y limit with some headroom
+                max_fp_val = max(fp_history) if fp_history else 10
+                ax_fp.set_ylim(0, max(10, max_fp_val * 1.15))
 
-            ax_bbox.set_ylabel(
-                "Number of Manually Labeled BBoxes",
-                fontsize=11,
-                fontweight="medium",
-                color=COLOR_BBOX,
-                labelpad=8,
-            )
-            ax_bbox.tick_params(axis="y", colors=COLOR_BBOX)
+                # Secondary Axis: Bounding Box Count
+                ax_bbox = ax_fp.twinx()
+                (line_bbox,) = ax_bbox.plot(
+                    cycles_plot,
+                    bbox_history,
+                    marker="s",
+                    markersize=7,
+                    markeredgecolor="white",
+                    markeredgewidth=1.5,
+                    linewidth=2.5,
+                    linestyle="-",
+                    color=COLOR_BBOX,
+                    label="Bounding Boxes",
+                )
 
-            max_bbox_val = max(bbox_history) if bbox_history else 100
-            ax_bbox.set_ylim(0, max(100, max_bbox_val * 1.15))
+                ax_bbox.set_ylabel(
+                    "Number of Annotations",
+                    fontsize=11,
+                    fontweight="medium",
+                    color=COLOR_BBOX,
+                    labelpad=8,
+                )
+                ax_bbox.tick_params(axis="y", colors=COLOR_BBOX)
 
-            ax_fp.set_xticks(cycles_plot)
-            ax_fp.set_xticklabels([str(c) for c in cycles_plot], fontsize=9)
-            ax_fp.set_xlim(0.6, 5.4)
+                max_bbox_val = max(bbox_history) if bbox_history else 100
+                ax_bbox.set_ylim(0, max(100, max_bbox_val * 1.15))
 
-            # Title & Layout
-            # (Title removed as requested)
+                ax_fp.set_xticks(cycles_plot)
+                ax_fp.set_xticklabels([str(c) for c in cycles_plot], fontsize=9)
+                ax_fp.set_xlim(0.6, 5.4)
 
-            # Despine
-            ax_fp.spines["top"].set_visible(False)
-            ax_bbox.spines["top"].set_visible(False)
+                # Despine
+                ax_fp.spines["top"].set_visible(False)
+                ax_bbox.spines["top"].set_visible(False)
 
-            # Legends
-            lines = [line_fp, line_bbox]
-            labels = [l.get_label() for l in lines]
-            ax_fp.legend(
-                lines,
-                labels,
-                loc="best",
-                frameon=True,
-                fontsize=10,
-                ncol=1,
-            )
+                # Legends
+                lines = [line_fp, line_bbox]
+                labels = [l.get_label() for l in lines]
+                ax_fp.legend(
+                    lines,
+                    labels,
+                    loc="lower left",
+                    frameon=True,
+                    fontsize=10,
+                    ncol=1,
+                )
 
-            plt.tight_layout()
+                plt.tight_layout()
 
-            # Save
-            safe_conf_name = (
-                conf_name.replace(" ", "_")
-                .replace("(", "")
-                .replace(")", "")
-                .replace("+", "_")
-                .lower()
-            )
-            png_path = os.path.join(
-                PLOTS_DIR, f"al_wlt_binary_trajectory_{m_type}_{safe_conf_name}.png"
-            )
-            pdf_path = os.path.join(
-                PLOTS_DIR, f"al_wlt_binary_trajectory_{m_type}_{safe_conf_name}.pdf"
-            )
+                # Save
+                safe_conf_name = (
+                    conf_name.replace(" ", "_")
+                    .replace("(", "")
+                    .replace(")", "")
+                    .replace("+", "_")
+                    .lower()
+                )
 
-            os.makedirs(PLOTS_DIR, exist_ok=True)
-            plt.savefig(png_path, dpi=300, bbox_inches="tight")
-            plt.savefig(pdf_path, dpi=300, bbox_inches="tight")
-            plt.close()
-            print(f"Saved trajectory plots to {png_path} and {pdf_path}")
+                metric_dir = os.path.join(PLOTS_DIR, "wlt_trajectories", metric["name"])
+                os.makedirs(metric_dir, exist_ok=True)
+
+                png_path = os.path.join(
+                    metric_dir,
+                    f"al_wlt_binary_trajectory_{m_type}_{safe_conf_name}.png",
+                )
+                pdf_path = os.path.join(
+                    metric_dir,
+                    f"al_wlt_binary_trajectory_{m_type}_{safe_conf_name}.pdf",
+                )
+
+                plt.savefig(png_path, dpi=300, bbox_inches="tight")
+                plt.savefig(pdf_path, dpi=300, bbox_inches="tight")
+                plt.close()
+                print(f"Saved trajectory plots to {png_path} and {pdf_path}")
 
 
 if __name__ == "__main__":
