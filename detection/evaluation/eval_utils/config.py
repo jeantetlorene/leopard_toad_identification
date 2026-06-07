@@ -33,6 +33,7 @@ IMG_SIZE = 640
 DEFAULT_BATCH_SIZE = 512
 FASTER_RCNN_SUB_BATCH_SIZE = 128
 MIN_CONF_THRESHOLD = 0.01
+RTDETR_MIN_CONF_THRESHOLD = 0.05
 CONF_THRESHOLDS = [round(x, 2) for x in torch.linspace(0.01, 0.95, 30).tolist()]
 
 # Bounding Box Spatial Filtering (Post-Processing) Settings

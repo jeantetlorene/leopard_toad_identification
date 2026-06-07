@@ -10,12 +10,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from eval_utils.config import RESULTS_DIR, FILTERED_FILE_SUFFIX
 import eval_utils.config as config
-from eval_utils.data_utils import load_predictions_from_json
+from eval_utils.data_utils import load_predictions_from_json, get_clean_ground_truth
 from eval_utils.spatial_filter import apply_spatial_filter
-
-
-import ijson
-import orjson
 
 import ijson
 import orjson
@@ -33,7 +29,6 @@ def process_file(raw_file):
 
         # Step 1: Stream extract lightweight predictions
         t_pass1_start = time.time()
-        from eval_utils.data_utils import get_clean_ground_truth
 
         lightweight_results = []
 
@@ -54,11 +49,20 @@ def process_file(raw_file):
 
         t_pass1 = time.time() - t_pass1_start
 
+        # Set model-specific min confidence threshold to save spatial filter memory
+        model_min_conf = (
+            config.RTDETR_MIN_CONF_THRESHOLD
+            if "rtdetr" in os.path.basename(raw_file)
+            else config.MIN_CONF_THRESHOLD
+        )
+
         # Step 2: Spatial Filtering
         t_filter_start = time.time()
         # Compute indices to remove using the new return_indices_only flag
         indices_to_remove, total_removed = apply_spatial_filter(
-            lightweight_results, return_indices_only=True
+            lightweight_results,
+            return_indices_only=True,
+            min_conf_threshold=model_min_conf,
         )
         t_filter = time.time() - t_filter_start
 

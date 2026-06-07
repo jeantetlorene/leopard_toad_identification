@@ -12,7 +12,9 @@ from eval_utils.config import (
 CAMERA_PATTERN = re.compile(r"^\d[A-Za-z]$")
 
 
-def apply_spatial_filter(results, return_indices_only=False):
+def apply_spatial_filter(
+    results, return_indices_only=False, min_conf_threshold=MIN_CONF_THRESHOLD
+):
     """
     Suppresses bounding boxes that trigger repeatedly in the same spatial location
     across fixed camera stations in the same year (static triggers).
@@ -22,15 +24,6 @@ def apply_spatial_filter(results, return_indices_only=False):
         if return_indices_only:
             return defaultdict(set), 0
         return results
-
-    # Filter predictions below MIN_CONF_THRESHOLD
-    for res in results:
-        if "predictions" in res:
-            res["predictions"] = [
-                p
-                for p in res["predictions"]
-                if p.get("conf", 1.0) >= MIN_CONF_THRESHOLD
-            ]
 
     # Group predictions by (camera_id, year, class)
     groups = defaultdict(list)
@@ -65,6 +58,9 @@ def apply_spatial_filter(results, return_indices_only=False):
             continue
 
         for pred_idx, pred in enumerate(res.get("predictions", [])):
+            if pred.get("conf", 1.0) < min_conf_threshold:
+                continue
+
             cls_id = pred["cls"]
             group_key = (camera, year, cls_id)
             groups[group_key].append(

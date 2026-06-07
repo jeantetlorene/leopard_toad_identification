@@ -9,6 +9,37 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from eval_utils.config import FILES_DIR, PLOTS_DIR
 
 
+def count_bounding_boxes(model, variant, cycle):
+    """
+    Counts the total number of bounding boxes (instances) across all classes
+    in the active learning training dataset for a given configuration.
+    """
+    base_dir = "/home/Joshua/Downloads/leopard_toad_identification/detection"
+    labels_dir = os.path.join(
+        base_dir,
+        "active learning",
+        "data",
+        model,
+        variant,
+        f"cycle_{cycle}",
+        "train",
+        "labels",
+    )
+    if not os.path.exists(labels_dir):
+        return 0
+
+    total_boxes = 0
+    try:
+        for f in os.listdir(labels_dir):
+            if f.endswith(".txt"):
+                filepath = os.path.join(labels_dir, f)
+                with open(filepath, "r") as file:
+                    total_boxes += sum(1 for line in file if line.strip())
+    except Exception as e:
+        print(f"Error reading labels for {model} {variant} cycle {cycle}: {e}")
+    return total_boxes
+
+
 def main():
     print("Generating WLT Image-Level Active Learning Trajectory Plots...")
 
@@ -26,229 +57,172 @@ def main():
         print("Error: Sweep CSV is empty.")
         return
 
-    # Filter settings
-    PROCESS = "clahe"
-    VARIANT = "pretrained"
     CYCLES = [0, 1, 2, 3, 4]
     MODELS = ["yolo", "faster_rcnn", "rtdetr"]
 
-    COLOR_AUC = "#1f77b4"  # Blue
-    COLOR_F1 = "#ff7f0e"  # Orange
-    COLOR_FP = "#6f42c1"  # Purple
+    # The 4 requested configurations
+    CONFIGS = [
+        {"process": "plain", "variant": "scratch", "name": "Baseline (Plain+Scratch)"},
+        {"process": "clahe", "variant": "scratch", "name": "CLAHE+Scratch"},
+        {
+            "process": "plain",
+            "variant": "pretrained",
+            "name": "Baseline+Pretrained (Plain)",
+        },
+        {"process": "clahe", "variant": "pretrained", "name": "CLAHE+Pretrained"},
+    ]
+
+    COLOR_FP = "#d62728"  # Red for False Positives
+    COLOR_BBOX = "#2ca02c"  # Green for Bounding Boxes
 
     for m_type in MODELS:
-        auc_history = []
-        f1_history = []
-        fp_history = []
+        for config in CONFIGS:
+            process = config["process"]
+            variant = config["variant"]
+            conf_name = config["name"]
 
-        has_data = True
-        for cycle in CYCLES:
-            # Query the sweep data for this cycle and model
-            df_cycle = df[
-                (df["model"] == m_type)
-                & (df["processing"] == PROCESS)
-                & (df["variant"] == VARIANT)
-                & (df["cycle"] == cycle)
-                & (df["dataset"] == "test_full_seq")
-            ]
+            fp_history = []
+            bbox_history = []
 
-            if df_cycle.empty:
-                print(
-                    f"Warning: No data for {m_type} cycle {cycle}. Skipping trajectory plot."
-                )
-                has_data = False
-                break
+            has_data = True
+            for cycle in CYCLES:
+                # Query the sweep data for this cycle, model, process, variant
+                df_cycle = df[
+                    (df["model"] == m_type)
+                    & (df["processing"] == process)
+                    & (df["variant"] == variant)
+                    & (df["cycle"] == cycle)
+                    & (df["dataset"] == "test_full_seq")
+                ]
 
-            # Find the optimal threshold operating point maximizing F1-Score
-            idx_max_f1 = df_cycle["f1_score"].idxmax()
-            best_row = df_cycle.loc[idx_max_f1]
+                if df_cycle.empty:
+                    print(
+                        f"Warning: No data for {m_type} {process} {variant} cycle {cycle}. Skipping trajectory plot."
+                    )
+                    has_data = False
+                    break
 
-            auc_history.append(best_row["auc"])
-            f1_history.append(best_row["f1_score"])
-            fp_history.append(best_row["fp"])
+                # The user prioritizes F2-Score/Recall. We find the operating point that maximizes F2-Score
+                if "f2_score" in df_cycle.columns:
+                    best_row = df_cycle.loc[df_cycle["f2_score"].idxmax()]
+                else:
+                    # Fallback to F1-Score if the new sweep hasn't been run yet
+                    best_row = df_cycle.loc[df_cycle["f1_score"].idxmax()]
 
-        if not has_data:
-            continue
+                fp_history.append(best_row["fp"])
 
-        # PlotTrajectory
-        fig, ax = plt.subplots(figsize=(6, 4))
-        cycles_plot = [c + 1 for c in CYCLES]
+                # Count the bounding boxes for this cycle
+                num_bboxes = count_bounding_boxes(m_type, variant, cycle)
+                bbox_history.append(num_bboxes)
 
-        # 1. Plot AUC and F1-Score on the primary y-axis (Metric Value, scale 0 to 1.12)
-        (line_auc,) = ax.plot(
-            cycles_plot,
-            auc_history,
-            marker="o",
-            markersize=8,
-            markeredgecolor="white",
-            markeredgewidth=1.5,
-            linewidth=2.5,
-            color=COLOR_AUC,
-            label="ROC-AUC",
-        )
-        (line_f1,) = ax.plot(
-            cycles_plot,
-            f1_history,
-            marker="s",
-            markersize=7,
-            markeredgecolor="white",
-            markeredgewidth=1.5,
-            linewidth=2.5,
-            color=COLOR_F1,
-            label="Optimal F$_1$",
-        )
+            if not has_data:
+                continue
 
-        # 2. Add second scale to the right for FP count
-        ax_fp = ax.twinx()
-        (line_fp,) = ax_fp.plot(
-            cycles_plot,
-            fp_history,
-            marker="d",
-            markersize=7,
-            markeredgecolor="white",
-            markeredgewidth=1.5,
-            linewidth=2.0,
-            linestyle="-",
-            color=COLOR_FP,
-            label="False Positives",
-        )
+            # PlotTrajectory Dual Axis
+            fig, ax_fp = plt.subplots(figsize=(7, 5))
+            cycles_plot = [c + 1 for c in CYCLES]
 
-        # Max AUC annotation calculation
-        max_auc = max(auc_history)
-        max_auc_idx = auc_history.index(max_auc)
-        max_auc_x = cycles_plot[max_auc_idx]
+            # Primary Axis: False Positives
+            (line_fp,) = ax_fp.plot(
+                cycles_plot,
+                fp_history,
+                marker="o",
+                markersize=8,
+                markeredgecolor="white",
+                markeredgewidth=1.5,
+                linewidth=2.5,
+                color=COLOR_FP,
+                label="False Positives (WLT)",
+            )
 
-        # Max F1 annotation calculation
-        max_f1 = max(f1_history)
-        max_f1_idx = f1_history.index(max_f1)
-        max_f1_x = cycles_plot[max_f1_idx]
+            ax_fp.set_xlabel(
+                "Active Learning Cycle", fontsize=11, fontweight="medium", labelpad=8
+            )
+            ax_fp.set_ylabel(
+                "Number of False Positives",
+                fontsize=11,
+                fontweight="medium",
+                color=COLOR_FP,
+                labelpad=8,
+            )
+            ax_fp.tick_params(axis="y", colors=COLOR_FP)
 
-        # Draw red circle around max AUC value
-        ax.plot(
-            max_auc_x,
-            max_auc,
-            marker="o",
-            markersize=14,
-            markeredgecolor="red",
-            markerfacecolor="none",
-            markeredgewidth=1.5,
-            linestyle="",
-        )
+            # Set Y limit with some headroom
+            max_fp_val = max(fp_history) if fp_history else 10
+            ax_fp.set_ylim(0, max(10, max_fp_val * 1.15))
 
-        # Draw red circle around max F1 value
-        ax.plot(
-            max_f1_x,
-            max_f1,
-            marker="o",
-            markersize=14,
-            markeredgecolor="red",
-            markerfacecolor="none",
-            markeredgewidth=1.5,
-            linestyle="",
-        )
+            # Secondary Axis: Bounding Box Count
+            ax_bbox = ax_fp.twinx()
+            (line_bbox,) = ax_bbox.plot(
+                cycles_plot,
+                bbox_history,
+                marker="s",
+                markersize=7,
+                markeredgecolor="white",
+                markeredgewidth=1.5,
+                linewidth=2.5,
+                linestyle="-",
+                color=COLOR_BBOX,
+                label="Total Manually Labeled BBoxes",
+            )
 
-        # Intelligently set annotation offsets to avoid overlapping
-        offset_auc = 0.03
-        va_auc = "bottom"
-        offset_f1 = -0.05
-        va_f1 = "top"
+            ax_bbox.set_ylabel(
+                "Number of Manually Labeled BBoxes",
+                fontsize=11,
+                fontweight="medium",
+                color=COLOR_BBOX,
+                labelpad=8,
+            )
+            ax_bbox.tick_params(axis="y", colors=COLOR_BBOX)
 
-        if max_auc_x == max_f1_x:
-            if max_auc >= max_f1:
-                offset_auc = 0.03
-                va_auc = "bottom"
-                offset_f1 = -0.05
-                va_f1 = "top"
-            else:
-                offset_auc = -0.05
-                va_auc = "top"
-                offset_f1 = 0.03
-                va_f1 = "bottom"
-        else:
-            offset_auc = -0.05 if max_auc > 0.95 else 0.03
-            va_auc = "top" if max_auc > 0.95 else "bottom"
+            max_bbox_val = max(bbox_history) if bbox_history else 100
+            ax_bbox.set_ylim(0, max(100, max_bbox_val * 1.15))
 
-            offset_f1 = -0.05 if max_f1 > 0.95 else 0.03
-            va_f1 = "top" if max_f1 > 0.95 else "bottom"
+            ax_fp.set_xticks(cycles_plot)
+            ax_fp.set_xticklabels([str(c) for c in cycles_plot], fontsize=9)
+            ax_fp.set_xlim(0.6, 5.4)
 
-        # Annotate with just the value in red
-        ax.text(
-            max_auc_x,
-            max_auc + offset_auc,
-            f"{max_auc:.2f}",
-            color="red",
-            fontsize=9,
-            fontweight="bold",
-            ha="center",
-            va=va_auc,
-        )
+            # Title & Layout
+            # (Title removed as requested)
 
-        ax.text(
-            max_f1_x,
-            max_f1 + offset_f1,
-            f"{max_f1:.2f}",
-            color="red",
-            fontsize=9,
-            fontweight="bold",
-            ha="center",
-            va=va_f1,
-        )
+            # Despine
+            ax_fp.spines["top"].set_visible(False)
+            ax_bbox.spines["top"].set_visible(False)
 
-        # Minimalist Axis Styling
-        ax.set_xlabel(
-            "Active Learning Cycle", fontsize=11, fontweight="medium", labelpad=8
-        )
-        ax.set_ylabel("Metric Value", fontsize=11, fontweight="medium", labelpad=8)
-        ax.set_xticks(cycles_plot)
-        ax.set_xticklabels([str(c) for c in cycles_plot], fontsize=9)
-        ax.set_xlim(0.6, 5.4)
-        ax.set_ylim(0.0, 1.12)
+            # Legends
+            lines = [line_fp, line_bbox]
+            labels = [l.get_label() for l in lines]
+            ax_fp.legend(
+                lines,
+                labels,
+                loc="best",
+                frameon=True,
+                fontsize=10,
+                ncol=1,
+            )
 
-        ax_fp.set_ylabel(
-            "Number of Image-Level False Positives",
-            fontsize=11,
-            fontweight="medium",
-            color=COLOR_FP,
-            labelpad=8,
-        )
-        ax_fp.tick_params(axis="y", colors=COLOR_FP, labelsize=9, width=1.2, length=4)
-        ax_fp.spines["right"].set_color(COLOR_FP)
-        ax_fp.spines["right"].set_linewidth(1.2)
+            plt.tight_layout()
 
-        max_fp_val = max(fp_history)
-        ax_fp.set_ylim(0, max(10, max_fp_val * 1.15))
+            # Save
+            safe_conf_name = (
+                conf_name.replace(" ", "_")
+                .replace("(", "")
+                .replace(")", "")
+                .replace("+", "_")
+                .lower()
+            )
+            png_path = os.path.join(
+                PLOTS_DIR, f"al_wlt_binary_trajectory_{m_type}_{safe_conf_name}.png"
+            )
+            pdf_path = os.path.join(
+                PLOTS_DIR, f"al_wlt_binary_trajectory_{m_type}_{safe_conf_name}.pdf"
+            )
 
-        # Despine
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines["left"].set_linewidth(1.2)
-        ax.spines["bottom"].set_linewidth(1.2)
-
-        ax_fp.spines["top"].set_visible(False)
-        ax_fp.spines["left"].set_visible(False)
-        ax_fp.spines["bottom"].set_visible(False)
-        ax_fp.spines["right"].set_visible(True)
-
-        ax.tick_params(axis="both", which="major", labelsize=9, width=1.2, length=4)
-
-        # Legend
-        lines = [line_auc, line_f1, line_fp]
-        labels = [l.get_label() for l in lines]
-        ax.legend(lines, labels, loc="lower right", frameon=False, fontsize=10)
-
-        # Ensure no grid
-        ax.grid(False)
-
-        plt.tight_layout()
-        fig.subplots_adjust(left=0.12, right=0.88)
-
-        png_path = os.path.join(PLOTS_DIR, f"al_wlt_binary_trajectory_{m_type}.png")
-        pdf_path = os.path.join(PLOTS_DIR, f"al_wlt_binary_trajectory_{m_type}.pdf")
-
-        plt.savefig(png_path, dpi=300)
-        plt.savefig(pdf_path, dpi=300)
-        plt.close()
-        print(f"Saved exact trajectory plot to {png_path} and {pdf_path}")
+            os.makedirs(PLOTS_DIR, exist_ok=True)
+            plt.savefig(png_path, dpi=300, bbox_inches="tight")
+            plt.savefig(pdf_path, dpi=300, bbox_inches="tight")
+            plt.close()
+            print(f"Saved trajectory plots to {png_path} and {pdf_path}")
 
 
 if __name__ == "__main__":

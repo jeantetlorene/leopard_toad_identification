@@ -8,26 +8,59 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from eval_utils.config import RESULTS_DIR, FILES_DIR, PLOTS_DIR, CONF_THRESHOLDS
+from eval_utils.config import (
+    RESULTS_DIR,
+    FILES_DIR,
+    PLOTS_DIR,
+    CONF_THRESHOLDS,
+    MIN_CONF_THRESHOLD,
+    RTDETR_MIN_CONF_THRESHOLD,
+)
 from eval_utils.metrics import calculate_image_level_metrics
 from eval_utils.data_utils import load_predictions_from_json
+from eval_utils.spatial_filter import apply_spatial_filter
 
 
-def compute_wlt_sweep(results, thresholds):
+def compute_wlt_sweep(results, thresholds, model_type="unknown"):
     """
-    Compute binary classification metrics focusing strictly on Class 2 (Western Leopard Toad).
+    Compute binary classification metrics focusing strictly on Class 2 (Western Leopard Toad)
+    with spatial filtering to remove static background false positives.
     """
+    # Create lightweight results containing only WLT predictions for spatial filtering
+    lightweight_results = []
+    for img_idx, res in enumerate(results):
+        wlt_preds = [p for p in res.get("predictions", []) if p.get("cls") == 2]
+        lightweight_results.append(
+            {"img_idx": img_idx, "path": res.get("path", ""), "predictions": wlt_preds}
+        )
+
+    # Set model-specific min confidence threshold to save spatial filter memory
+    model_min_conf = (
+        RTDETR_MIN_CONF_THRESHOLD if "rtdetr" in model_type else MIN_CONF_THRESHOLD
+    )
+
+    # Get indices of static triggers to remove
+    indices_to_remove, total_removed = apply_spatial_filter(
+        lightweight_results, return_indices_only=True, min_conf_threshold=model_min_conf
+    )
+
     # 1. Determine ground truth focusing strictly on Class 2 (WLT)
     is_positive = np.array(
         [any(gt["cls"] == 2 for gt in res["gt_boxes"]) for res in results],
         dtype=bool,
     )
 
-    # 2. Determine maximum confidence score for Class 2 predictions
+    # 2. Determine maximum confidence score for Class 2 predictions, ignoring removed static false positives
     max_confs = []
-    for res in results:
-        preds = res["predictions"]
-        scores = [p["conf"] for p in preds if p["cls"] == 2]
+    for img_idx, res in enumerate(lightweight_results):
+        wlt_preds = res["predictions"]
+        remove_set = indices_to_remove.get(img_idx, set())
+
+        scores = [
+            p["conf"]
+            for pred_idx, p in enumerate(wlt_preds)
+            if pred_idx not in remove_set
+        ]
         max_confs.append(max(scores + [0.0]))
     max_confs = np.array(max_confs)
 
@@ -50,6 +83,14 @@ def compute_wlt_sweep(results, thresholds):
             if (precision + recall) > 0
             else 0.0
         )
+        f2 = (
+            5 * (precision * recall) / (4 * precision + recall)
+            if (4 * precision + recall) > 0
+            else 0.0
+        )
+        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+        roc_distance = np.sqrt((1.0 - recall) ** 2 + fpr**2)
+
         labor_reduction = (tn + fn) / total_images if total_images > 0 else 0.0
 
         metrics.append(
@@ -63,6 +104,8 @@ def compute_wlt_sweep(results, thresholds):
                 "specificity": float(specificity),
                 "precision": float(precision),
                 "f1_score": float(f1),
+                "f2_score": float(f2),
+                "roc_distance": float(roc_distance),
                 "labor_reduction": float(labor_reduction),
             }
         )
@@ -75,13 +118,22 @@ def main():
     plot_data = []
 
     # Find all model results folders
-    folders = sorted(
-        [
-            f
-            for f in os.listdir(RESULTS_DIR)
-            if os.path.isdir(os.path.join(RESULTS_DIR, f))
-        ]
-    )
+    raw_folders = [
+        f
+        for f in os.listdir(RESULTS_DIR)
+        if os.path.isdir(os.path.join(RESULTS_DIR, f))
+    ]
+
+    # Custom order: faster_rcnn, megadetector, yolo, rtdetr
+    desired_order = ["faster_rcnn", "megadetector", "yolo", "rtdetr"]
+
+    def get_order_index(folder_name):
+        for i, prefix in enumerate(desired_order):
+            if folder_name.startswith(prefix):
+                return i
+        return len(desired_order)
+
+    folders = sorted(raw_folders, key=lambda x: (get_order_index(x), x))
 
     for model_folder in folders:
         folder_path = os.path.join(RESULTS_DIR, model_folder)
@@ -116,7 +168,7 @@ def main():
 
             # Calculate Sweep strictly focusing on WLT
             binary_sweep_data, binary_gt, binary_scores = compute_wlt_sweep(
-                results, CONF_THRESHOLDS
+                results, CONF_THRESHOLDS, model_type
             )
 
             # Calculate ROC-AUC for WLT

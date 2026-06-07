@@ -54,11 +54,13 @@ def main():
         )
 
         f.write(
-            "For each combination, we evaluate performance at three separate operating points:\n"
-            "1.  **Optimal $F_1$-Score Operating Point**: Maximizes the geometric mean of Precision and Recall.\n"
-            "2.  **High-Recall Safety Operating Point (Target $\\ge 95\\%$)**: Restricts the search space to "
+            "For each combination, we evaluate performance at multiple separate operating points:\n"
+            "1.  **Optimal $F_1$-Score**: Maximizes the geometric mean of Precision and Recall.\n"
+            "2.  **Optimal $F_2$-Score**: Heavily weights Recall to minimize false negatives.\n"
+            "3.  **Min ROC Distance**: Minimizes the Euclidean distance to the perfect classification corner (0, 1) on the ROC curve.\n"
+            "4.  **High-Recall Safety (Target $\\ge 95\\%$)**: Restricts the search space to "
             "configurations that guarantee at least $95\\%$ target recall, and maximizes specificity.\n"
-            "3.  **Moderate High-Recall Operating Point (Target $\\ge 85\\%$)**: Restricts the search space to "
+            "5.  **Moderate High-Recall (Target $\\ge 85\\%$)**: Restricts the search space to "
             "configurations that guarantee at least $85\\%$ target recall, and maximizes specificity.\n\n"
         )
 
@@ -88,6 +90,14 @@ def main():
                 idx_max_f1 = df_group["f1_score"].idxmax()
                 op_f1 = df_group.loc[idx_max_f1]
 
+                # Max F2 Operating Point
+                idx_max_f2 = df_group["f2_score"].idxmax()
+                op_f2 = df_group.loc[idx_max_f2]
+
+                # Min ROC Distance Operating Point
+                idx_min_roc = df_group["roc_distance"].idxmin()
+                op_roc = df_group.loc[idx_min_roc]
+
                 # 2. High-Recall Target (>= 95%)
                 df_95 = df_group[df_group["recall"] >= 0.95]
                 op_95 = (
@@ -108,6 +118,16 @@ def main():
                 # Write Max F1 row
                 f.write(
                     f"| **{model_name}** | {process_name} | {variant_name} | **{auc_str}** | Max $F_1$ | {op_f1['threshold']:.2f} | {int(op_f1['tp'])} | {int(op_f1['fp'])} | {int(op_f1['tn'])} | {int(op_f1['fn'])} | {op_f1['recall'] * 100:.2f}% | {op_f1['specificity'] * 100:.2f}% | {op_f1['precision'] * 100:.2f}% | {op_f1['f1_score']:.4f} | **{op_f1['labor_reduction'] * 100:.2f}%** |\n"
+                )
+
+                # Write Max F2 row
+                f.write(
+                    f"| | | | | Max $F_2$ | {op_f2['threshold']:.2f} | {int(op_f2['tp'])} | {int(op_f2['fp'])} | {int(op_f2['tn'])} | {int(op_f2['fn'])} | {op_f2['recall'] * 100:.2f}% | {op_f2['specificity'] * 100:.2f}% | {op_f2['precision'] * 100:.2f}% | {op_f2['f1_score']:.4f} | **{op_f2['labor_reduction'] * 100:.2f}%** |\n"
+                )
+
+                # Write Min ROC Dist row
+                f.write(
+                    f"| | | | | Min ROC Dist | {op_roc['threshold']:.2f} | {int(op_roc['tp'])} | {int(op_roc['fp'])} | {int(op_roc['tn'])} | {int(op_roc['fn'])} | {op_roc['recall'] * 100:.2f}% | {op_roc['specificity'] * 100:.2f}% | {op_roc['precision'] * 100:.2f}% | {op_roc['f1_score']:.4f} | **{op_roc['labor_reduction'] * 100:.2f}%** |\n"
                 )
 
                 # Write 95% Recall row
