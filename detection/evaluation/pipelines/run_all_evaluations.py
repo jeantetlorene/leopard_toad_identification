@@ -5,10 +5,20 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from eval_utils.config import MODEL_ROOTS, RESULTS_DIR, DEVICE, DATASETS
+from eval_utils.config import (
+    MODEL_ROOTS,
+    RESULTS_DIR,
+    DEVICE,
+    DATASETS,
+    USE_FILTERED_PREDICTIONS,
+    FILTERED_FILE_SUFFIX,
+)
 from eval_utils.inference import generate_predictions
 from eval_utils.evaluation_suite import run_evaluation_suite
-from eval_utils.data_utils import get_camera_images, get_dataset_images
+from eval_utils.data_utils import get_camera_images, get_dataset_images, refresh_results
+from eval_utils.evaluation_suite import apply_spatial_filter
+from eval_utils.models.ultralytics_wrapper import UltralyticsWrapper
+from eval_utils.models.faster_rcnn_wrapper import FasterRCNNWrapper
 
 
 def run_all(
@@ -201,16 +211,8 @@ def run_all(
 
         # Lazy import to save memory/time if all are cached
         if m_type in ["yolo", "rtdetr"]:
-            from eval_utils.models.ultralytics_wrapper import (
-                UltralyticsWrapper,
-            )
-
             wrapper = UltralyticsWrapper(m_type, path_to_run, device=DEVICE)
         else:
-            from eval_utils.models.faster_rcnn_wrapper import (
-                FasterRCNNWrapper,
-            )
-
             wrapper = FasterRCNNWrapper(path_to_run, device=DEVICE)
 
         for ds_name in datasets:
@@ -252,17 +254,17 @@ def run_all(
                 existing_results=existing_results,
             )
 
-            # Immediately refresh, filter, and save cache to _filtered.json
-            from eval_utils.data_utils import refresh_results
-            from eval_utils.evaluation_suite import apply_spatial_filter
-            from eval_utils.config import FILTERED_FILE_SUFFIX
+            if USE_FILTERED_PREDICTIONS:
+                # Immediately refresh, filter, and save cache to _filtered.json
 
-            filtered_file = raw_file.replace("_raw.json", FILTERED_FILE_SUFFIX)
-            refreshed_results = refresh_results(raw_results, is_full_seq=full_sequence)
-            filtered_results = apply_spatial_filter(refreshed_results)
-            with open(filtered_file, "w") as f:
-                json.dump(filtered_results, f)
-            print(f"Saved filtered predictions cache to {filtered_file}")
+                filtered_file = raw_file.replace("_raw.json", FILTERED_FILE_SUFFIX)
+                refreshed_results = refresh_results(
+                    raw_results, is_full_seq=full_sequence
+                )
+                filtered_results = apply_spatial_filter(refreshed_results)
+                with open(filtered_file, "w") as f:
+                    json.dump(filtered_results, f)
+                print(f"Saved filtered predictions cache to {filtered_file}")
 
     print("\n=========================================")
     print(">>> All predictions generated. Running Evaluation Suite...")

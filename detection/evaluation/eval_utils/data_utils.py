@@ -6,6 +6,8 @@ import concurrent.futures
 from functools import lru_cache
 from eval_utils.config import DATASETS, MAPPING_PATH
 from eval_utils.spatial_filter import apply_spatial_filter
+import json
+from eval_utils.config import USE_FILTERED_PREDICTIONS, FILTERED_FILE_SUFFIX
 
 
 def apply_clahe(im):
@@ -169,8 +171,6 @@ def load_predictions_from_json(json_path, is_full_seq=False):
     Otherwise, loads the raw predictions, refreshes ground truth, and applies
     spatial filtering on-the-fly.
     """
-    import json
-    from eval_utils.config import USE_FILTERED_PREDICTIONS, FILTERED_FILE_SUFFIX
 
     # Determine filtered json path
     if json_path.endswith("_raw.json"):
@@ -195,6 +195,7 @@ def load_predictions_from_json(json_path, is_full_seq=False):
 
     results = refresh_results(results, is_full_seq=is_full_seq)
 
-    results = apply_spatial_filter(results)
+    if USE_FILTERED_PREDICTIONS:
+        results = apply_spatial_filter(results)
 
     return results
