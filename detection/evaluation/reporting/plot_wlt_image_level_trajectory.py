@@ -148,23 +148,23 @@ def main():
                     markeredgewidth=1.5,
                     linewidth=2.5,
                     color=COLOR_FP,
-                    label="False Positives",
+                    label="Error Count",
                 )
 
                 ax_fp.set_xlabel(
                     "Active Learning Cycle",
-                    fontsize=11,
+                    fontsize=16,
                     fontweight="medium",
                     labelpad=8,
                 )
                 ax_fp.set_ylabel(
                     "False Positives",
-                    fontsize=11,
+                    fontsize=16,
                     fontweight="medium",
                     color=COLOR_FP,
                     labelpad=8,
                 )
-                ax_fp.tick_params(axis="y", colors=COLOR_FP)
+                ax_fp.tick_params(axis="y", colors=COLOR_FP, labelsize=14)
 
                 # Set Y limit with some headroom
                 max_fp_val = max(fp_history) if fp_history else 10
@@ -187,18 +187,18 @@ def main():
 
                 ax_bbox.set_ylabel(
                     "Number of Annotations",
-                    fontsize=11,
+                    fontsize=16,
                     fontweight="medium",
                     color=COLOR_BBOX,
                     labelpad=8,
                 )
-                ax_bbox.tick_params(axis="y", colors=COLOR_BBOX)
+                ax_bbox.tick_params(axis="y", colors=COLOR_BBOX, labelsize=14)
 
                 max_bbox_val = max(bbox_history) if bbox_history else 100
-                ax_bbox.set_ylim(0, max(100, max_bbox_val * 1.15))
+                ax_bbox.set_ylim(50, max(100, max_bbox_val * 1.15))
 
                 ax_fp.set_xticks(cycles_plot)
-                ax_fp.set_xticklabels([str(c) for c in cycles_plot], fontsize=9)
+                ax_fp.set_xticklabels([str(c) for c in cycles_plot], fontsize=14)
                 ax_fp.set_xlim(0.6, 5.4)
 
                 # Despine
@@ -213,7 +213,7 @@ def main():
                     labels,
                     loc="lower left",
                     frameon=True,
-                    fontsize=10,
+                    fontsize=14,
                     ncol=1,
                 )
 
