@@ -12,43 +12,46 @@ plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Inter", "Outfit", "DejaVu Sans", "Arial"]
 
 
-def plot_cm(tn, fp, fn, tp, save_path_png, save_path_pdf):
+def plot_cm(tn, fp, fn, tp, save_path_png, save_path_pdf, normalized=False):
     fig, ax = plt.subplots(figsize=(6, 6), dpi=300)
-    matrix = np.array([[tn, fp], [fn, tp]])
-    labels = ["Other", "WLT"]
+    matrix = np.array([[tn, fp], [fn, tp]], dtype=float)
+
+    if normalized:
+        row_sums = matrix.sum(axis=1, keepdims=True)
+        valid_rows = row_sums.squeeze() > 0
+        matrix[valid_rows] = matrix[valid_rows] / row_sums[valid_rows]
+    labels = ["Background", "WLT"]
 
     # Plot heatmap without the colorbar as requested
-    im = ax.imshow(matrix, cmap=plt.cm.Blues)
+    im = ax.imshow(matrix, cmap=plt.cm.Blues, vmin=0, vmax=1.0 if normalized else None)
 
     # Show all ticks and label them with large fonts
     ax.set_xticks(np.arange(len(labels)))
     ax.set_yticks(np.arange(len(labels)))
-    ax.set_xticklabels(labels, fontsize=16, fontweight="medium")
-    ax.set_yticklabels(
-        labels, fontsize=16, fontweight="medium", rotation=90, va="center"
-    )
+    ax.set_xticklabels(labels, fontsize=16)
+    ax.set_yticklabels(labels, fontsize=16, rotation=90, va="center")
 
     # Let the horizontal axes labeling appear on bottom
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Loop over data dimensions and create text annotations with very large fonts.
-    thresh = (matrix.max() + matrix.min()) / 2.0
+    fmt = ".2f" if normalized else ".0f"
+    thresh = (matrix.max() + matrix.min()) / 2.0 if not normalized else 0.5
     for i in range(len(labels)):
         for j in range(len(labels)):
             ax.text(
                 j,
                 i,
-                format(matrix[i, j], ".0f"),
+                format(matrix[i, j], fmt),
                 ha="center",
                 va="center",
                 color="white" if matrix[i, j] > thresh else "black",
                 fontsize=26,
-                fontweight="bold",
             )
 
-    ax.set_title("WLT vs Other", fontsize=20, fontweight="bold", pad=15)
-    ax.set_xlabel("Predicted class", fontsize=18, fontweight="medium", labelpad=10)
-    ax.set_ylabel("True class", fontsize=18, fontweight="medium", labelpad=10)
+    # ax.set_title("WLT vs Background", fontsize=20, pad=15)
+    ax.set_xlabel("Predicted", fontsize=18, labelpad=10)
+    ax.set_ylabel("Ground truth", fontsize=18, labelpad=10)
     ax.grid(False)
 
     for spine in ax.spines.values():
@@ -62,7 +65,9 @@ def plot_cm(tn, fp, fn, tp, save_path_png, save_path_pdf):
 
 
 def main():
-    sweep_csv = os.path.join(RESULTS_DIR, "files", "wlt_image_level_sweep_results.csv")
+    sweep_csv = os.path.join(
+        RESULTS_DIR, "files", "wlt_binary_threshold_sweep_test_pool.csv"
+    )
     if not os.path.exists(sweep_csv):
         print("Sweep CSV not found at", sweep_csv)
         return
@@ -133,12 +138,25 @@ def main():
                     fn = best_row["fn"]
                     tp = best_row["tp"]
 
-                    base_filename = f"cm_cycle{cycle}_{conf_name}"
+                    base_filename = f"cm_{m_type}_cycle{cycle}_{conf_name}"
                     png_path = os.path.join(model_dir, base_filename + ".png")
                     pdf_path = os.path.join(model_dir, base_filename + ".pdf")
 
-                    plot_cm(tn, fp, fn, tp, png_path, pdf_path)
-                    generated += 1
+                    # Unnormalized
+                    plot_cm(tn, fp, fn, tp, png_path, pdf_path, normalized=False)
+
+                    # Normalized
+                    norm_png_path = os.path.join(
+                        model_dir, base_filename + "_normalized.png"
+                    )
+                    norm_pdf_path = os.path.join(
+                        model_dir, base_filename + "_normalized.pdf"
+                    )
+                    plot_cm(
+                        tn, fp, fn, tp, norm_png_path, norm_pdf_path, normalized=True
+                    )
+
+                    generated += 2
 
     print(f"Generated {generated} binary confusion matrices in {out_base}")
 

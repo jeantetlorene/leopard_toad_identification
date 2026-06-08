@@ -195,7 +195,7 @@ def main():
                 ax_bbox.tick_params(axis="y", colors=COLOR_BBOX, labelsize=14)
 
                 max_bbox_val = max(bbox_history) if bbox_history else 100
-                ax_bbox.set_ylim(50, max(100, max_bbox_val * 1.15))
+                ax_bbox.set_ylim(80, 200)
 
                 ax_fp.set_xticks(cycles_plot)
                 ax_fp.set_xticklabels([str(c) for c in cycles_plot], fontsize=14)
@@ -211,7 +211,7 @@ def main():
                 ax_fp.legend(
                     lines,
                     labels,
-                    loc="lower left",
+                    loc="best",
                     frameon=True,
                     fontsize=14,
                     ncol=1,
