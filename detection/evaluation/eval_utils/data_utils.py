@@ -182,8 +182,14 @@ def load_predictions_from_json(json_path, is_full_seq=False):
         filtered_path = f"{base}_filtered{ext}"
 
     if USE_FILTERED_PREDICTIONS and os.path.exists(filtered_path):
-        with open(filtered_path, "r") as f:
-            return json.load(f)
+        try:
+            with open(filtered_path, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(
+                f"[Warning] Failed to load {filtered_path} due to {e}. Deleting corrupted cache and falling back to raw processing."
+            )
+            os.remove(filtered_path)
 
     # Fallback: load raw predictions, refresh GT, and apply spatial filter on the fly
     raw_path = json_path

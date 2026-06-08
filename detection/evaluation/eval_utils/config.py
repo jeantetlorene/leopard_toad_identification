@@ -41,7 +41,7 @@ POST_PROCESS_IOU_THRESHOLD = 0.8
 POST_PROCESS_OCCURRENCE_THRESHOLD = 30
 
 # Prediction Loading / Caching Settings
-USE_FILTERED_PREDICTIONS = False
+USE_FILTERED_PREDICTIONS = True
 FILTERED_FILE_SUFFIX = "_filtered.json"
 
 # Common Models and Processing Pipeline Parameters
