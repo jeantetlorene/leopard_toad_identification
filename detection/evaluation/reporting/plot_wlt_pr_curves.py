@@ -27,18 +27,14 @@ def get_wlt_pr(raw_json_path):
     metrics = calculate_detection_metrics(results, iou_threshold=0.5)
     class_curves = metrics.get("class_curves", {})
 
-    if "WLT" not in class_curves:
-        if len(class_curves) == 0:
-            return None, None, None, None
-        wlt_key = list(class_curves.keys())[0]
-        curve = class_curves[wlt_key]
-    else:
-        curve = class_curves["WLT"]
-
+    if 2 not in class_curves:
+        return None, None, None, None
+        
+    curve = class_curves[2]
     mrec = curve["recall"]
     mpre = curve["precision"]
-
-    ap = curve.get("ap", metrics.get("mAP", 0.0))
+    
+    ap = metrics.get("class_aps", {}).get(2, 0.0)
     ar = mrec[-2] if len(mrec) >= 2 else 0.0
 
     return mrec, mpre, ap, ar
