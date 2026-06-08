@@ -208,10 +208,12 @@ def plot_confidence_distributions(df):
                                     label="Optimal validation threshold",
                                 )
 
-                        plt.xlabel("Confidence Score")
-                        plt.ylabel("Density")
+                        plt.xlabel("Confidence Score", fontsize=16)
+                        plt.ylabel("Density", fontsize=16)
+                        plt.xticks(fontsize=14)
+                        plt.yticks(fontsize=14)
                         plt.xlim(0, 1)
-                        plt.legend()
+                        plt.legend(fontsize=14)
                         plt.tight_layout()
                         plt.savefig(
                             os.path.join(
