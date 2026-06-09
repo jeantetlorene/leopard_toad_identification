@@ -26,11 +26,11 @@ def get_wlt_pr(raw_json_path):
 
     if 2 not in class_curves:
         return None, None, None, None
-        
+
     curve = class_curves[2]
     mrec = curve["recall"]
     mpre = curve["precision"]
-    
+
     ap = metrics.get("class_aps", {}).get(2, 0.0)
     ar = mrec[-2] if len(mrec) >= 2 else 0.0
 
