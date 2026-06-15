@@ -148,7 +148,7 @@ def main():
                     markeredgewidth=1.5,
                     linewidth=2.5,
                     color=COLOR_FP,
-                    label="Error Count",
+                    label="False Positives",
                 )
 
                 ax_fp.set_xlabel(
@@ -157,13 +157,13 @@ def main():
                     fontweight="medium",
                     labelpad=8,
                 )
-                ax_fp.set_ylabel(
-                    "False Positives",
-                    fontsize=16,
-                    fontweight="medium",
-                    color=COLOR_FP,
-                    labelpad=8,
-                )
+                # ax_fp.set_ylabel(
+                #     "False Positives",
+                #     fontsize=16,
+                #     fontweight="medium",
+                #     color=COLOR_FP,
+                #     labelpad=8,
+                # )
                 ax_fp.tick_params(axis="y", colors=COLOR_FP, labelsize=14)
 
                 # Set Y limit with some headroom
@@ -185,13 +185,13 @@ def main():
                     label="Bounding Boxes",
                 )
 
-                ax_bbox.set_ylabel(
-                    "Number of Annotations",
-                    fontsize=16,
-                    fontweight="medium",
-                    color=COLOR_BBOX,
-                    labelpad=8,
-                )
+                # ax_bbox.set_ylabel(
+                #     "Number of Annotations",
+                #     fontsize=16,
+                #     fontweight="medium",
+                #     color=COLOR_BBOX,
+                #     labelpad=8,
+                # )
                 ax_bbox.tick_params(axis="y", colors=COLOR_BBOX, labelsize=14)
 
                 max_bbox_val = max(bbox_history) if bbox_history else 100
