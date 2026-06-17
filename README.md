@@ -1,98 +1,32 @@
-# Leopard Toad Identification & Re-identification
+# Western Leopard Toad (WLT) Detection & Identification
 
-This repository contains the codebase and methodology for detecting, tracking, and identifying individual leopard toads from multi-year camera trap data (2023-2025). The project combines state-of-the-art object detection models with feature-matching algorithms to automate ecological monitoring and population analysis.
+This repository contains the codebase and tools for the automatic detection and individual re-identification (re-ID) of Western Leopard Toads (WLT) from camera trap data, primarily to evaluate migratory tunnel usage.
 
 ## Repository Structure
 
-The project is divided into two primary modules: **Detection** and **Identification**.
+The project is structured into three main folders:
 
-### 1. Detection (`/detection`)
-This module handles the automatic localization of leopard toads in raw camera trap images using various object detection architectures (YOLOv8, Faster R-CNN, and RT-DETR). 
+### 1. dataset/
+Contains the raw and processed datasets used throughout the project.
 
-Key files and features:
-- **`active learning/pipelines/run_inference_pipeline.py`**: A fully modular, configurable batch inference pipeline to run deep learning models (supporting both RT-DETR and YOLO) on multi-year year folder structures. Features CLAHE contrast enhancement, batch prediction, dynamic model loading, and automatic prediction class alignment via the model's loaded metadata. Includes an integrated post-processing switch (`--filter_static`) to automatically remove background triggers. Supports folder-level continuation to resume interrupted runs.
-- **`active learning/pipelines/run_active_learning_loop.py`**: Unified active learning loop orchestrator. Coordinates training models, running inference on unlabeled pools, filtering static background triggers, and selecting curation candidates. Integrates cycle and phase state tracking to automatically resume incomplete iterations.
-- **`active learning/pipelines/filter_static_false_positives.py`**: Standalone post-processing script to eliminate stationary camera trap false positives (triggers on leaves, rocks, ripples, etc.) by clustering bounding boxes spatially within camera sequences and suppressing those that trigger more than `--occurrence_threshold` times.
-- **`batch_inference.py`**: Automates detection on large datasets using YOLO or Faster R-CNN models.
-- **`threshold_sweeping.py`**: Contains the threshold-sweeping evaluation pipeline. Generates PR curves, recall-threshold trade-off analyses, and confidence distributions to determine optimal model thresholds that maximize recall (targeting 95–98%) while minimizing manual review overhead. 
-- **`active learning/pipelines/active_curation.py`**: A fully generalized, dynamic active learning curation script. Loads domain-pretrained ResNet50 weights, clusters crops using K-Means++ independently across active curation categories (primary target positive class, spatial hard negatives, and support classes), and outputs human curation priority lists. Features dynamic budget redistribution to prevent underutilizing curation slots.
-- **`visualize_gradio.py` & `gradio_app.py`**: Interactive Gradio interfaces used for visually auditing model predictions, with options to quickly jump to specific image indices and review outputs in real time.
+### 2. detection/
+Handles toad localization and bounding box detection within camera trap images.
+* **pretraining/**: Model pre-training scripts using supplementary datasets (e.g., iNaturalist, Open Images).
+* **active learning/**: The active learning loop orchestrator, pipelines, and selectors to iteratively curate high-yield training samples.
+* **results/**, **runs/**, **training/**: Output folders containing detection predictions, trained weights, and training run progress logs.
 
-### 2. Identification (`/identification`)
-Once toads are detected and cropped, this module is responsible for the re-identification of individual toads to determine if unique individuals are reoccurring within the habitat.
+### 3. identification/
+Responsible for re-identifying individual toads across tunnel ends to track recurrence and evaluate tunnel usage.
+* **data/**: Image crops of detected toads.
+* **hotspotter/**: The re-identification engine implementing a Hotspotter-inspired algorithm (SIFT descriptor extraction, FLANN matching, and RANSAC spatial verification) to match toad spot patterns between the opposite ends of migratory road-underpass tunnels (Z vs. R cameras) within the same year.
+* **results/**: Subfolder storing all matching CSV outputs and compiled premium visual match PDF reports.
+* **simclr/** (Experimental): Directory containing early experimental contrastive learning (SimCLR) implementations (not used in the final production pipeline).
 
-Key files and features:
-- **`batch_hotspotter.py`**: A batch processing script utilizing a Hotspotter-inspired algorithm (SIFT feature extraction + FLANN-based matching) to compare cropped toad images against a database, generating potential matches for manual validation.
-- **`hotspotter.ipynb`**: Interactive notebook version of the Hotspotter matching process for fine-grained testing and parameter tuning.
-- **`train_simclr.ipynb`**: Notebook detailing a deep-learning approach utilizing SimCLR (contrastive learning) to pull visual embeddings from toad patterns for advanced re-identification.
-- **`visualize.ipynb`**: General visualization notebook for viewing matched pairs and feature keypoints.
-
-## Tech Stack
-- **Deep Learning**: PyTorch, Torchvision, Ultralytics YOLOv8
-- **Computer Vision**: OpenCV (CLAHE, SIFT, FLANN)
-- **UI / Visualization**: Gradio, Matplotlib
-- **Data Engineering**: Pandas, concurrent.futures
+---
 
 ## Getting Started
-Ensure you have the required dependencies listed in your virtual environment (`.venv`).
-Most scripts are designed to be run as standalone modules or via interactive Jupyter notebooks depending on if you are doing inference, training, or manual review.
 
-### Running the Inference & Filtering Pipeline
-You can run the batch inference pipeline with automated static background trigger filtering using the following commands:
-
-```bash
-# Run batch inference and automatically clean stationary background false positives (resumes folder-by-folder by default)
-.venv/bin/python "detection/active learning/pipelines/run_inference_pipeline.py" \
-  --model_path "detection/active learning/rtdetr_clahe/runs/cycle_2_pretrained_phase2/weights/best.pt" \
-  --output_dir "detection/results/detect_rtdetr_cycle2_clahe_pretrained" \
-  --img_size 640 \
-  --batch_size 128 \
-  --filter_static \
-  --iou_threshold 0.7 \
-  --occurrence_threshold 15
-
-# Force rerun from scratch, overwriting existing intermediate files:
-.venv/bin/python "detection/active learning/pipelines/run_inference_pipeline.py" \
-  --model_path "detection/active learning/rtdetr_clahe/runs/cycle_2_pretrained_phase2/weights/best.pt" \
-  --output_dir "detection/results/detect_rtdetr_cycle2_clahe_pretrained" \
-  --force
-
-# Run the static bounding box filter independently on an existing prediction CSV
-.venv/bin/python "detection/active learning/pipelines/filter_static_false_positives.py" \
-  --input_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/all_unlabeled_predictions.csv" \
-  --iou_threshold 0.7 \
-  --occurrence_threshold 15
-
-# Run the active curation priority selector pipeline using domain feature extraction and category splits (supports --batch_size to optimize GPU throughput)
-.venv/bin/python "detection/active learning/pipelines/active_curation.py" \
-  --consensus_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/all_unlabeled_predictions.csv" \
-  --output_csv "detection/results/detect_rtdetr_cycle2_clahe_pretrained/curation_priority.csv" \
-  --n_clusters 100 \
-  --batch_size 256
-```
-
-### Running the Active Learning Loop Orchestrator
-The `run_active_learning_loop.py` script ties all components together (Training, Inference, Filtering, Curation, and Query Export) and is **fully resumeable**. It features a configurable `--batch_size` (default: `256`) that is automatically passed down to both the batch inference and active curation pipelines to maximize GPU acceleration:
-
-```bash
-# Run the active learning loop (will automatically resume incomplete cycles/phases)
-.venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
-  --model_type yolo rtdetr \
-  --clahe \
-  --mode pretrained \
-  --batch_size 256
-
-# High-performance run leveraging high-VRAM workstation GPUs (e.g. RTX A6000) to maximize parallel throughput:
-.venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
-  --model_type yolo \
-  --clahe \
-  --mode pretrained \
-  --batch_size 1024
-
-# Force rerun all phases, skipping state-based caching:
-.venv/bin/python "detection/active learning/pipelines/run_active_learning_loop.py" \
-  --model_type yolo \
-  --clahe \
-  --mode pretrained \
-  --force
-```
+To get started with running inference, training, or re-identification:
+1. Ensure your virtual environment (`.venv`) is activated.
+2. For object detection and model training, refer to the tools in the [detection/](detection) folder.
+3. For re-identification and match generation, refer to the [identification/hotspotter/README.md](identification/hotspotter/README.md).

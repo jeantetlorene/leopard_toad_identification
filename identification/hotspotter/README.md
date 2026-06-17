@@ -4,7 +4,7 @@ This framework uses optimized Scale-Invariant Feature Transform (**SIFT**) keypo
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 * **Advanced Computer Vision Preprocessing Pipeline:** Integrates custom aspect-ratio-preserving padding, bicubic upscaling, local CLAHE enhancement, bilateral noise filtering, and high-frequency unsharp masking to elevate SIFT match performance on low-light night-time sensors.
 * **Optimized SIFT Parameters:** Tailored SIFT settings (`contrastThreshold=0.02`, `edgeThreshold=15`) to capture micro-level spot edges and boundaries.
@@ -13,7 +13,7 @@ This framework uses optimized Scale-Invariant Feature Transform (**SIFT**) keypo
 
 ---
 
-## 🛠️ Preprocessing Pipeline Architecture
+## Preprocessing Pipeline Architecture
 
 Raw cropped images of toads are often low-contrast, grainy, or geometrically distorted. The framework applies a multi-stage preprocessing chain before feature extraction:
 
@@ -36,7 +36,7 @@ graph TD
 
 ---
 
-## 📊 Preprocessing Impact on SIFT
+## Preprocessing Impact on SIFT
 
 Applying this pipeline yields a massive performance boost over matching raw crops:
 
@@ -50,7 +50,7 @@ Applying this pipeline yields a massive performance boost over matching raw crop
 
 ---
 
-## 📂 Directory & Package Structure
+## Directory & Package Structure
 
 ```
 identification/hotspotter/
@@ -67,7 +67,7 @@ identification/hotspotter/
 
 ---
 
-## 🚀 Execution Guide
+## Execution Guide
 
 ### 1. Preprocessing and Cropping
 To generate preprocessed toad crops from the prediction list, run the dataset utility:
@@ -90,7 +90,7 @@ python run_cross_tunnel_hotspotter.py --prep-mode improved
 ```
 
 Results containing matched Z/R crop pairs, confidence scores, and original image paths will be saved directly to:
-[cross_tunnel_matches_filtered_\<prep_mode\>.csv](file:///home/Joshua/Downloads/leopard_toad_identification/identification/cross_tunnel_matches_filtered_improved.csv) (e.g. `cross_tunnel_matches_filtered_improved.csv`).
+[cross_tunnel_matches_filtered_\<prep_mode\>.csv](../results/cross_tunnel_matches_filtered_improved.csv) (e.g. `results/cross_tunnel_matches_filtered_improved.csv`).
 
 ### 3. Generating Premium Visualizations (PDF Report)
 To compile a high-quality PDF report showing visual matches with green inlier keypoint connection vectors:
@@ -100,11 +100,11 @@ python visualize_matches.py -n 70 --prep-mode improved
 ```
 
 The resulting multi-page PDF document will be compiled and saved dynamically to:
-`identification/top_<num_matches>_cross_tunnel_matches_<prep_mode>.pdf` (e.g. `top_70_cross_tunnel_matches_improved.pdf`).
+`identification/results/top_<num_matches>_cross_tunnel_matches_<prep_mode>.pdf` (e.g. `results/top_70_cross_tunnel_matches_improved.pdf`).
 
 ---
 
-## 🛡️ Spatial Verification Details
+## Spatial Verification Details
 
 Lowe's ratio test filters out ambiguous descriptor matches by ensuring the best match is significantly closer than the second best. The remaining matches undergo spatial homography filtering:
 $$H = \text{findHomography}(pts_1, pts_2, \text{RANSAC}, 5.0)$$

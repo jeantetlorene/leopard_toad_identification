@@ -17,9 +17,9 @@ PREDICTIONS_CSV = os.path.join(
     "wlt_predictions.csv",
 )
 CROSS_TUNNEL_MATCHES_CSV = os.path.join(
-    IDENTIFICATION_DIR, "cross_tunnel_matches_filtered.csv"
+    IDENTIFICATION_DIR, "results", "cross_tunnel_matches_filtered.csv"
 )
-ALL_MATCHES_CSV = os.path.join(IDENTIFICATION_DIR, "possible_matches_filtered.csv")
+ALL_MATCHES_CSV = os.path.join(IDENTIFICATION_DIR, "results", "possible_matches_filtered.csv")
 
 # Crop directory paths
 CROPS_DIR = os.path.join(IDENTIFICATION_DIR, "data", "wlt_predictions_crops_filtered")

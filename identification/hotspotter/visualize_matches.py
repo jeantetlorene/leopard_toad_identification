@@ -97,6 +97,7 @@ def main():
     hotspotter = BatchHotSpotter(prep_mode=prep_mode)
     pdf_path = os.path.join(
         config.IDENTIFICATION_DIR,
+        "results",
         f"top_{num_to_visualize}_cross_tunnel_matches_{prep_mode}.pdf",
     )
 

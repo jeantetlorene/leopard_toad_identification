@@ -90,7 +90,7 @@ DATA_DIR = (
     "/home/Joshua/Downloads/leopard_toad_identification/dataset/dataset_reid_crops"
 )
 SCORE_THRESHOLD = 20  # Adjust this if needed (>10 is usually a strong match)
-OUTPUT_CSV = "/home/Joshua/Downloads/leopard_toad_identification/identification/possible_matches.csv"
+OUTPUT_CSV = "/home/Joshua/Downloads/leopard_toad_identification/identification/results/possible_matches.csv"
 
 # 1. Pre-compute features for all images to save time.
 # This prevents computing the SIFT features repeatedly for the same image.
