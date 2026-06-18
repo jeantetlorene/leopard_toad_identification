@@ -45,10 +45,10 @@ The active learning loop iteratively updates the models by selecting the most in
   * Code: [run_active_learning_loop.py](active%20learning/pipelines/run_active_learning_loop.py)
 * **Inference on Unlabeled Pool**: Batch inference pipeline that generates predictions on the unlabeled dataset.
   * Code: [run_inference_pipeline.py](active%20learning/pipelines/run_inference_pipeline.py)
-* **Difficulty-Calibrated Uncertainty Sampling (DCUS)**: Combines classification entropy (label confusion) and bounding box spatial variance (localization confusion) to score candidate predictions.
-  * Code: [active_curation.py (DCUS Scoring)](active%20learning/pipelines/active_curation.py#L313-L325)
-* **Consensus-Based Core-Set Selection (CCMS) & K-Means++ Clustering**: Extracts deep visual features using a domain-pretrained backbone, then clusters candidates with K-Means++ independently across categories (Target Positives, Hard Negatives, Other support classes) to query a diverse and representative active learning subset.
-  * Code: [active_curation.py (CCMS Selection)](active%20learning/pipelines/active_curation.py#L198-L242)
+* **Difficulty-Calibrated Uncertainty Sampling (DCUS)**: Estimates classification entropy and calculates running class-wise difficulty coefficients (based on validation set box-matching or AP50) to weight and sum object-level uncertainties.
+  * Code: [dcus_sampling.py](active%20learning/pipelines/dcus_sampling.py)
+* **Category-Conditioned Matching Similarity (CCMS) & Diversity Clustering**: Extracts visual feature crops and calculates pairwise similarities, then queries diverse representatives using k-Center Greedy and modified k-Means++ clustering centroids.
+  * Code: [ccms_sampling.py](active%20learning/pipelines/ccms_sampling.py)
 * **Human Annotation (Oracle Export)**: Saves prioritized candidates to a priority query list for manual curation.
   * Code: [run_active_learning_loop.py (Oracle Export)](active%20learning/pipelines/run_active_learning_loop.py#L48-L76)
 

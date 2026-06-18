@@ -19,7 +19,33 @@ Our active curation pipeline solves these issues by:
    - **Western Leopard Toad (40% Budget)**: Confident but non-static toad candidates to enrich the positive train set.
    - **Stationary Background Triggers (30% Budget)**: Confident stationary triggers to be verified as background empty images, forcing the model to ignore them.
    - **Other Fauna (30% Budget)**: Small mammals and other amphibians to support classifier boundary definitions.
-3. Performing **independent K-Means++ clustering** inside each sub-pool to select the most diverse, high-uncertainty representatives.
+3. Performing **independent CCMS similarity & clustering** inside each sub-pool using a two-stage (k-Center Greedy and modified k-Means++) clustering algorithm to select the most diverse, high-uncertainty representative images.
+
+---
+
+## Active Curation Pipeline (Modularized Sampling)
+
+The active curation pipeline (Phase 3) is split into two distinct modular scripts under `pipelines/`:
+
+### 1. Difficulty-Calibrated Uncertainty Sampling (DCUS) (`dcus_sampling.py`)
+Computes uncertainty at both the object and image levels:
+- **Object-Level Entropy**: Calculates the standard Shannon classification entropy $E = - \sum_{c=1}^C p_c \log p_c$ for each bounding box. If only top-1 confidence is available, it is estimated as:
+  $$E = -p \log p - (1-p) \log \left(\frac{1-p}{C-1}\right)$$
+- **Difficulty Coefficients ($w_c$)**: Dynamically evaluates the detector on the validation dataset (matching predictions to ground-truth boxes via IoU). The box difficulty is $(1 - \text{conf}) + (1 - \text{IoU})$, and the class weight is $w_c = 1.0 + \beta \cdot D_c$ (where $D_c$ is class-wise average difficulty, defaulting to $\beta = 2.0$). If validation images are unavailable, it reads AP50 scores from `results_dict.json` ($w_c = 1.0 + 2.0 \cdot (1 - \text{AP50}_c)$) or falls back to default settings (Target class = 3.0, Small Mammal = 1.2, others = 2.0).
+- **Image-Level Aggregation**: Sums the difficulty-weighted classification entropies of all individual objects in each image:
+  $$U(I) = \sum_{i \in I} w_{c(i)} \cdot E_i$$
+
+### 2. Category Conditioned Matching Similarity (CCMS) & Clustering (`ccms_sampling.py`)
+Runs visual similarity-based diversity curation on the sub-pools:
+- **Feature Extraction**: Extracts 2048-dimensional deep visual features ($f$) from crops of the predicted boxes using a domain-pretrained ResNet50 backbone.
+- **Category-Conditioned Object Matching**: Measures object-level similarity between images strictly within the same predicted class:
+  $$s(o_{a,i}, O_b) = \begin{cases} \max_{c_{b,j}=c_{a,i}} \text{cosine\_similarity}(f_{a,i}, f_{b,j}) \\ 0 & \text{if no class matching object exists in } I_b \end{cases}$$
+- **Symmetric Image similarity**: Averages directional weighted similarities:
+  $$S'(O_a, O_b) = \frac{1}{\sum_{i} t_{a,i}} \sum_{i} t_{a,i} \cdot s(o_{a,i}, O_b)$$
+  $$S(O_a, O_b) = \frac{1}{2} (S'(O_a, O_b) + S'(O_b, O_a))$$
+- **Two-Step Clustering**:
+  - *Initialization (k-Center Greedy)*: Picks a random first image center, then repeatedly selects centers that maximize the minimum distance ($1 - S$) to already chosen centers.
+  - *Refinement (Modified k-Means++)*: Redefines centroids to be the actual image in each cluster that has the maximum summed similarity to all other images in that cluster. Returns the final stabilized cluster centers as representatives.
 
 ---
 

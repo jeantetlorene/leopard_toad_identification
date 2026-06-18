@@ -472,7 +472,7 @@ def main():
                     )
 
                 # ----------------------------------------------------
-                # PHASE 3: CATEGORY-BIASED ACTIVE CURATION
+                # PHASE 3: CATEGORY-BIASED ACTIVE CURATION (DCUS & CCMS)
                 # ----------------------------------------------------
                 if not args.force and os.path.exists(curation_priority_csv):
                     print(
@@ -482,13 +482,44 @@ def main():
                     print(
                         f"\n--- [Phase 3: Active Curation] Selecting diverse priority annotations ---"
                     )
-                    curation_script = os.path.join(PIPELINES_DIR, "active_curation.py")
 
-                    curate_cmd = [
+                    # Step 3a: Difficulty Calibrated Uncertainty Sampling (DCUS)
+                    dcus_script = os.path.join(PIPELINES_DIR, "dcus_sampling.py")
+                    predictions_uncertainty_csv = os.path.join(
+                        output_dir, "all_unlabeled_predictions_uncertainty.csv"
+                    )
+
+                    # Dynamically resolve device
+                    import torch
+
+                    device_str = "cuda" if torch.cuda.is_available() else "cpu"
+
+                    dcus_cmd = [
                         python_interpreter,
-                        curation_script,
-                        "--consensus_csv",
+                        dcus_script,
+                        "--predictions_csv",
                         unified_predictions_csv,
+                        "--output_csv",
+                        predictions_uncertainty_csv,
+                        "--model_path",
+                        model_weight,
+                        "--val_dir",
+                        dataset_dir,
+                        "--device",
+                        device_str,
+                    ]
+                    run_command(
+                        dcus_cmd,
+                        f"{m_type.upper()} ({prep_val}, {mode_val}) DCUS Uncertainty Estimation",
+                    )
+
+                    # Step 3b: Category Conditioned Matching Similarity (CCMS) & Diversity Clustering
+                    ccms_script = os.path.join(PIPELINES_DIR, "ccms_sampling.py")
+                    ccms_cmd = [
+                        python_interpreter,
+                        ccms_script,
+                        "--predictions_csv",
+                        predictions_uncertainty_csv,
                         "--output_csv",
                         curation_priority_csv,
                         "--n_clusters",
@@ -501,8 +532,8 @@ def main():
                         str(args.batch_size),
                     ]
                     run_command(
-                        curate_cmd,
-                        f"{m_type.upper()} ({prep_val}, {mode_val}) Active Learning Curation Selection",
+                        ccms_cmd,
+                        f"{m_type.upper()} ({prep_val}, {mode_val}) CCMS Curation Selection",
                     )
 
                 # ----------------------------------------------------

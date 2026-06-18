@@ -216,20 +216,22 @@ def crop_from_csv(csv_path, output_dir, apply_clahe=False):
     print(f"Saved to: {output_dir}")
 
 
-def crop_from_json(json_path, output_dir, apply_clahe=False, conf_threshold=0.5, class_id=2):
+def crop_from_json(
+    json_path, output_dir, apply_clahe=False, conf_threshold=0.5, class_id=2
+):
     """
-    Crop images from a predictions JSON file. 
+    Crop images from a predictions JSON file.
     The JSON should be formatted with normalized [x_center, y_center, w, h] predictions.
     """
     print(f"Reading predictions from JSON: {json_path}")
-    with open(json_path, 'r') as f:
+    with open(json_path, "r") as f:
         data = json.load(f)
 
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"Cleaning existing crops in: {output_dir}")
     for f in os.listdir(output_dir):
-        if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+        if f.lower().endswith((".jpg", ".jpeg", ".png")):
             try:
                 os.remove(os.path.join(output_dir, f))
             except Exception as e:
@@ -238,11 +240,17 @@ def crop_from_json(json_path, output_dir, apply_clahe=False, conf_threshold=0.5,
     # Filter data first to only process images with valid predictions
     valid_data = []
     for entry in data:
-        valid_preds = [p for p in entry.get("predictions", []) if p["cls"] == class_id and p["conf"] >= conf_threshold]
+        valid_preds = [
+            p
+            for p in entry.get("predictions", [])
+            if p["cls"] == class_id and p["conf"] >= conf_threshold
+        ]
         if valid_preds:
             valid_data.append((entry["path"], valid_preds))
 
-    print(f"Found {len(valid_data)} images containing class {class_id} with confidence >= {conf_threshold}. Starting cropping...")
+    print(
+        f"Found {len(valid_data)} images containing class {class_id} with confidence >= {conf_threshold}. Starting cropping..."
+    )
 
     crops_created = 0
     image_crop_counts = {}
@@ -265,7 +273,7 @@ def crop_from_json(json_path, output_dir, apply_clahe=False, conf_threshold=0.5,
             rel_path = img_path.split(ref_prefix, 1)[1]
         else:
             rel_path = img_path.lstrip("/")
-        
+
         rel_path_no_ext = os.path.splitext(rel_path)[0]
         trackable_name = rel_path_no_ext.replace("/", "__")
 
@@ -293,6 +301,7 @@ def crop_from_json(json_path, output_dir, apply_clahe=False, conf_threshold=0.5,
     print(f"Total Toads Cropped: {crops_created}")
     print(f"Saved to: {output_dir}")
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Crop images from a dataset based on YOLO labels or CSV predictions with optional CLAHE preprocessing."
@@ -317,7 +326,7 @@ def main():
         "--conf",
         type=float,
         default=0.5,
-        help="Minimum confidence threshold for crops when using JSON mode. Default 0.5."
+        help="Minimum confidence threshold for crops when using JSON mode. Default 0.5.",
     )
 
     args = parser.parse_args()
@@ -329,7 +338,9 @@ def main():
     elif args.json:
         if not args.output_dir:
             parser.error("--output-dir is required when using --json mode.")
-        crop_from_json(args.json, args.output_dir, apply_clahe=args.clahe, conf_threshold=args.conf)
+        crop_from_json(
+            args.json, args.output_dir, apply_clahe=args.clahe, conf_threshold=args.conf
+        )
     else:
         generate_reid_dataset(apply_clahe=args.clahe)
 
