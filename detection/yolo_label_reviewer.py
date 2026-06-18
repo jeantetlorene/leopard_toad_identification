@@ -5,17 +5,8 @@ import numpy as np
 import pandas as pd
 import gradio as gr
 
-# Maximum number of annotations we support reviewing per image
-MAX_BOXES = 20
-
-# Default classes
-DEFAULT_CLASSES = ["Other_Amphibian", "Small_Mammal", "Western_Leopard_Toad"]
-
 
 def load_classes(base_path):
-    """
-    Robustly load classes from classes.txt or notes.json.
-    """
     classes_file = os.path.join(base_path, "classes.txt")
     if os.path.isfile(classes_file):
         try:
@@ -37,15 +28,11 @@ def load_classes(base_path):
                 if names:
                     return names
         except Exception as e:
-            print(f"Error parsing notes.json: {e}")
-
-    return DEFAULT_CLASSES
+            print(f"Error reading notes.json: {e}")
+    return []
 
 
 def load_dataset(base_path):
-    """
-    Validate base path, load images list and classes list.
-    """
     if not base_path:
         return [], [], "Please enter a base path.", gr.update(choices=[])
 
@@ -67,10 +54,8 @@ def load_dataset(base_path):
             gr.update(choices=[]),
         )
 
-    # Load classes
     classes = load_classes(base_path)
 
-    # Scan for images
     image_extensions = (
         ".jpg",
         ".jpeg",
@@ -108,9 +93,6 @@ def load_dataset(base_path):
 
 
 def load_boxes(base_path, image_name, classes):
-    """
-    Load YOLO format boxes from labels/ directory.
-    """
     labels_dir = os.path.join(base_path, "labels")
     base_name, _ = os.path.splitext(image_name)
     label_path = os.path.join(labels_dir, base_name + ".txt")
@@ -147,9 +129,6 @@ def load_boxes(base_path, image_name, classes):
 
 
 def save_boxes(base_path, image_name, boxes):
-    """
-    Save keeping boxes to YOLO label file. Delete file or empty it if no boxes left.
-    """
     labels_dir = os.path.join(base_path, "labels")
     if not os.path.isdir(labels_dir):
         try:
@@ -178,14 +157,10 @@ def save_boxes(base_path, image_name, boxes):
 
 
 def draw_image_boxes(image_path, boxes):
-    """
-    Draw bounding boxes on the image. Green for Keep, Red for Delete.
-    """
     img = cv2.imread(image_path)
     if img is None:
-        # Create a nice dark fallback canvas
         canvas = np.zeros((600, 800, 3), dtype=np.uint8)
-        canvas[:, :] = (15, 23, 42)  # Slate-900 background
+        canvas[:, :] = (15, 23, 42)
         cv2.putText(
             canvas,
             "Error: Image file not found",
@@ -198,7 +173,6 @@ def draw_image_boxes(image_path, boxes):
         )
         return canvas
 
-    # Optimize performance by downscaling large images before drawing & rendering
     h, w, _ = img.shape
     max_dim = 1280
     if max(h, w) > max_dim:
@@ -210,7 +184,6 @@ def draw_image_boxes(image_path, boxes):
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Adaptive text scaling & thickness based on image size
     thickness = max(2, int(max(h, w) / 500))
     font_scale = max(0.5, thickness / 3)
 
@@ -221,23 +194,20 @@ def draw_image_boxes(image_path, boxes):
         xmax = int((x_c + bw / 2) * w)
         ymax = int((y_c + bh / 2) * h)
 
-        # Clamp boundaries
         xmin = max(0, min(xmin, w - 1))
         ymin = max(0, min(ymin, h - 1))
         xmax = max(0, min(xmax, w - 1))
         ymax = max(0, min(ymax, h - 1))
 
         if box["keep"]:
-            color = (46, 204, 113)  # Emerald Green
+            color = (46, 204, 113)
             status_suffix = ""
         else:
-            color = (231, 76, 60)  # Alizarin Red
+            color = (231, 76, 60)
             status_suffix = " [DELETE]"
 
-        # Draw box
         cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color, thickness)
 
-        # Draw box label with background box
         conf_str = (
             f" ({box['confidence']:.2%})" if box["confidence"] is not None else ""
         )
@@ -247,11 +217,9 @@ def draw_image_boxes(image_path, boxes):
             label_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness // 2 + 1
         )
 
-        # Label background
         label_ymin = max(0, ymin - text_h - 12)
         cv2.rectangle(img, (xmin, label_ymin), (xmin + text_w + 6, ymin), color, -1)
 
-        # Put label text
         cv2.putText(
             img,
             label_text,
@@ -266,113 +234,80 @@ def draw_image_boxes(image_path, boxes):
     return img
 
 
-def get_dataframe_data(boxes):
-    """
-    Format current boxes info as a pandas DataFrame for nice rendering.
-    """
-    if not boxes:
-        return pd.DataFrame(
-            columns=[
-                "Box #",
-                "Class Name",
-                "Confidence",
-                "Coordinates (x,y,w,h)",
-                "Status",
-            ]
+def get_control_updates(boxes, classes, selected_idx):
+    if not boxes or selected_idx < 0 or selected_idx >= len(boxes):
+        return (
+            gr.update(choices=[], value=None, visible=False),
+            gr.update(visible=False),
+            gr.update(choices=[], value=None, visible=False),
         )
 
-    data = []
-    for idx, box in enumerate(boxes):
-        status = "✅ Keep" if box["keep"] else "❌ Delete"
-        coords_str = ", ".join(f"{x:.4f}" for x in box["coords"])
-        conf_str = (
-            f"{box['confidence']:.2%}" if box["confidence"] is not None else "N/A"
-        )
-        data.append(
-            {
-                "Box #": idx + 1,
-                "Class Name": box["class_name"],
-                "Confidence": conf_str,
-                "Coordinates (x,y,w,h)": coords_str,
-                "Status": status,
-            }
-        )
-    return pd.DataFrame(data)
+    selector_choices = [
+        f"Box #{i + 1}: {box['class_name']}{'' if box['keep'] else ' [DELETE]'}"
+        for i, box in enumerate(boxes)
+    ]
+    selector_val = selector_choices[selected_idx]
+
+    current_box = boxes[selected_idx]
+    keep_val = "Keep" if current_box["keep"] else "Delete"
+
+    return (
+        gr.update(choices=selector_choices, value=selector_val, visible=True),
+        gr.update(value=keep_val, visible=True),
+        gr.update(choices=classes, value=current_box["class_name"], visible=True),
+    )
 
 
 def update_ui_for_image(base_path, image_name, classes, index, total_images):
-    """
-    Load data for image at new index and generate component outputs.
-    """
     image_path = os.path.join(base_path, "images", image_name)
     boxes = load_boxes(base_path, image_name, classes)
     annotated_img = draw_image_boxes(image_path, boxes)
 
     progress_text = f"**Image {index + 1} of {total_images}**: `{image_name}`"
     jump_dropdown_val = f"{index + 1}: {image_name}"
-    df_data = get_dataframe_data(boxes)
 
-    outputs = [
+    sel_idx = 0 if boxes else -1
+    sel_update, keep_update, cls_update = get_control_updates(boxes, classes, sel_idx)
+
+    return [
         annotated_img,
         index,
         boxes,
         progress_text,
         jump_dropdown_val,
-        df_data,
         "",
+        sel_idx,
+        sel_update,
+        keep_update,
+        cls_update,
     ]
-
-    # Generate visibility & values for all MAX_BOXES control rows
-    for i in range(MAX_BOXES):
-        if i < len(boxes):
-            box = boxes[i]
-            conf_str = (
-                f" ({box['confidence']:.1%})" if box["confidence"] is not None else ""
-            )
-            lbl_val = f"**Box #{i + 1}{conf_str}**"
-            outputs.append(gr.Row(visible=True))
-            outputs.append(lbl_val)
-            outputs.append("Keep")
-            outputs.append(
-                gr.Dropdown(choices=classes, value=box["class_name"], visible=True)
-            )
-        else:
-            outputs.append(gr.Row(visible=False))
-            outputs.append("")
-            outputs.append("Keep")
-            outputs.append(gr.Dropdown(choices=[], value=None, visible=False))
-
-    return outputs
 
 
 def handle_load_dataset(base_path):
-    """
-    Handle click on Load Dataset. Sets both raw_images_state and images_state,
-    resets filter dropdown to "All" and populated choices list.
-    """
     images, classes, msg, dropdown_update = load_dataset(base_path)
     if not images:
         return [
-            pd.DataFrame(),
-            0,
             [],
             [],
             [],
-            "",
+            msg,
             dropdown_update,
             gr.update(choices=["All"], value="All"),
             None,
-            msg,
-        ] + [gr.update(visible=False) for _ in range(MAX_BOXES * 4)]
+            0,
+            [],
+            "No dataset loaded",
+            "",
+            -1,
+            gr.update(choices=[], value=None, visible=False),
+            gr.update(visible=False),
+            gr.update(choices=[], value=None, visible=False),
+        ]
 
-    # Load first image of full list
     first_img = images[0]
     ui_updates = update_ui_for_image(base_path, first_img, classes, 0, len(images))
-
-    # Update filter choices
     filter_dropdown_update = gr.update(choices=["All"] + classes, value="All")
 
-    # Returns [images_state, raw_images_state, classes_state, msg, jump_dropdown, filter_class_drop] + UI updates
     return [
         images,
         images,
@@ -380,45 +315,43 @@ def handle_load_dataset(base_path):
         msg,
         dropdown_update,
         filter_dropdown_update,
-    ] + ui_updates
+        ui_updates[0],
+        ui_updates[1],
+        ui_updates[2],
+        ui_updates[3],
+        ui_updates[5],
+        ui_updates[6],
+        ui_updates[7],
+        ui_updates[8],
+        ui_updates[9],
+    ]
 
 
 def handle_navigate(base_path, images, classes, current_index, boxes, action):
-    """
-    Handle clicking next/prev or selecting a new image from dropdown.
-    """
     if not images:
-        return [gr.skip()] * (7 + MAX_BOXES * 4)
+        return [gr.skip()] * 9
 
-    # 1. Auto-save current annotations
     current_img = images[current_index]
     save_boxes(base_path, current_img, boxes)
 
-    # 2. Compute new index
     new_index = current_index
     if action == "next":
         new_index = min(len(images) - 1, current_index + 1)
     elif action == "prev":
         new_index = max(0, current_index - 1)
     elif isinstance(action, str) and ":" in action:
-        # Selecting from dropdown (format: "index: filename")
         try:
             parts = action.split(":", 1)
             new_index = int(parts[0]) - 1
         except:
             pass
 
-    # 3. Load UI for new image
-    ui_updates = update_ui_for_image(
+    return update_ui_for_image(
         base_path, images[new_index], classes, new_index, len(images)
     )
-    return ui_updates
 
 
 def handle_save(base_path, images, current_index, boxes):
-    """
-    Manually save the current image annotation boxes.
-    """
     if not images or current_index < 0 or current_index >= len(images) or not boxes:
         return "No image annotations to save."
     img_name = images[current_index]
@@ -429,18 +362,12 @@ def handle_save(base_path, images, current_index, boxes):
 def handle_class_filter(
     base_path, raw_images, classes, current_index, current_boxes, filter_class
 ):
-    """
-    Auto-saves current image annotations, filters images based on selected class,
-    resets navigation, and loads the first image of the filtered list.
-    """
     if not raw_images:
-        return [gr.skip()] * (11 + MAX_BOXES * 4)
+        return [gr.skip()] * 9
 
-    # 1. Auto-save current annotations
     if 0 <= current_index < len(raw_images) and current_boxes is not None:
         save_boxes(base_path, raw_images[current_index], current_boxes)
 
-    # 2. Filter images list
     if not filter_class or filter_class == "All":
         filtered_images = list(raw_images)
     else:
@@ -450,26 +377,22 @@ def handle_class_filter(
             if any(box["class_name"] == filter_class for box in boxes):
                 filtered_images.append(img)
 
-    # 3. Handle empty filtered list
     if not filtered_images:
         empty_msg = f"No images contain class '{filter_class}'."
-        outputs = [
-            [],  # images_state
-            0,  # current_index_state
-            [],  # boxes_state
-            None,  # image_display
-            f"**0 of 0**: {empty_msg}",  # progress_info
-            gr.update(choices=[], value=None),  # jump_dropdown
-            pd.DataFrame(),  # data_table
-            empty_msg,  # save_status
+        return [
+            [],
+            0,
+            [],
+            None,
+            f"**0 of 0**: {empty_msg}",
+            gr.update(choices=[], value=None),
+            empty_msg,
+            -1,
+            gr.update(choices=[], value=None, visible=False),
+            gr.update(visible=False),
+            gr.update(choices=[], value=None, visible=False),
         ]
-        for _ in range(MAX_BOXES):
-            outputs.extend(
-                [gr.Row(visible=False), "", "Keep", gr.Dropdown(visible=False)]
-            )
-        return outputs
 
-    # 4. Load first image of the filtered list
     new_index = 0
     ui_updates = update_ui_for_image(
         base_path, filtered_images[new_index], classes, new_index, len(filtered_images)
@@ -479,65 +402,87 @@ def handle_class_filter(
     dropdown_update = gr.update(choices=dropdown_choices, value=dropdown_choices[0])
 
     outputs = [
-        filtered_images,  # images_state
-        0,  # current_index_state
-        ui_updates[2],  # boxes_state (boxes)
-        ui_updates[0],  # image_display (annotated_img)
-        ui_updates[3],  # progress_info (progress_text)
-        dropdown_update,  # jump_dropdown
-        ui_updates[5],  # data_table (df_data)
-        ui_updates[6],  # save_status ("")
+        filtered_images,
+        0,
+        ui_updates[2],
+        ui_updates[0],
+        ui_updates[3],
+        dropdown_update,
+        ui_updates[5],
+        ui_updates[6],
+        ui_updates[7],
+        ui_updates[8],
+        ui_updates[9],
     ]
-    outputs.extend(ui_updates[7:])
     return outputs
 
 
-def on_control_change(boxes, current_index, images, base_path, classes, *control_vals):
-    """
-    Fires whenever any of the radio buttons or class dropdowns changes value.
-    Updates keeping flags and classes, redraws image, and updates Pandas DataFrame.
-    """
-    if not boxes or not images or current_index >= len(images):
+def handle_box_selector_change(box_selector_val, boxes):
+    if not box_selector_val or not boxes:
+        return -1, gr.skip(), gr.skip(), gr.skip()
+
+    try:
+        parts = box_selector_val.split(":", 1)
+        lbl_part = parts[0].replace("Box #", "").strip()
+        idx = int(lbl_part) - 1
+    except:
+        return gr.skip(), gr.skip(), gr.skip(), gr.skip()
+
+    if idx < 0 or idx >= len(boxes):
+        return gr.skip(), gr.skip(), gr.skip(), gr.skip()
+
+    box = boxes[idx]
+    keep_val = "Keep" if box["keep"] else "Delete"
+
+    return idx, True, keep_val, box["class_name"]
+
+
+def handle_single_box_edit(
+    is_updating,
+    selected_idx,
+    boxes,
+    current_index,
+    images,
+    base_path,
+    classes,
+    keep_val,
+    class_val,
+):
+    if is_updating or selected_idx < 0 or not boxes or selected_idx >= len(boxes):
         return gr.skip(), gr.skip(), gr.skip()
 
-    # control_vals split into radio values and dropdown values
-    radio_vals = control_vals[:MAX_BOXES]
-    dropdown_vals = control_vals[MAX_BOXES:]
-
+    box = boxes[selected_idx]
+    expected_keep = keep_val == "Keep"
     updated = False
-    for i in range(min(len(boxes), MAX_BOXES)):
-        # 1. Check keep status
-        radio_val = radio_vals[i]
-        expected_keep = radio_val == "Keep"
-        if boxes[i]["keep"] != expected_keep:
-            boxes[i]["keep"] = expected_keep
-            updated = True
 
-        # 2. Check class value
-        dropdown_val = dropdown_vals[i]
-        if dropdown_val and boxes[i]["class_name"] != dropdown_val:
-            boxes[i]["class_name"] = dropdown_val
-            # Update class_id to match list index of loaded classes
-            if dropdown_val in classes:
-                boxes[i]["class_id"] = classes.index(dropdown_val)
-            updated = True
+    if box["keep"] != expected_keep:
+        box["keep"] = expected_keep
+        updated = True
+
+    if class_val and box["class_name"] != class_val:
+        box["class_name"] = class_val
+        if class_val in classes:
+            box["class_id"] = classes.index(class_val)
+        updated = True
 
     if not updated:
         return gr.skip(), gr.skip(), gr.skip()
 
-    # Instant auto-save to disk
     img_name = images[current_index]
     save_boxes(base_path, img_name, boxes)
 
-    # Redraw
     image_path = os.path.join(base_path, "images", img_name)
     annotated_img = draw_image_boxes(image_path, boxes)
-    df_data = get_dataframe_data(boxes)
 
-    return annotated_img, boxes, df_data
+    selector_choices = [
+        f"Box #{i + 1}: {b['class_name']}{'' if b['keep'] else ' [DELETE]'}"
+        for i, b in enumerate(boxes)
+    ]
+    selector_val = selector_choices[selected_idx]
+    selector_update = gr.update(choices=selector_choices, value=selector_val)
 
+    return annotated_img, boxes, selector_update
 
-# --- GRADIO INTERFACE ---
 
 css = """
 body {
@@ -584,28 +529,26 @@ theme = gr.themes.Soft(
 )
 
 with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
-    # App Header
-    gr.Markdown("# 🐸 Western Leopard Toad YOLO Annotation Reviewer")
+    gr.Markdown("# YOLO Annotation Reviewer")
     gr.Markdown(
         "Load any YOLO dataset, filter by class, step through images, review labels, and **change classes** or delete bounding boxes on the fly. "
         "**Changes are auto-saved** when you navigate."
     )
 
-    # State variables
-    images_state = gr.State([])  # Filtered images list
-    raw_images_state = gr.State([])  # Unfiltered original images list
+    images_state = gr.State([])
+    raw_images_state = gr.State([])
     classes_state = gr.State([])
     current_index_state = gr.State(0)
     boxes_state = gr.State([])
+    selected_box_index_state = gr.State(-1)
+    is_updating_state = gr.State(False)
 
     with gr.Row():
-        # Left Panel: Path input and list selector
         with gr.Column(scale=3):
             with gr.Group():
                 base_path_input = gr.Textbox(
                     label="Dataset Train/Val Path",
                     placeholder="/absolute/path/to/dataset/train",
-                    value="/home/Joshua/Downloads/leopard_toad_identification/detection/active learning/data/detect_1/train",
                 )
                 with gr.Row():
                     filter_class_drop = gr.Dropdown(
@@ -619,7 +562,6 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
 
             status_msg = gr.Markdown("Enter path and click **Load Dataset** to begin.")
 
-            # Image selection dropdown/search
             jump_dropdown = gr.Dropdown(
                 label="Search / Select Image",
                 choices=[],
@@ -629,50 +571,36 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
 
             progress_info = gr.Markdown("No dataset loaded.")
 
-            # Image display
-            image_display = gr.Image(
-                label="Reviewed Image (Real-time Feedback)",
-                type="numpy",
-                interactive=False,
-            )
+            image_display = gr.Image(type="numpy", interactive=False)
 
-        # Right Panel: Controls
         with gr.Column(scale=2):
             with gr.Column(elem_classes="annotation-panel"):
                 gr.Markdown("### Bounding Box Controls")
 
-                # Dynamic controls lists
-                box_rows = []
-                box_labels = []
-                box_radios = []
-                box_dropdowns = []
+                box_selector = gr.Dropdown(
+                    choices=[],
+                    label="Select Bounding Box to Edit",
+                    interactive=True,
+                    visible=False,
+                )
 
-                for idx in range(MAX_BOXES):
-                    with gr.Row(visible=False, variant="compact") as row:
-                        lbl = gr.Markdown(f"**Box #{idx + 1}**")
-                        # Panel/button style for Keep/Delete
-                        rad = gr.Radio(
-                            choices=["Keep", "Delete"],
-                            value="Keep",
-                            show_label=False,
-                            interactive=True,
-                            scale=2,
-                        )
-                        cls_drop = gr.Dropdown(
-                            choices=DEFAULT_CLASSES,
-                            value=None,
-                            show_label=False,
-                            interactive=True,
-                            container=False,
-                            scale=3,
-                            allow_custom_value=True,
-                        )
-                        box_rows.append(row)
-                        box_labels.append(lbl)
-                        box_radios.append(rad)
-                        box_dropdowns.append(cls_drop)
+                box_keep_radio = gr.Radio(
+                    choices=["Keep", "Delete"],
+                    value="Keep",
+                    label="Status",
+                    interactive=True,
+                    visible=False,
+                )
 
-            # Action & Navigation buttons
+                box_class_dropdown = gr.Dropdown(
+                    choices=[],
+                    value=None,
+                    label="Class",
+                    interactive=True,
+                    allow_custom_value=True,
+                    visible=False,
+                )
+
             with gr.Row():
                 prev_btn = gr.Button("⬅️ Previous Image", elem_classes="nav-btn")
                 next_btn = gr.Button("Next Image ➡️", elem_classes="nav-btn")
@@ -684,66 +612,27 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
 
             save_status = gr.Markdown("")
 
-            # Bounding Box detailed Table
-            gr.Markdown("### Image Annotations Table")
-            data_table = gr.Dataframe(
-                headers=[
-                    "Box #",
-                    "Class Name",
-                    "Confidence",
-                    "Coordinates (x,y,w,h)",
-                    "Status",
-                ],
-                interactive=False,
-                wrap=True,
-            )
-
-    # Define Event Listeners
-
-    # 1. Loading dataset
-    # Output schema:
-    # [images_state, raw_images_state, classes_state, status_msg, jump_dropdown, filter_class_drop, image_display, current_index_state, boxes_state, progress_info, jump_dropdown, data_table, save_status] + MAX_BOXES * [row, label, radio, dropdown]
-    load_outputs = [
-        images_state,
-        raw_images_state,
-        classes_state,
-        status_msg,
-        jump_dropdown,
-        filter_class_drop,
-        image_display,
-        current_index_state,
-        boxes_state,
-        progress_info,
-        jump_dropdown,
-        data_table,
-        save_status,
-    ]
-    for i in range(MAX_BOXES):
-        load_outputs.extend(
-            [box_rows[i], box_labels[i], box_radios[i], box_dropdowns[i]]
-        )
-
     load_btn.click(
-        fn=handle_load_dataset, inputs=[base_path_input], outputs=load_outputs
+        fn=handle_load_dataset,
+        inputs=[base_path_input],
+        outputs=[
+            images_state,
+            raw_images_state,
+            classes_state,
+            status_msg,
+            jump_dropdown,
+            filter_class_drop,
+            image_display,
+            current_index_state,
+            boxes_state,
+            progress_info,
+            save_status,
+            selected_box_index_state,
+            box_selector,
+            box_keep_radio,
+            box_class_dropdown,
+        ],
     )
-
-    # 2. Class Filter selection
-    # Output schema is exactly the same as handle_load_dataset outputs, minus raw_images_state and classes_state:
-    # [images_state, current_index_state, boxes_state, image_display, progress_info, jump_dropdown, data_table, save_status] + dynamic controls
-    filter_outputs = [
-        images_state,
-        current_index_state,
-        boxes_state,
-        image_display,
-        progress_info,
-        jump_dropdown,
-        data_table,
-        save_status,
-    ]
-    for i in range(MAX_BOXES):
-        filter_outputs.extend(
-            [box_rows[i], box_labels[i], box_radios[i], box_dropdowns[i]]
-        )
 
     filter_class_drop.change(
         fn=handle_class_filter,
@@ -755,25 +644,34 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
             boxes_state,
             filter_class_drop,
         ],
-        outputs=filter_outputs,
+        outputs=[
+            images_state,
+            current_index_state,
+            boxes_state,
+            image_display,
+            progress_info,
+            jump_dropdown,
+            save_status,
+            selected_box_index_state,
+            box_selector,
+            box_keep_radio,
+            box_class_dropdown,
+        ],
     )
 
-    # 3. Navigation & Dropdown Selection
     nav_outputs = [
         image_display,
         current_index_state,
         boxes_state,
         progress_info,
         jump_dropdown,
-        data_table,
         save_status,
+        selected_box_index_state,
+        box_selector,
+        box_keep_radio,
+        box_class_dropdown,
     ]
-    for i in range(MAX_BOXES):
-        nav_outputs.extend(
-            [box_rows[i], box_labels[i], box_radios[i], box_dropdowns[i]]
-        )
 
-    # Next image
     next_btn.click(
         fn=handle_navigate,
         inputs=[
@@ -787,7 +685,6 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
         outputs=nav_outputs,
     )
 
-    # Previous image
     prev_btn.click(
         fn=handle_navigate,
         inputs=[
@@ -801,7 +698,6 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
         outputs=nav_outputs,
     )
 
-    # Dropdown select
     jump_dropdown.change(
         fn=handle_navigate,
         inputs=[
@@ -815,43 +711,80 @@ with gr.Blocks(title="YOLO Annotation Reviewer") as demo:
         outputs=nav_outputs,
     )
 
-    # 4. Manual save button
     save_btn.click(
         fn=handle_save,
         inputs=[base_path_input, images_state, current_index_state, boxes_state],
         outputs=[save_status],
     )
 
-    # 5. Live Radio and Dropdown changes
-    for idx in range(MAX_BOXES):
-        box_radios[idx].change(
-            fn=on_control_change,
-            inputs=[
-                boxes_state,
-                current_index_state,
-                images_state,
-                base_path_input,
-                classes_state,
-            ]
-            + box_radios
-            + box_dropdowns,
-            outputs=[image_display, boxes_state, data_table],
-        )
-        box_dropdowns[idx].change(
-            fn=on_control_change,
-            inputs=[
-                boxes_state,
-                current_index_state,
-                images_state,
-                base_path_input,
-                classes_state,
-            ]
-            + box_radios
-            + box_dropdowns,
-            outputs=[image_display, boxes_state, data_table],
-        )
+    box_selector.input(
+        fn=handle_box_selector_change,
+        inputs=[box_selector, boxes_state],
+        outputs=[
+            selected_box_index_state,
+            is_updating_state,
+            box_keep_radio,
+            box_class_dropdown,
+        ],
+    ).then(fn=lambda: False, inputs=[], outputs=[is_updating_state])
+
+    box_keep_radio.change(
+        fn=handle_single_box_edit,
+        inputs=[
+            is_updating_state,
+            selected_box_index_state,
+            boxes_state,
+            current_index_state,
+            images_state,
+            base_path_input,
+            classes_state,
+            box_keep_radio,
+            box_class_dropdown,
+        ],
+        outputs=[image_display, boxes_state, box_selector],
+    )
+    box_class_dropdown.change(
+        fn=handle_single_box_edit,
+        inputs=[
+            is_updating_state,
+            selected_box_index_state,
+            boxes_state,
+            current_index_state,
+            images_state,
+            base_path_input,
+            classes_state,
+            box_keep_radio,
+            box_class_dropdown,
+        ],
+        outputs=[image_display, boxes_state, box_selector],
+    )
+
+    js_code = """
+    () => {
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                return;
+            }
+            const key = e.key.toLowerCase();
+            if (key === 'arrowright' || key === 'n') {
+                const btn = Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Next Image'));
+                if (btn) btn.click();
+            } else if (key === 'arrowleft' || key === 'p' || key === 'b') {
+                const btn = Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Previous Image'));
+                if (btn) btn.click();
+            } else if (key === 'd') {
+                const spans = Array.from(document.querySelectorAll('span'));
+                const deleteLabel = spans.find(el => el.textContent.trim() === 'Delete');
+                if (deleteLabel) deleteLabel.click();
+            } else if (key === 'k') {
+                const spans = Array.from(document.querySelectorAll('span'));
+                const keepLabel = spans.find(el => el.textContent.trim() === 'Keep');
+                if (keepLabel) keepLabel.click();
+            }
+        });
+    }
+    """
+    demo.load(js=js_code)
 
 if __name__ == "__main__":
-    demo.launch(
-        server_name="0.0.0.0", server_port=7860, share=True, theme=theme, css=css
-    )
+    demo.launch(server_name="0.0.0.0", server_port=7860, theme=theme, css=css)
